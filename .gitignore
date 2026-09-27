@@ -101,12 +101,25 @@ inference/frontend/out/
 !packages/wolinet-sdk/dist/
 !packages/wolinet-sdk/dist/**
 
-# macOS / Swift Builds
+# macOS / Desktop & Eclipse Theia Builds
 *.app/
 *.dSYM/
-.build/
-apps/desktop/Packages/
 apps/desktop/.build/
+apps/desktop/**/lib/
+apps/desktop/**/src-gen/
+apps/desktop/**/gen-esbuild.*.mjs
+apps/desktop/**/.test/
+apps/desktop/plugins/
+apps/desktop/**/plugins/
+apps/desktop/**/*.tsbuildinfo
+apps/desktop/**/*.vsix
+apps/desktop/**/.theia/chatSessions
+apps/desktop/**/tmp/
+apps/desktop/**/errorShots/
+apps/desktop/**/.nyc_output/
+apps/desktop/**/coverage/
+apps/desktop/electron-pack/
+apps/desktop/dist/
 xcuserdata/
 DerivedData/
 
