@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.litespeed/
+.speedrail/
+.lite/
+coverage/
+test-results/
+playwright-report/
+.DS_Store
+*.log
+WORKLOG.md
+test-results-tui/
+release-artifacts/
+.ui-audit/

@@ -1,0 +1,360 @@
+/** @jsxImportSource @opentui/react */
+import { permissionModeLabels } from '../shared/permissions.js';
+import { liteFusionReadinessLabel } from '../shared/litefusion-readiness.js';
+import { pendingArchitectureLabel } from '../shared/architecture-config.js';
+import { Footer, shortcutLabel } from './footer.js';
+import { goalTurnLabel } from '../shared/goals.js';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
+import { useBlur, useFocus, useKeyboard, useRenderer, useSelectionHandler, useTerminalDimensions } from '@opentui/react';
+import { SyntaxStyle, type TextareaRenderable } from '@opentui/core';
+import { readFile, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import type { Message, Session } from '../shared/types.js';
+import { terminalText, parseSlash } from './protocol.js';
+import type { ProfileCatalog } from '../shared/profiles.js';
+import { skillInvocation, skillCommands } from '../shared/skill-commands.js';
+import { Profiles } from './profiles.js';
+import { TerminalController, effectiveModel, isRunning } from './controller.js';
+import { ConfigContext, ThemeContext, useConfig, useTheme } from './context.js';
+import { getTheme, listThemes, toHex, type Theme } from './theme.js';
+import { BUILTIN_THEMES } from './themes.js';
+import type { TuiConfig } from './tuiConfig.js';
+import type { TerminalStorage } from './storage.js';
+import { KEYBIND_DEFAULTS } from './keybinds.js';
+import { ACTIVE_KEY_ACTIONS, COMMAND_ORDER, KEY_COMMANDS } from './commands.js';
+import { parseBinding, strokeMatches, LEADER_TOKEN, type KeymapRouter } from './keymap.js';
+import { Button, Menu, TextPrompt, TextViewer, type MenuItem } from './ui.js';
+import { EditorKeys } from './editor.js';
+import { ComposerImages, removeDraftAttachment } from './composerImages.js';
+import { Sessions } from './sessions.js';
+import { FilePicker } from './files.js';
+import { attachmentFromClipboard, attachmentFromFile, editDraft, openShell, suspendTerminal } from './terminalIO.js';
+import { PendingTaskInspector, WorkerChooser, Changes, WorkInspector, WorkerInspector } from './inspectors.js';
+import { conversationGroups, usageDetails } from './conversation.js';
+import { TaskProgress } from './tasks.js';
+import { UpdateNotice } from './updates.js';
+import { Brand } from './brand.js';
+import { needsSetup } from '../shared/setup.js';
+import { Onboarding } from './onboarding.js';
+import { WorkerInspectionContext } from './workerCard.js';
+import { workerLabels } from '../shared/worker-presentation.js';
+import { architectureInfo } from '../shared/architectures.js';
+import { ModelSettings } from './models.js';
+import { HistoryConfirmation, GoalPanel, PlanPanel, HistoryPanel } from './sessionPanels.js';
+import { SettingsPanel } from './settings.js';
+import { expandProjectCommand, type ProjectCommand } from './projectCommands.js';
+import { Providers } from './providers.js';
+import { copyTerminalText } from './clipboard.js';
+import { PermissionPrompt, QuestionPrompt } from './prompts.js';
+import { DEFAULT_TRANSCRIPT_SETTINGS, InterruptHint, Transcript, TranscriptSettingsProvider, WorkingScanner, type TranscriptSettings } from './transcript.js';
+
+export const LOADING_GRACE_MS = 500;
+export const LOADING_DOT_MS = 3000;
+function LoadingScreen() {
+  const theme = useTheme(), [visible, setVisible] = useState(false);
+  useEffect(() => { const timer = setTimeout(() => setVisible(true), LOADING_GRACE_MS); return () => clearTimeout(timer); }, []);
+  return <box flexGrow={1} justifyContent="center" alignItems="center" flexDirection="column">{visible && <><Brand /><box marginTop={1} flexDirection="row" gap={1}><WorkingScanner color={toHex(theme.primary)} /><text fg={toHex(theme.textMuted)}>Connecting to Litespeed…</text></box></>}</box>;
+}
+
+function Composer({ editorRef, imagesRef, controller, focused, onSubmit, onReference, onSuggestionsChange, commands }: { editorRef:RefObject<TextareaRenderable|null>; imagesRef:RefObject<ComposerImages|null>; commands: {name: string; description: string; skill?: boolean}[]; controller: TerminalController; focused: boolean; onSubmit: () => void; onReference: (prefix: string) => void; onSuggestionsChange: (open: boolean) => void }) {
+  const theme = useTheme(), editor = editorRef;
+  const { draft, pending, sync } = useSyncExternalStore(controller.subscribe, controller.getState);
+  const queued = Boolean(sync.detail?.queue?.items.length);
+  const { height, width } = useTerminalDimensions(), config = useConfig();
+  const editorKeys = useMemo(() => new EditorKeys(config.keybinds), [config.keybinds]);
+  const imageStyle = useMemo(() => SyntaxStyle.fromStyles({ image: { fg: toHex(theme.primary), bold: true } }), [theme]);
+  useEffect(() => () => editorKeys.dispose(), [editorKeys]);
+  useEffect(() => () => imageStyle.destroy(), [imageStyle]);
+  useEffect(() => {
+    if (!editor.current) return;
+    if (imagesRef.current?.editor !== editor.current) imagesRef.current = new ComposerImages(editor.current);
+    const next = imagesRef.current.load(draft);
+    if (next !== draft) controller.setDraft(next);
+  }, [draft, controller, editor, imagesRef]);
+  useEffect(() => () => { imagesRef.current = null; }, [imagesRef]);
+  function saveEditor() {
+    const current = controller.getState().draft;
+    const next = imagesRef.current?.read(current);
+    if (next && next !== current) controller.setDraft(next);
+  }
+  const [selected, setSelected] = useState(0), [dismissed, setDismissed] = useState(false);
+  const token = draft.text.match(/^\/([\w-]*)$/);
+  const matches = focused && token && !dismissed ? commands.filter(item => item.name.startsWith(token[1].toLowerCase())) : [];
+  useEffect(() => { onSuggestionsChange(matches.length > 0); return () => onSuggestionsChange(false); }, [matches.length > 0, onSuggestionsChange]);
+  const highlighted = Math.min(selected, Math.max(0, matches.length - 1));
+  const visibleCount = Math.min(6, Math.max(2, Math.floor(height / 4)));
+  const start = Math.max(0, highlighted - visibleCount + 1);
+  function accept(name: string) {
+    const text = `/${name} `;
+    if (editor.current) { editor.current.setText(text); editor.current.cursorOffset = text.length; }
+    controller.setDraft({...controller.getState().draft, text}); setDismissed(true);
+  }
+  const rows = Math.min(Math.max(1, draft.text.split('\n').reduce((count, line) => count + Math.max(1, Math.ceil([...line].length / Math.max(10, width - 6))), 0)), Math.max(1, Math.min(12, Math.floor(height * config.prompt.max_height / 100) - 4)));
+  return <box flexDirection="column" flexShrink={0} width={config.prompt.max_width === 'auto' ? '100%' : Math.min(width, config.prompt.max_width)} alignSelf="center">
+    {matches.length > 0 && <box flexDirection="column" paddingLeft={2} paddingRight={2} marginBottom={1} flexShrink={0}>
+      {matches.slice(start, start + visibleCount).map((item, offset) => <box key={item.name} height={1} backgroundColor={start + offset === highlighted ? toHex(theme.backgroundElement) : undefined} onMouseDown={() => accept(item.name)}><text fg={toHex(start + offset === highlighted ? theme.primary : theme.textMuted)}>{terminalText(`${start + offset === highlighted ? '›' : ' '} /${item.name}  ${item.description}`).slice(0, width - 6)}</text></box>)}
+      <text height={1} fg={toHex(theme.textMuted)}>{`↑↓ choose · Tab/Enter complete · Esc dismiss${matches.length > visibleCount ? ` · ${highlighted + 1}/${matches.length}` : ''}`}</text>
+    </box>}
+    <box width={config.prompt.max_width === 'auto' ? '100%' : Math.min(width, config.prompt.max_width)} alignSelf="center" border borderColor={toHex(focused ? theme.primary : theme.border)} height={rows + 2} paddingLeft={1} paddingRight={1} flexShrink={0}>
+    <textarea ref={editor} focused={focused} initialValue={draft.text} wrapMode="word" syntaxStyle={imageStyle}
+      placeholder={pending ? `${pending}…` : queued ? 'Press Up to edit queued messages' : isRunning(controller.detail) ? 'Queue a follow-up… (Alt+Enter to steer)' : 'Ask Litespeed to do something…'}
+      backgroundColor={toHex(theme.background)} textColor={toHex(theme.text)}
+      onKeyDown={key => {
+        if (!editor.current) return;
+        if (matches.length && !(key.name === 'return' && !matches[highlighted].skill && draft.text === `/${matches[highlighted].name}`) && !key.ctrl && !key.meta && !key.shift && ['up', 'down', 'tab', 'return', 'escape'].includes(key.name)) {
+          key.preventDefault(); key.stopPropagation();
+          if (key.name === 'escape') setDismissed(true);
+          else if (key.name === 'up' || key.name === 'down') setSelected((highlighted + (key.name === 'up' ? -1 : 1) + matches.length) % matches.length);
+          else accept(matches[highlighted].name);
+          return;
+        }
+        if (key.name === 'up' && !key.ctrl && !key.meta && !key.shift && !key.super && queued && editor.current.visualCursor.visualRow === 0) {
+          key.preventDefault(); key.stopPropagation();
+          if (!pending) void controller.recallQueued();
+          return;
+        }
+        const reference = /(?:^|\s)@([^\s]*)$/.exec(editor.current.plainText);
+        if (key.name === 'tab' && reference) { key.preventDefault(); key.stopPropagation(); saveEditor(); onReference(reference[1]); return; }
+        const action = editorKeys.handle(editor.current, key);
+        if (action === 'undo' || action === 'redo') saveEditor();
+      }}
+      onContentChange={() => { const changed = editor.current; if (imagesRef.current?.updating) return; queueMicrotask(() => { if (!changed || editor.current !== changed || imagesRef.current?.updating) return; setSelected(0); setDismissed(false); saveEditor(); }); }}
+      onSubmit={() => { saveEditor(); onSubmit(); }} />
+    </box>
+  </box>;
+}
+
+export interface AppProps { controller: TerminalController; config: TuiConfig; theme: Theme; themeName: string; storage: TerminalStorage; router: KeymapRouter; onQuit: (code?: number) => void }
+export function App({ controller, config, theme: initialTheme, themeName: initialName, storage, router, onQuit }: AppProps) {
+  const renderer = useRenderer(), [name, setName] = useState(initialName), [mode, setMode] = useState<'system' | 'light' | 'dark'>(storage.preferences().mode ?? 'system');
+  const [terminalMode, setTerminalMode] = useState(renderer.themeMode ?? 'dark');
+  useEffect(() => { const change = (mode: 'light' | 'dark') => setTerminalMode(mode); renderer.on('theme_mode', change); return () => { renderer.off('theme_mode', change); }; }, [renderer]);
+  const theme = getTheme(name, mode === 'system' ? terminalMode : mode, BUILTIN_THEMES) ?? initialTheme;
+  const chooseTheme = (next: string, nextMode: 'system' | 'light' | 'dark') => { setName(next); setMode(nextMode); try { storage.savePreferences({ theme: next, mode: nextMode }); } catch { controller.notice('Theme changed for this run; preferences could not be saved.'); } };
+  return <ConfigContext.Provider value={config}><ThemeContext.Provider value={theme}><SessionApp controller={controller} router={router} onQuit={onQuit} chooseTheme={chooseTheme} themeName={name} themeMode={mode} /></ThemeContext.Provider></ConfigContext.Provider>;
+}
+
+function SessionApp({ controller, router, onQuit, chooseTheme, themeName, themeMode }: { controller: TerminalController; router: KeymapRouter; onQuit: (code?: number) => void; chooseTheme: (name: string, mode: 'system' | 'light' | 'dark') => void; themeName: string; themeMode: 'system' | 'light' | 'dark' }) {
+  const theme = useTheme(), { width } = useTerminalDimensions(), renderer = useRenderer();
+  const state = useSyncExternalStore(controller.subscribe, controller.getState);
+  const composerEditor=useRef<TextareaRenderable>(null);
+  const composerImages=useRef<ComposerImages>(null);
+  const config = useConfig(), terminalFocused = useRef(true), previousStatus = useRef<string | undefined>(undefined);
+  useFocus(() => { terminalFocused.current = true; }); useBlur(() => { terminalFocused.current = false; });
+  useSelectionHandler(selection => {
+    const text = selection.getSelectedText();
+    if (!selection.isDragging && text) void copyTerminalText(renderer, text).catch(error => controller.notice(error.message));
+  });
+  useEffect(() => { const status = state.sync.detail?.session.status; if (config.attention.enabled && config.attention.sounds !== false && (!config.attention.focus_only || terminalFocused.current) && previousStatus.current === 'running' && (status === 'waiting' || status === 'idle' || status === 'error')) process.stdout.write('\x07'); previousStatus.current = status; }, [state.sync.detail?.session.status]);
+  const detail = state.sync.detail, busy = isRunning(detail);
+  const [skillCatalog, setSkillCatalog] = useState<ProfileCatalog | null>(null);
+  const skills = skillCatalog?.skills ?? [];
+  const [projectCommands, setProjectCommands] = useState<ProjectCommand[]>([]);
+  useEffect(() => {
+    setProjectCommands([]); setSkillCatalog(null); let live = true;
+    if (detail) void controller.client.api<ProfileCatalog>(`/profiles?workspace=${encodeURIComponent(detail.session.workspace)}`).then(value => { if (live) setSkillCatalog(value); }).catch(() => {});
+    if (detail) void controller.client.api<{ commands: ProjectCommand[] }>(`/commands?workspace=${encodeURIComponent(detail.session.workspace)}`).then(value => { if (live) setProjectCommands(value.commands); }).catch(() => {});
+    return () => { live = false; };
+  }, [detail?.session.workspace, detail?.session.configRevision]);
+  const [promptOverlay, setPromptOverlay] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [panel, setPanel] = useState<ReactNode>(null);
+  const [settings, setSettings] = useState<TranscriptSettings>(DEFAULT_TRANSCRIPT_SETTINGS);
+  const lastCtrlC = useRef(0);
+  const pendingLeader = useSyncExternalStore(listener => router.subscribe(listener), () => router.pending.length > 0);
+  const permission = detail?.permissions[0], question = !permission ? detail?.questions?.[0] : undefined;
+  const close = () => setPanel(null);
+  const run = (operation: () => unknown | Promise<unknown>) => { void Promise.resolve().then(operation).catch(error => controller.notice(error instanceof Error ? error.message : String(error))); };
+  const menu = (title: string, items: MenuItem[]) => setPanel(<Menu key={title} title={title} items={items} onClose={close} />);
+  const prompt = (title: string, value: string, save: (value: string) => unknown | Promise<unknown>) => setPanel(<TextPrompt key={title} title={title} value={value} onClose={close} onSave={value => { close(); run(() => save(value)); }} />);
+  const toggle = (key: keyof TranscriptSettings) => setSettings(current => ({ ...current, [key]: !current[key] }));
+  const sessions = () => setPanel(<Sessions controller={controller} onClose={close} />);
+  const queue = () => {
+    const current = controller.getState().sync.detail?.queue;
+    menu('Queued messages', [{ id: 'toggle', label: current?.paused ? 'Resume queue' : 'Pause queue', description: current?.reason, action: () => { close(); run(() => controller.queue(current?.paused ? 'resume' : 'pause')); } }, ...(current?.items ?? []).map(item => ({ id: item.id, label: terminalText(item.content), description: 'Edit, steer, or remove from queue', action: () => menu('Queued message', [{id:'edit',label:'Edit message',action:()=>{close();run(()=>controller.recallQueued(item.id));}},{id:'steer',label:'Steer driver now',disabled:!isRunning(controller.detail) || Boolean(item.attachments?.length),action:()=>{close();run(()=>controller.steerQueued(item.id));}},{id:'remove',label:'Remove from queue',action:()=>{close();run(()=>controller.queue('remove',item.id));}}]) }))]);
+  };
+  const permissions = () => menu('Permissions', [
+    { id: 'ask', label: `${controller.detail?.session.permissionMode === 'ask' ? '●' : '○'} Ask first`, description: 'Review actions; remember tools you trust for this session.', action: () => { close(); run(() => controller.permissionMode('ask')); } },
+    { id: 'edit', label: `${controller.detail?.session.permissionMode === 'edit' ? '●' : '○'} Allow project edits`, description: 'Ask for commands and new external access.', action: () => { close(); run(() => controller.permissionMode('edit')); } },
+    { id: 'auto', label: `${controller.detail?.session.permissionMode === 'auto' ? '●' : '○'} Allow all tools`, description: 'This session and its workers. Explicit ask/deny rules still apply.', action: () => { close(); run(() => controller.permissionMode('auto')); } },
+    { id: 'settings', label: 'Rules and defaults', action: () => openSettings() },
+  ]);
+  const openSettings = () => setPanel(<SettingsPanel controller={controller} onClose={close} />);
+  const openModels = () => {
+    if (!controller.detail || !controller.getState().settings) return;
+    controller.configurationReady(true);
+    setPanel(<ModelSettings controller={controller} initial={controller.detail.session} settings={controller.getState().settings!} onClose={close} onProviders={() => setPanel(<Providers controller={controller} onClose={close} />)} />);
+  };
+  const openSetup = (quick = false) => { controller.configurationReady(); if (controller.detail) setPanel(<Onboarding quick={quick} controller={controller} initial={controller.detail.session} onClose={close} />); };
+  const inspect = useCallback((steps: Message[]) => { if (controller.detail) setPanel(<WorkInspector controller={controller} steps={steps} detail={controller.detail} onClose={() => setPanel(null)} />); }, [controller]);
+  const showUsage = useCallback((message: Message, usage?: import('../shared/types.js').Usage) => setPanel(<TextViewer title="Turn usage" text={usageDetails(message, usage)} onClose={() => setPanel(null)} />), []);
+  const attach = (filename: string) => controller.action('Attaching file', async () => {
+    const current = controller.getState().draft;
+    if (current.attachments.length >= 10) throw new Error('A message can have up to 10 attachments.');
+    const attachment = await attachmentFromFile(filename, controller.detail!.session.workspace);
+    controller.setDraft({ ...controller.getState().draft, attachments: [...controller.getState().draft.attachments, attachment] });
+  });
+  const pasteImage = async () => {
+    const sessionId = controller.sessionId, current = controller.getState().draft, composer = composerImages.current, generation = composer?.generation;
+    if (current.attachments.length >= 10) return;
+    const attachment = await attachmentFromClipboard();
+    if (controller.sessionId !== sessionId || !attachment || !composer || composerImages.current !== composer || composer.generation !== generation || controller.getState().pending) return;
+    const draft = controller.getState().draft;
+    if (draft.attachments.length >= 10) return;
+    controller.setDraft(composer.insert(draft, attachment));
+  };
+  const copyResponse = () => { const text = renderer.getSelection()?.getSelectedText() || controller.detail?.messages.findLast(message => message.role === 'assistant' && message.content)?.content; if (text) run(async () => { await copyTerminalText(renderer, text); controller.notice('Copied.'); }); else controller.notice('There is no response to copy yet.'); close(); };
+  const commands: MenuItem[] = [
+    { id: 'copy', label: 'Copy selected text or last response', action: copyResponse },
+    { id: 'timeline', label: 'Conversation timeline', description: 'Inspect, copy, or fork from a response', action: () => menu('Conversation timeline', conversationGroups(controller.detail!).filter(group => group.footer).reverse().map(group => ({ id: group.message.id, label: terminalText(group.message.content).slice(0, 100) || 'Response', action: () => menu('Response actions', [
+      { id: 'read', label: 'Read response', action: () => setPanel(<TextViewer title="Response" text={group.message.content} onClose={close} />) },
+      { id: 'copy', label: 'Copy response', action: () => { run(() => copyTerminalText(renderer, group.message.content)); close(); } },
+      { id: 'usage', label: 'Turn usage', action: () => setPanel(<TextViewer title="Turn usage" text={usageDetails(group.message, group.runUsage)} onClose={close} />) },
+      { id: 'fork', label: 'Fork from here', disabled: busy, action: () => { close(); run(() => controller.fork(group.message.id)); } },
+    ]) }))) },
+
+    { id: 'theme', label: 'Terminal theme', action: () => menu('Terminal theme', [{ id: 'mode', label: `Appearance: ${themeMode}`, description: 'Cycle system / light / dark', action: () => { chooseTheme(themeName, themeMode === 'system' ? 'light' : themeMode === 'light' ? 'dark' : 'system'); close(); } }, ...listThemes(BUILTIN_THEMES).map(name => ({ id: name, label: `${name === themeName ? '● ' : ''}${name}`, action: () => { chooseTheme(name, themeMode); close(); } }))]) },
+    { id: 'timestamps', label: 'Toggle timestamps', action: () => { toggle('timestamps'); close(); } },
+    { id: 'outputs', label: 'Toggle tool output', action: () => { toggle('genericToolOutput'); close(); } },
+    { id: 'animations', label: 'Toggle animations', action: () => { toggle('animations'); close(); } },
+    { id: 'files', label: 'Add a workspace file reference', description: 'The server snapshots the file when you send', action: () => setPanel(<FilePicker controller={controller} onClose={close} onPick={file => { const draft = controller.getState().draft; if (draft.attachments.length >= 10) { controller.notice('A message can have up to 10 attachments.'); return; } controller.setDraft({ ...draft, attachments: [...draft.attachments, { name: file.name, path: file.path }] }); close(); }} />) },
+    { id: 'attach', label: 'Attach a text file or image', description: 'Read a file from this computer', action: () => prompt('File to attach', '', attach) },
+    { id: 'attachments', label: 'Manage draft attachments', action: () => menu('Draft attachments', controller.getState().draft.attachments.map((item, index) => ({ id: String(index), label: item.name, description: 'Select to remove', action: () => { controller.setDraft(removeDraftAttachment(controller.getState().draft, index)); close(); } }))) },
+    { id: 'editor', label: 'Open draft in external editor', description: 'Uses VISUAL or EDITOR, then returns to Litespeed', action: () => { close(); run(() => controller.action('Editing draft', async () => { const text = await editDraft(renderer, controller.getState().draft.text, controller.detail!.session.workspace); controller.setDraft({ ...controller.getState().draft, text }); })); } },
+    { id: 'shell', label: 'Open workspace shell', description: 'Type exit to return to Litespeed', action: () => { close(); run(() => openShell(renderer, controller.detail!.session.workspace)); } },
+    { id: 'skills', label: 'Browse and use project skills', disabled: busy, action: () => run(() => { controller.configurationReady(); if (controller.detail) setPanel(<Profiles skillsOnly controller={controller} initial={controller.detail.session} onCatalog={catalog => setSkillCatalog(catalog)} onClose={close} />); }) },
+    { id: 'commands', label: 'Project command templates', description: 'Workspace prompt templates with argument substitution', action: () => menu('Project commands', projectCommands.map(item => ({ id: item.name, label: `/${item.name}`, description: item.description, action: () => { controller.setDraft({ ...controller.getState().draft, text: `/${item.name} ` }); close(); } }))) },
+    { id: 'drafts', label: 'Input history', description: 'Restore a previous message to the composer', action: () => menu('Input history', controller.inputHistory().reverse().map((text, index) => ({ id: String(index), label: terminalText(text).slice(0, 100), action: () => { controller.setDraft({ ...controller.getState().draft, text }); close(); } }))) },
+    { id: 'export', label: 'Export session', description: 'Save this conversation as JSON', action: () => prompt('Export to file (new file)', `litespeed-session-${controller.sessionId}.json`, async filename => { const data = await controller.client.api(controller.path('/export')); const path = resolve(controller.detail!.session.workspace, filename); await writeFile(path, JSON.stringify(data, null, 2), { flag: 'wx', mode: 0o600 }); controller.notice(`Exported to ${path}`); }) },
+    { id: 'import', label: 'Import session', description: 'Open an exported JSON conversation as a new session', action: () => prompt('Session JSON file', '', async filename => { const data = JSON.parse(await readFile(resolve(controller.detail!.session.workspace, filename), 'utf8')); let session: Session | undefined; if (await controller.action('Importing session', async () => { session = await controller.client.api<Session>('/sessions/import', data); }) && session) await controller.open(session.id); }) },
+    { id: 'archive', label: detail?.session.archived ? 'Unarchive session' : 'Archive session', disabled: busy, action: () => { close(); run(() => controller.configure({ archived: !detail?.session.archived })); } },
+    { id: 'delete', label: 'Delete session…', description: 'Permanently remove this conversation', disabled: busy, action: () => menu('Delete this session?', [{ id: 'cancel', label: 'Cancel', action: close }, { id: 'delete', label: 'Delete permanently', description: 'The conversation cannot be restored.', action: () => { close(); run(async () => { const workspace = controller.detail!.session.workspace; if (await controller.action('Deleting session', () => controller.client.api(controller.path(), undefined, 'DELETE'))) await controller.create(workspace); }); } }]) },
+
+    { id: 'history', label: 'File history and recovery', description: 'Undo, Redo, interrupted operations, and protected paths', action: () => setPanel(<HistoryPanel controller={controller} onClose={close} />) },
+    { id: 'notice', label: 'Read last notice', disabled: !state.notice, action: () => setPanel(<TextViewer title="Last notice" text={state.notice} onClose={close} />) },
+    { id: 'goal', label: 'Session goal', description: 'Set an objective with an optional turn limit', action: () => setPanel(<GoalPanel controller={controller} onClose={close} />) },
+    { id: 'todos', label: 'Task list', description: 'Follow the agent’s plan and progress', action: () => setPanel(<PlanPanel controller={controller} onClose={close} />) },
+    { id: 'changes', label: 'Review changed files', description: 'Recorded file edits and diffs', action: () => setPanel(<Changes controller={controller} onClose={close} />) },
+    { id: 'work', label: 'Inspect response steps', description: 'Thinking, commands, outputs, and worker assignments', action: () => menu('Response turns', conversationGroups(controller.detail!).filter(group => group.steps.some(message => message.reasoning || message.toolCalls?.length)).reverse().map((group, index) => ({ id: group.message.id, label: group.steps.find(message => message.content)?.content.slice(0, 100) || `Response ${index + 1}`, description: `${group.steps.flatMap(message => message.toolCalls ?? []).length} steps`, action: () => inspect(group.steps) }))) },
+    { id: 'workers', label: 'Inspect worker', description: 'Brief, report, evidence, and invocation transcript', action: () => setPanel(<WorkerChooser controller={controller} onClose={close} onSelect={task=>setPanel('childSessionId' in task?<WorkerInspector controller={controller} invocation={task} onClose={close}/>:<PendingTaskInspector controller={controller} task={task} onClose={close}/>)}/>) },
+    { id: 'fork', label: 'Fork session', description: 'Continue from a copy of this conversation', disabled: busy, action: () => { close(); run(() => controller.fork()); } },
+    { id: 'compact', label: 'Compact context', description: 'Summarize earlier context for the next response', disabled: busy, action: () => { close(); run(() => controller.action('Compacting context', () => controller.client.api(controller.path('/compact'), {}))); } },
+    { id: 'setup', label: 'Set up Litespeed', description: 'A quick guide to architecture, models, and permissions', disabled: busy, action: () => run(() => openSetup()) },
+    { id: 'models', label: 'Choose models', description: 'Architecture and its saved model configuration', disabled: Boolean(state.pending||detail?.history?.pendingRecovery), action: () => run(openModels) },
+    { id: 'permissions', label: 'Permissions', description: 'Ask first or allow all tools, including workers', action: permissions },
+    { id: 'mcp', label: 'MCP integrations', description: 'Open connected tools and sign-in settings', action: () => setPanel(<SettingsPanel key="integrations" controller={controller} initialView="integrations" onClose={close} />) },
+    { id: 'settings', label: 'Settings', description: 'Providers, project profiles, permissions, integrations, and usage', action: openSettings },
+    { id: 'sessions', label: 'Sessions', description: 'Switch sessions or start a new one', action: () => run(sessions) },
+    { id: 'new', label: 'New session', description: 'Start with empty context; keep this session and its draft', action: () => { close(); run(() => controller.create(detail?.session.workspace ?? process.cwd())); } },
+    { id: 'rename', label: 'Rename session', action: () => prompt('Rename session', detail?.session.title ?? '', title => controller.configure({ title })) },
+    { id: 'mode', label: detail?.session.mode === 'plan' ? 'Switch to Build' : 'Switch to Plan', description: 'Plan investigates without changing project files', disabled: busy, action: () => { close(); run(() => controller.configure({ mode: detail?.session.mode === 'plan' ? 'build' : 'plan' })); } },
+    { id: 'queue', label: 'Queued messages', description: 'Pause, resume, or remove follow-ups', action: queue },
+    { id: 'steer', label: 'Send draft as steering', description: 'Guide the current response without starting another turn', disabled: !busy, action: () => { close(); run(() => send('steer')); } },
+    { id: 'stop', label: 'Stop response', disabled: !busy, action: () => { close(); run(() => controller.cancel()); } },
+    { id: 'undo', label: 'Undo last turn', disabled: busy || !detail?.history?.canUndo, description: detail?.history?.unavailableReason, action: () => setPanel(<HistoryConfirmation controller={controller} direction="undo" onClose={close}/>) },
+    { id: 'redo', label: 'Redo turn', disabled: busy || !detail?.history?.canRedo, action: () => setPanel(<HistoryConfirmation controller={controller} direction="redo" onClose={close}/>) },
+    { id: 'recover', label: 'Recover interrupted history', disabled: !detail?.history?.pendingRecovery, action: () => setPanel(<HistoryConfirmation controller={controller} direction="recover" onClose={close}/>) },
+    { id: 'thinking', label: 'Toggle thinking', action: () => { toggle('showThinking'); close(); } },
+    { id: 'actions', label: 'Toggle tool details', action: () => { toggle('toolDetails'); close(); } },
+    { id: 'refresh', label: 'Reconnect', description: 'Refresh the session without resending anything', action: () => { close(); run(() => controller.open(controller.sessionId)); } },
+    { id: 'quit', label: 'Quit Litespeed TUI', description: 'The server and running tasks keep working', action: onQuit },
+  ];
+  commands.sort((a, b) => COMMAND_ORDER.indexOf(a.id) - COMMAND_ORDER.indexOf(b.id));
+  const reserved = [...commands.map(item => item.id), 'help', 'exit', 'skill', 'clear', 'reset', ...projectCommands.map(item => item.name)];
+  const palette = () => menu('Commands', [...commands.map(item => ({ ...item, label: `${item.label}   /${item.id}` })), ...projectCommands.map(item => ({ id: `project:${item.name}`, label: `/${item.name}`, description: item.description, action: () => { controller.setDraft({ ...controller.getState().draft, text: `/${item.name} ` }); close(); } }))]);
+  const send = (kind: 'message' | 'queue' | 'steer' = 'message', content?: string) => controller.send(kind, content, skillInvocation(content ?? controller.getState().draft.text, skillCatalog, reserved));
+  const submit = () => {
+    if (state.pending) return;
+    const slash = parseSlash(controller.getState().draft.text);
+    if (slash?.name === 'steer' && slash.args) { run(() => send('steer', slash.args)); return; }
+    if (slash?.name === 'queue' && slash.args) { run(() => send('queue', slash.args)); return; }
+    if (slash?.name === 'attach' && slash.args) { controller.setDraft({ ...controller.getState().draft, text: '' }); run(() => attach(slash.args)); return; }
+    if (slash) {
+      if (slash.name === 'help') { controller.setDraft({ ...controller.getState().draft, text: '' }); palette(); return; }
+      const command = commands.find(item => item.id === (['clear','reset'].includes(slash.name) ? 'new' : slash.name === 'exit' ? 'quit' : slash.name === 'skill' ? 'skills' : slash.name));
+      if (command) {
+        if (command.disabled) { controller.notice('That action is unavailable while the current task is running or history is incomplete.'); return; }
+        controller.setDraft({ ...controller.getState().draft, text: '' }); command.action(); return;
+      }
+      run(() => send('message', expandProjectCommand(controller.getState().draft.text, projectCommands))); return;
+    }
+    run(() => send());
+  };
+  const setupSeen = useRef(new Set<string>());
+  useEffect(() => {
+    if (!detail || !state.settings || detail.messages.length || busy || setupSeen.current.has(detail.session.workspace) || !needsSetup(state.settings, detail.session)) return;
+    setupSeen.current.add(detail.session.workspace); openSetup(true);
+  }, [detail?.session.id, Boolean(state.settings)]);
+  useKeyboard(key => {
+    if (key.defaultPrevented) return;
+    if ((key.super || (key.ctrl && key.shift)) && key.name === 'c') { key.preventDefault(); key.stopPropagation(); copyResponse(); return; }
+    const exitMatch = parseBinding(config.keybinds.app_exit ?? KEYBIND_DEFAULTS.app_exit).some(binding => binding.steps.length === 1 && binding.steps[0] !== LEADER_TOKEN && strokeMatches(binding.steps[0], { name: key.name, ctrl: key.ctrl, shift: key.shift, meta: key.meta }));
+    if (key.ctrl && key.name === 'c' && exitMatch) {
+      key.preventDefault(); key.stopPropagation();
+      const now = Date.now();
+      if (now - lastCtrlC.current < 2000) onQuit(); else { lastCtrlC.current = now; controller.notice('Ctrl+C again to exit. Running tasks continue on the server.'); }
+      return;
+    }
+    if (panel || promptOverlay || key.name === 'escape' && suggestionsOpen) return;
+    if (key.ctrl && key.name === 'd' && controller.getState().draft.text) return;
+    if (key.meta && key.name === 'return' && busy && !permission && !question) { key.preventDefault(); key.stopPropagation(); run(() => send('steer')); return; }
+    const result = router.dispatch({ name: key.name, ctrl: key.ctrl, shift: key.shift, meta: key.meta });
+    if (result.preventDefault) { key.preventDefault(); key.stopPropagation(); }
+    if (result.pending) return;
+    if (result.command === 'prompt.paste') { run(() => pasteImage()); return; }
+    if (result.command === 'terminal.suspend') return suspendTerminal(renderer);
+    if (result.command === 'app.exit') return onQuit();
+    if (result.command === 'command.palette.show' || result.command === 'help.show') return palette();
+    if (result.command === 'session.interrupt' && busy) {
+      run(() => controller.interrupt());
+      return;
+    }
+    const command = commands.find(item => item.id === KEY_COMMANDS[result.command ?? '']);
+    if (command && !command.disabled) command.action();
+  });
+  const activeWorkers = detail?.delegations?.filter(task => task.status === 'running') ?? [];
+  const actor = activeWorkers.length > 1 ? `${activeWorkers.length} ${activeWorkers.every(task => task.role === 'expert') ? 'experts' : 'workers'}` : activeWorkers.length ? workerLabels(detail!).get(`${activeWorkers[0].parentMessageId}:${activeWorkers[0].toolCallId}`) || 'Research' : 'Driver';
+  const model = detail ? effectiveModel(detail.session) : null;
+  const modelSuffix = detail?.session.mode === 'build' && detail.session.architecture ? ` + ${architectureInfo(detail.session.architecture.kind).roles[0]?.id ?? 'specialists'}` : detail?.session.mode === 'plan' && detail.session.planner ? ' · planner' : '';
+  const modelWidth = Math.max(18, Math.floor((width - (busy ? 36 : 12)) / 2) - 4);
+  const modelName = terminalText(model?.model.split('/').at(-1) || 'Choose model');
+  const modelSpace = Math.max(1, modelWidth - modelSuffix.length);
+  const modelLabel = (modelName.length > modelSpace ? `${modelName.slice(0, modelSpace - 1)}…` : modelName) + modelSuffix;
+  const taskWidth = width >= 112 ? Math.min(44, Math.max(32, Math.floor(width / 4))) : 0;
+  return <WorkerInspectionContext.Provider value={task=>setPanel('childSessionId' in task?<WorkerInspector controller={controller} invocation={task} onClose={close}/>:<PendingTaskInspector controller={controller} task={task} onClose={close}/>)}><TranscriptSettingsProvider value={settings}><box width="100%" height="100%" flexDirection="column" backgroundColor={toHex(theme.background)}>
+    {detail ? <>
+      <box height={1} flexDirection="row" flexShrink={0}><Button onPress={() => run(sessions)}>{terminalText(detail.session.title || 'New session').slice(0, Math.max(10, Math.floor((width - (busy ? 36 : 12)) / 2) - 4))}</Button><Button disabled={Boolean(state.pending||detail?.history?.pendingRecovery)} onPress={() => run(openModels)}>{modelLabel}</Button><Button disabled={busy} onPress={() => run(() => controller.configure({ mode: detail.session.mode === 'plan' ? 'build' : 'plan' }))}>{detail.session.mode}</Button><box flexGrow={1} />{busy ? permission || question ? <text fg={toHex(theme.warning)}>waiting for you </text> : <><WorkingScanner color={toHex(theme.primary)} /><text fg={toHex(theme.textMuted)}>{` ${actor} `}</text><InterruptHint /></> : <text fg={toHex(theme.textMuted)}>idle </text>}</box>
+      {!taskWidth && <TaskProgress detail={detail} controller={controller} compact />}
+      <box flexDirection="row" flexGrow={1} minHeight={1}>
+        <Transcript controller={controller} detail={detail} width={width - taskWidth} active={!panel} onInspect={inspect} onUsage={showUsage} />
+        {taskWidth > 0 && <scrollbox width={taskWidth} flexShrink={0} border={['left']} borderColor={toHex(theme.border)}><TaskProgress detail={detail} controller={controller} /></scrollbox>}
+      </box>
+      {detail.history?.pendingRecovery && <box border borderColor={toHex(theme.warning)}><text fg={toHex(theme.warning)}>History needs recovery. Your draft is saved. </text><Button onPress={() => setPanel(<HistoryConfirmation controller={controller} direction="recover" onClose={close}/>)}>Recover history</Button></box>}
+      {detail.litefusion&&<box height={1}><Button tone="muted" onPress={()=>run(openModels)}>{liteFusionReadinessLabel(detail.litefusion)}</Button></box>}
+      {detail.session.pendingArchitecture&&<box height={1}><Button onPress={()=>run(openModels)}>{pendingArchitectureLabel(detail.session)}</Button></box>}
+      {detail.session.goal && ['active', 'blocked'].includes(detail.session.goal.status) && <box height={1} flexShrink={0}><Button onPress={() => setPanel(<GoalPanel controller={controller} onClose={close} />)}>{`Goal ${detail.session.goal.status} · ${goalTurnLabel(detail.session.goal.turns, detail.session.goal.maxTurns)} · ${terminalText(detail.session.goal.text).slice(0, Math.max(10, width - 36))}`}</Button></box>}
+      {detail.queue?.items.length ? <box flexDirection="column" flexShrink={0} paddingLeft={1} paddingRight={1}>
+        <box flexDirection="row" height={1}>
+          <Button tone="muted" onPress={queue}>{`${detail.queue.items.length} queued${detail.queue.paused ? ' · paused' : busy ? ' · Esc interrupts and sends next' : ' · next'}`}</Button>
+          {busy && !detail.queue.items[0].attachments?.length && <Button onPress={() => run(() => controller.steerQueued(detail.queue!.items[0].id))}>Steer now</Button>}
+        </box>
+        {detail.queue.items.slice(0, 3).map(item => <box key={item.id} height={1} backgroundColor={toHex(theme.backgroundElement)}><text fg={toHex(theme.textMuted)}>{terminalText(`› ${item.content || 'Attached context'}${item.attachments.length ? ` · ${item.attachments.length} attachment(s)` : ''}`).replace(/\s+/g, ' ').slice(0, Math.max(8, width - 4))}</text></box>)}
+        {detail.queue.items.length > 3 && <text height={1} fg={toHex(theme.textMuted)}>{`  +${detail.queue.items.length - 3} more · /queue to view all`}</text>}
+      </box> : null}
+      {state.draft.attachments.some((_, index) => !state.draft.inlineImages?.some(image => image.attachmentIndex === index)) && <text fg={toHex(theme.textMuted)}>{state.draft.attachments.filter((_, index) => !state.draft.inlineImages?.some(image => image.attachmentIndex === index)).map(item => `⌕ ${item.name}`).join('  ')}</text>}
+      {!panel && permission ? <PermissionPrompt key={permission.id} request={permission} controller={controller} onOverlayChange={setPromptOverlay} disabled={Boolean(state.pending)} /> : !panel && question ? <QuestionPrompt key={question.id} request={question} controller={controller} onOverlayChange={setPromptOverlay} disabled={Boolean(state.pending)} /> : <Composer key={controller.sessionId} editorRef={composerEditor} imagesRef={composerImages} onSuggestionsChange={setSuggestionsOpen} commands={[...commands.map(item => ({name:item.id, description:item.label})), {name:'help', description:'Browse all commands'}, ...projectCommands.filter(item => !commands.some(command => command.id === item.name)).map(item => ({name:item.name, description:item.description})), ...skillCommands(skills, reserved)]} controller={controller} focused={!panel} onSubmit={submit} onReference={prefix => setPanel(<FilePicker controller={controller} initialQuery={prefix} onClose={close} onPick={file => { const draft = controller.getState().draft; if (draft.attachments.length >= 10) { controller.notice('A message can have up to 10 attachments.'); return; } controller.setDraft({ ...draft, text: draft.text.replace(/@[^\s]*$/, ''), attachments: [...draft.attachments, { name: file.name, path: file.path }] }); close(); }} />)} />}
+    </> : state.sync.phase === 'error' ? <box flexGrow={1} justifyContent="center" alignItems="center" flexDirection="column"><text fg={toHex(theme.error)}>{state.sync.error}</text><Button onPress={() => run(() => controller.open(controller.sessionId))}>Reconnect</Button><Button onPress={palette}>Commands</Button></box> : <LoadingScreen />}
+    <UpdateNotice controller={controller} onRestart={() => { process.send?.({ type: 'litespeed-restart', sessionId: controller.sessionId }); onQuit(75); }} />
+    {(state.notice || pendingLeader || state.sync.connection === 'reconnecting') && <text height={1} flexShrink={0} paddingLeft={1} fg={toHex(theme.warning)}>{terminalText(pendingLeader ? 'Leader…' : state.notice || 'Reconnecting… Showing the last known state.').replace(/\s+/g, ' ').slice(0, width - 2)}</text>}
+    <Footer width={width} message={permission||question||!detail?[]:[
+      {id:'send',label:busy?'Queue':'Send',shortcut:shortcutLabel('input_submit',config.keybinds),onPress:submit,disabled:Boolean(panel||state.pending||!state.draft.text.trim()&&!state.draft.attachments.length)},
+      busy?{id:'steer',label:'Steer',shortcut:'Alt+Enter',onPress:()=>run(()=>send('steer')),disabled:Boolean(panel||state.pending||!state.draft.text.trim()||state.draft.attachments.length)}:{id:'newline',label:'New line',shortcut:shortcutLabel('input_newline',config.keybinds),optional:true,onPress:()=>{composerEditor.current?.insertText('\n');},disabled:Boolean(panel||state.pending)},
+    ]} session={[
+      {id:'commands',label:'Commands',shortcut:shortcutLabel('command_list',config.keybinds),onPress:palette},
+      {id:'permissions',label:'Permissions',shortcut:shortcutLabel('permissions_open',config.keybinds),onPress:permissions,disabled:!detail},
+      {id:'settings',label:'Settings',shortcut:shortcutLabel('settings_open',config.keybinds),onPress:openSettings},
+    ]}/>
+
+    {panel}
+  </box></TranscriptSettingsProvider></WorkerInspectionContext.Provider>;
+}
