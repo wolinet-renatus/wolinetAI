@@ -5,25 +5,31 @@
 
 # Configure Wolinet Sovereign AI Gateway (LiteLLM Proxy)
 provider add wolinet \
-  --type litellm \
+  --type openai-compat \
   --base-url "${LITELLM_BASE_URL:-http://127.0.0.1:4000/v1}" \
-  --api-key "${LITELLM_API_KEY:-sk-wolinet-admin-2026}"
+  --api-key "${LITELLM_API_KEY:-sk-wolinet-admin-2026}" \
+  --discover-models true
 
 # Register default models available on Wolinet Gateway
+# Model names map to the gateway model_list entries in gateway/config.yaml
 model add wolinet/wolinex-coder \
-  --name "Wolinet Sovereign Coder (Local GGUF)" \
+  --name "Wolinex Coder (Sovereign Local Coding Engine)" \
   --context-window 32768 \
   --default-max-tokens 8192
 
-model add wolinet/qwen2.5-coder-3b \
-  --name "Qwen 2.5 Coder 3B (Local GGUF)" \
+model add wolinet/wolinex-coder-pro \
+  --name "Wolinex Coder Pro (Sovereign Advanced Coding + Tool Calling)" \
   --context-window 32768 \
   --default-max-tokens 8192
 
-model add wolinet/deepseek-coder-1.3b \
-  --name "DeepSeek Coder 1.3B (Local Fast GGUF)" \
+model add wolinet/wolinex-coder-lite \
+  --name "Wolinex Coder Lite (Sovereign Fast Lightweight Coding)" \
   --context-window 16384 \
   --default-max-tokens 4096
+
+# Set active default models — large: full coder, small: lite (fast completions)
+model large wolinet/wolinex-coder
+model small wolinet/wolinex-coder-lite
 
 # Auto-allow non-destructive inspection tools
 permissions allow view ls grep

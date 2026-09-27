@@ -5,6 +5,7 @@ Interactive agentic coding assistant powered by Wolinet AI Platform.
 """
 
 import argparse
+import os
 import sys
 import time
 from rich.console import Console
@@ -16,15 +17,21 @@ from openai import OpenAI
 console = Console()
 
 
-def run_benchmark(endpoint: str, model: str, api_key: str = "sk-wolinet-admin-2026"):
+def run_benchmark(endpoint: str, model: str, api_key: str | None = None):
     """Run an instant speed, latency, and tokens/sec benchmark against the local model."""
+    resolved_key = (
+        api_key
+        or os.getenv("LITELLM_MASTER_KEY")
+        or os.getenv("WOLINET_GATEWAY_MASTER_KEY")
+        or "not-needed"
+    )
     console.print(Panel.fit(
         f"[bold cyan]⚡ Wolinet AI Performance Benchmark[/bold cyan]\n"
         f"Gateway: [yellow]{endpoint}[/yellow] | Model: [green]{model}[/green]",
         border_style="cyan"
     ))
 
-    client = OpenAI(base_url=endpoint, api_key=api_key)
+    client = OpenAI(base_url=endpoint, api_key=resolved_key)
 
     with console.status("[bold cyan]Pinging gateway and testing model latency...[/bold cyan]", spinner="dots"):
         t0 = time.time()
@@ -78,7 +85,9 @@ def main():
         "--model", "-m", type=str, default="wolinex-coder", help="Model name (default: wolinex-coder)"
     )
     parser.add_argument(
-        "--endpoint", "-e", type=str, default="http://localhost:4000/v1", help="Gateway endpoint"
+        "--endpoint", "-e", type=str,
+        default=os.getenv("LITELLM_BASE_URL", "http://localhost:4000/v1"),
+        help="Gateway endpoint (default: $LITELLM_BASE_URL or http://localhost:4000/v1)"
     )
     parser.add_argument(
         "--workspace", "-w", type=str, default=".", help="Target workspace path (default: current directory)"

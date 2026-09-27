@@ -33,10 +33,14 @@ class AgenticCoder:
             api_key
             or os.getenv("LITELLM_MASTER_KEY")
             or os.getenv("WOLINET_GATEWAY_MASTER_KEY")
-            or "sk-wolinet-admin-2026"
         )
-        self.client = OpenAI(base_url=base_url, api_key=resolved_key)
-        self.base_url = base_url
+        if not resolved_key:
+            raise EnvironmentError(
+                "No API key found. Set LITELLM_MASTER_KEY or WOLINET_GATEWAY_MASTER_KEY in your environment or .env file."
+            )
+        resolved_url = base_url or os.getenv("LITELLM_BASE_URL") or "http://localhost:4000/v1"
+        self.client = OpenAI(base_url=resolved_url, api_key=resolved_key)
+        self.base_url = resolved_url
         self.model = model
         self.workspace_root = os.path.abspath(workspace_root)
         self.max_iterations = max_iterations
