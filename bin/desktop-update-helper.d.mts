@@ -1,1 +1,0 @@
-export function replaceDesktop(job: { app: string; staged: string; release: any; id: string; device: number; inode: number }, launch: (app: string) => Promise<void>, validate?: (app: string, release: any) => Promise<void>): Promise<void>;

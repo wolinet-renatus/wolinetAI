@@ -1,88 +1,237 @@
-# Litespeed
+# Open WebUI 👋
 
-A local coding agent for your Mac, terminal, and browser, built around **multi-model workflows**. Use one model or combine a driver with sidekicks, workers, or experts. Follow their work, approve changes, and review the result in one conversation. Pairing models lets a faster, cheaper model handle routine work while a stronger model handles planning or difficult tasks, which can reduce cost and wait time.
+![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
+![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
+![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
+![GitHub repo size](https://img.shields.io/github/repo-size/open-webui/open-webui)
+![GitHub language count](https://img.shields.io/github/languages/count/open-webui/open-webui)
+![GitHub top language](https://img.shields.io/github/languages/top/open-webui/open-webui)
+![GitHub last commit](https://img.shields.io/github/last-commit/open-webui/open-webui?color=red)
+[![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
+[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
 
-Connect through LiteLLM, OpenAI-compatible APIs, native Anthropic, or ChatGPT device sign-in. Your project stays on your machine; prompts and selected context go to your chosen provider.
+![Open WebUI Banner](./banner.png)
 
-## Quick start
+**Open WebUI is an [extensible](https://docs.openwebui.com/features/extensibility/plugin), feature-rich, and user-friendly self-hosted AI platform designed to operate entirely offline.** It supports various LLM runners like **Ollama** and **OpenAI-compatible APIs**, with **built-in inference engine** for RAG, making it a **powerful AI deployment solution**.
 
-### Mac desktop app
+Passionate about open-source AI? [Join our team →](https://careers.openwebui.com/)
 
-**[Download Litespeed for Apple silicon Macs](https://github.com/BerriAI/litespeed/releases/download/desktop-v0.1.23-preview.3/Litespeed-0.1.23-darwin-arm64.dmg)** · macOS 14 or later
+![Open WebUI Demo](./demo.png)
 
-Open the downloaded disk image, drag **Litespeed** onto **Applications**, then open Litespeed from Applications. The app includes its runtimes and task browser. This is a locally signed desktop preview, not an Apple-notarized release; see the [installation instructions](docs/desktop-macos.md#download-and-install) if macOS blocks the first launch.
+> [!TIP]  
+> **Looking for an [Enterprise Plan](https://docs.openwebui.com/enterprise)?** – **[Speak with Our Sales Team Today!](https://docs.openwebui.com/enterprise)**
+>
+> Get **enhanced capabilities**, including **custom theming and branding**, **Service Level Agreement (SLA) support**, **Long-Term Support (LTS) versions**, and **more!**
 
-### Terminal
+For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
 
-Download the terminal package with its runtimes included—no Node or npm setup:
+## Key Features of Open WebUI ⭐
 
-```sh
-curl -fsSL https://github.com/BerriAI/litespeed/releases/latest/download/install.sh | sh
+- 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize or helm) for a hassle-free experience with support for both `:ollama` and `:cuda` tagged images.
+
+- 🤝 **Ollama/OpenAI API Integration**: Effortlessly integrate OpenAI-compatible APIs for versatile conversations alongside Ollama models. Customize the OpenAI API URL to link with **LMStudio, GroqCloud, Mistral, OpenRouter, and more**.
+
+- 🛡️ **Granular Permissions and User Groups**: By allowing administrators to create detailed user roles and permissions, we ensure a secure user environment. This granularity not only enhances security but also allows for customized user experiences, fostering a sense of ownership and responsibility amongst users.
+
+- 📱 **Responsive Design**: Enjoy a seamless experience across Desktop PC, Laptop, and Mobile devices.
+
+- 📱 **Progressive Web App (PWA) for Mobile**: Enjoy a native app-like experience on your mobile device with our PWA, providing offline access on localhost and a seamless user interface.
+
+- ✒️🔢 **Full Markdown and LaTeX Support**: Elevate your LLM experience with comprehensive Markdown and LaTeX capabilities for enriched interaction.
+
+- 🎤📹 **Hands-Free Voice/Video Call**: Experience seamless communication with integrated hands-free voice and video call features using multiple Speech-to-Text providers (Local Whisper, OpenAI, Deepgram, Azure) and Text-to-Speech engines (Azure, ElevenLabs, OpenAI, Transformers, WebAPI), allowing for dynamic and interactive chat environments.
+
+- 🛠️ **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through [Open WebUI Community](https://openwebui.com/) integration.
+
+- 🐍 **Native Python Function Calling Tool**: Enhance your LLMs with built-in code editor support in the tools workspace. Bring Your Own Function (BYOF) by simply adding your pure Python functions, enabling seamless integration with LLMs.
+
+- 💾 **Persistent Artifact Storage**: Built-in key-value storage API for artifacts, enabling features like journals, trackers, leaderboards, and collaborative tools with both personal and shared data scopes across sessions.
+
+- 📚 **Local RAG Integration**: Dive into the future of chat interactions with groundbreaking Retrieval Augmented Generation (RAG) support using your choice of 9 vector databases and multiple content extraction engines (Tika, Docling, Document Intelligence, Mistral OCR, PaddleOCR-vl, External loaders). Load documents directly into chat or add files to your document library, effortlessly accessing them using the `#` command before a query.
+
+- 🔍 **Web Search for RAG**: Perform web searches using 15+ providers including `SearXNG`, `Google PSE`, `Brave Search`, `Kagi`, `Mojeek`, `Tavily`, `Perplexity`, `serpstack`, `serper`, `Serply`, `DuckDuckGo`, `SearchApi`, `SerpApi`, `Bing`, `Jina`, `Exa`, `Sougou`, `Azure AI Search`, and `Ollama Cloud`, injecting results directly into your chat experience.
+
+- 🌐 **Web Browsing Capability**: Seamlessly integrate websites into your chat experience using the `#` command followed by a URL. This feature allows you to incorporate web content directly into your conversations, enhancing the richness and depth of your interactions.
+
+- 🎨 **Image Generation & Editing Integration**: Create and edit images using multiple engines including OpenAI's DALL-E, Gemini, ComfyUI (local), and AUTOMATIC1111 (local), with support for both generation and prompt-based editing workflows.
+
+- ⚙️ **Many Models Conversations**: Effortlessly engage with various models simultaneously, harnessing their unique strengths for optimal responses. Enhance your experience by leveraging a diverse set of models in parallel.
+
+- 🔐 **Role-Based Access Control (RBAC)**: Ensure secure access with restricted permissions; only authorized individuals can access your Ollama, and exclusive model creation/pulling rights are reserved for administrators.
+
+- 🗄️ **Flexible Database & Storage Options**: Choose from SQLite (with optional encryption), PostgreSQL, or configure cloud storage backends (S3, Google Cloud Storage, Azure Blob Storage) for scalable deployments.
+
+- 🔍 **Advanced Vector Database Support**: Select from 9 vector database options including ChromaDB, PGVector, Qdrant, Milvus, Elasticsearch, OpenSearch, Pinecone, S3Vector, and Oracle 23ai for optimal RAG performance.
+
+- 🔐 **Enterprise Authentication**: Full support for LDAP/Active Directory integration, SCIM 2.0 automated provisioning, and SSO via trusted headers alongside OAuth providers. Enterprise-grade user and group provisioning through SCIM 2.0 protocol, enabling seamless integration with identity providers like Okta, Azure AD, and Google Workspace for automated user lifecycle management.
+
+- ☁️ **Cloud-Native Integration**: Native support for Google Drive and OneDrive/SharePoint file picking, enabling seamless document import from enterprise cloud storage.
+
+- 📊 **Production Observability**: Built-in OpenTelemetry support for traces, metrics, and logs, enabling comprehensive monitoring with your existing observability stack.
+
+- ⚖️ **Horizontal Scalability**: Redis-backed session management and WebSocket support for multi-worker and multi-node deployments behind load balancers.
+
+- 🌐🌍 **Multilingual Support**: Experience Open WebUI in your preferred language with our internationalization (i18n) support. Join us in expanding our supported languages! We're actively seeking contributors!
+
+- 🧩 **Pipelines, Open WebUI Plugin Support**: Seamlessly integrate custom logic and Python libraries into Open WebUI using [Pipelines Plugin Framework](https://github.com/open-webui/pipelines). Launch your Pipelines instance, set the OpenAI URL to the Pipelines URL, and explore endless possibilities. [Examples](https://github.com/open-webui/pipelines/tree/main/examples) include **Function Calling**, User **Rate Limiting** to control access, **Usage Monitoring** with tools like Langfuse, **Live Translation with LibreTranslate** for multilingual support, **Toxic Message Filtering** and much more.
+
+- 🌟 **Continuous Updates**: We are committed to improving Open WebUI with regular updates, fixes, and new features.
+
+Want to learn more about Open WebUI's features? Check out our [Open WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
+
+---
+
+We are incredibly grateful for the generous support of our sponsors. Their contributions help us to maintain and improve our project, ensuring we can continue to deliver quality work to our community. Thank you!
+
+## How to Install 🚀
+
+### Installation via Python pip 🐍
+
+Open WebUI can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.11** to avoid compatibility issues.
+
+1. **Install Open WebUI**:
+   Open your terminal and run the following command to install Open WebUI:
+
+   ```bash
+   pip install open-webui
+   ```
+
+2. **Running Open WebUI**:
+   After installation, you can start Open WebUI by executing:
+
+   ```bash
+   open-webui serve
+   ```
+
+This will start the Open WebUI server, which you can access at [http://localhost:8080](http://localhost:8080)
+
+### Quick Start with Docker 🐳
+
+> [!NOTE]  
+> Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Open WebUI Documentation](https://docs.openwebui.com/) is ready to assist you.
+
+> [!WARNING]
+> When using Docker to install Open WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
+
+> [!TIP]  
+> If you wish to utilize Open WebUI with Ollama included or CUDA acceleration, we recommend utilizing our official images tagged with either `:cuda` or `:ollama`. To enable CUDA, you must install the [Nvidia CUDA container toolkit](https://docs.nvidia.com/dgx/nvidia-container-runtime-upgrade/) on your Linux/WSL system.
+
+### Installation with Default Configuration
+
+- **If Ollama is on your computer**, use this command:
+
+  ```bash
+  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+  ```
+
+- **If Ollama is on a Different Server**, use this command:
+
+  To connect to Ollama on another server, change the `OLLAMA_BASE_URL` to the server's URL:
+
+  ```bash
+  docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=https://example.com -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+  ```
+
+- **To run Open WebUI with Nvidia GPU support**, use this command:
+
+  ```bash
+  docker run -d -p 3000:8080 --gpus all --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:cuda
+  ```
+
+### Installation for OpenAI API Usage Only
+
+- **If you're only using OpenAI API**, use this command:
+
+  ```bash
+  docker run -d -p 3000:8080 -e OPENAI_API_KEY=your_secret_key -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+  ```
+
+### Installing Open WebUI with Bundled Ollama Support
+
+This installation method uses a single container image that bundles Open WebUI with Ollama, allowing for a streamlined setup via a single command. Choose the appropriate command based on your hardware setup:
+
+- **With GPU Support**:
+  Utilize GPU resources by running the following command:
+
+  ```bash
+  docker run -d -p 3000:8080 --gpus=all -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
+  ```
+
+- **For CPU Only**:
+  If you're not using a GPU, use this command instead:
+
+  ```bash
+  docker run -d -p 3000:8080 -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
+  ```
+
+Both commands facilitate a built-in, hassle-free installation of both Open WebUI and Ollama, ensuring that you can get everything up and running swiftly.
+
+After installation, you can access Open WebUI at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
+
+### Other Installation Methods
+
+We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
+
+### Troubleshooting
+
+Encountering connection issues? Our [Open WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Open WebUI Discord](https://discord.gg/5rJgQTnV4s).
+
+#### Open WebUI: Server Connection Error
+
+If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
+
+**Example Docker Command**:
+
+```bash
+docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:main
 ```
 
-Open a **new terminal**, then run it from **the project you want to work on**:
+### Keeping Your Docker Installation Up-to-Date
 
-```sh
-cd /path/to/your/project
-litespeed
+Check our Updating Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/updating).
+
+### Using the Dev Branch 🌙
+
+> [!WARNING]
+> The `:dev` branch contains the latest unstable features and changes. Use it at your own risk as it may have bugs or incomplete features.
+
+If you want to try out the latest bleeding-edge features and are okay with occasional instability, you can use the `:dev` tag like this:
+
+```bash
+docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui --add-host=host.docker.internal:host-gateway --restart always ghcr.io/open-webui/open-webui:dev
 ```
 
-The installer sets up the `litespeed` command for new terminal windows (zsh or Bash). If you use the same terminal window where you installed it, run `export PATH="$HOME/.local/bin:$PATH"` first.
+### Offline Mode
 
-Litespeed starts its local backend automatically. Updates appear in both UIs, or run `litespeed update`. Saved sessions and settings stay outside the application package.
+If you are running Open WebUI in an offline environment, you can set the `HF_HUB_OFFLINE` environment variable to `1` to prevent attempts to download models from the internet.
 
-See [installation, updates, and the source-build alternative](docs/installing.md). Packages support Apple silicon and Intel Macs. Git and your project's development tools remain separate.
+```bash
+export HF_HUB_OFFLINE=1
+```
 
-Litespeed has its own command, separate from the [LiteLLM gateway CLI](https://docs.litellm.ai/docs/proxy/management_cli). If you used an earlier version of this agent, follow the [upgrade guide](docs/upgrading.md) to carry over saved sessions and configuration.
+## What's Next? 🌟
 
-1. On your first launch, connect your **LiteLLM gateway base URL** and **API key**, then review your ready-to-use **Sidekick Fusion** setup with **Shunt off**. Litespeed picks the latest available driver in this order: **Astra → Fable → Opus → Sol**; the sidekick uses **Sol → Opus → Sonnet**. If none are available, it asks you to choose a model. Every setting is editable, including **Single model** and experimental **LiteFusion**. Litespeed remembers your choices; running `litespeed` in another project opens chat directly. Gateways that do not require a key can leave it blank.
-2. Use **Models** or `/models` to change your arrangement. **Ask first** is the default. Handoffs run automatically; choose **Allow project edits** for routine coding or **Allow all tools** in permissions or on any routine approval prompt. The full setup is available from the web sidebar or `/setup`. If you already use Claude Code or Codex skills, /skills (or **Settings → Project profiles**) offers **Import a Claude/Codex skill…** to copy one into the project — see [Project profiles and skills](docs/profiles.md).
-3. Type a task. **Build** can edit files and run commands; **Plan** uses read-only tools. Type `/` for command suggestions in either client; use **↑/↓**, **Tab** or **Enter** to complete, and **Esc** to dismiss. **Ctrl+P** opens terminal commands and navigation.
+Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
 
-See the [terminal guide](docs/tui.md) for shortcuts, resuming sessions, and configuration.
+## License 📜
 
-## Mac desktop app
+This project contains code under multiple licenses. The current codebase includes components licensed under the Open WebUI License with an additional requirement to preserve the "Open WebUI" branding, as well as prior contributions under their respective original licenses. For a detailed record of license changes and the applicable terms for each section of the code, please refer to [LICENSE_HISTORY](./LICENSE_HISTORY). For complete and updated licensing details, please see the [LICENSE](./LICENSE) and [LICENSE_HISTORY](./LICENSE_HISTORY) files.
 
-The desktop build puts projects and tasks on the left, with persistent files, review, browser, and computer views beside the conversation. It can import your existing Litespeed settings and saved tasks into its own local data.
+## Support 💬
 
-See the [desktop app guide](docs/desktop-status.md) for opening the portable app, available workflows, shortcuts, and current limits. [Build and packaging details](docs/desktop-macos.md) cover the native Mac shell and bundled runtime. The [desktop preview](https://github.com/BerriAI/litespeed/releases/tag/desktop-v0.1.23-preview.3) is available for Apple silicon Macs.
+If you have any questions, suggestions, or need assistance, please open an issue or join our
+[Open WebUI Discord community](https://discord.gg/5rJgQTnV4s) to connect with us! 🤝
 
-## Prefer the browser?
+## Star History
 
-Once Litespeed is running, open **http://localhost:3210**. The browser and terminal share saved sessions, providers, and model settings.
+<a href="https://star-history.com/#open-webui/open-webui&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
+  </picture>
+</a>
 
-For a web-only session, run `litespeed serve`. For development, use `npm run dev` from the checkout. See [development and updating](docs/development.md).
+---
 
-## Choose how models work together
-
-| Architecture | How it works |
-| --- | --- |
-| **Single model** | One model investigates, implements, and checks the task. |
-| **Sidekick Fusion** · Recommended | A strong driver plans and reviews; a cheaper sidekick keeps context across handoffs. |
-| **LiteFusion** · Experimental | One persistent lead routes 63 task categories to specific models and reasoning levels, with one shared hard/escalation map. |
-| **Team Fusion** | A strong driver assigns fresh cheaper workers, runs independent work in parallel, and verifies the combined result. |
-| **Expert Fusion** | A cheaper driver coordinates fresh strong experts and verifies their work. Independent assignments can run in parallel. |
-
-Choose any connected model for each role. An optional **Planner model** handles Plan mode separately. Litespeed uses your last chosen model arrangement for new sessions across workspaces; existing sessions keep their settings. Cost and quality depend on the models and task. See [architecture details and limits](docs/architectures.md).
-
-## Additional options
-
-**Shunt** sends large reads and routine generation to a separate model. Off by default; enable it in **Advanced settings** during setup or in Models, in either client. [How it works and measured results](docs/shunt.md).
-
-**Session goals** (`/goal`) keep an objective moving across turns. There is no turn limit unless you set one. [Context compaction](docs/context-management.md) makes room during long tasks automatically.
-
-## Guides
-
-- [Using Litespeed](docs/usage.md): queue follow-ups, steer a response, answer questions, manage context, and customize projects.
-- [Providers](docs/providers.md) · [CLI and scripting](docs/cli.md) · [Terminal controls](docs/tui.md)
-- [Permissions](docs/permissions.md) · [Undo/redo, recovery, and local data](docs/local-data.md)
-- [Project profiles and skills](docs/profiles.md) · [MCP connections](docs/mcp.md) · [Hooks and plugins](docs/design-hooks-plugins.md)
-- [Context management and harness comparison](docs/context-management.md) · [Concurrent tasks](docs/concurrency.md)
-- [Agent memory](docs/memory.md) · [History search](docs/search.md) · [Research tasks](docs/delegation.md)
-- [Feature coverage and known gaps](docs/coverage.md) · [Development and tests](docs/development.md)
-
-Unrestricted commands run with your local user’s capabilities. Optional [workspace command confinement](docs/permissions.md#command-confinement) restricts model-initiated commands; permissions alone are not a sandbox. Keep the server local. Provider keys stay server-side, and provider usage may incur charges.
-
-## License
-
-Litespeed is licensed under [Apache-2.0](LICENSE). Bundled themes and fonts retain their original licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).
+Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make Open WebUI even more amazing together! 💪
