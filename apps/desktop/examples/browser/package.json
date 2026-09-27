@@ -14,20 +14,20 @@
           "ai-features.openAiOfficial.allowEnvironmentApiKey": true,
           "ai-features.openAiCustom.customOpenAiModels": [
             {
-              "id": "qwen2.5-coder",
-              "model": "qwen2.5-coder",
+              "id": "wolinex-coder",
+              "model": "wolinex-coder",
+              "url": "http://127.0.0.1:4000/v1",
+              "apiKey": "sk-wolinet-admin-2026"
+            },
+            {
+              "id": "wolinex-coder-lite",
+              "model": "wolinex-coder-lite",
               "url": "http://127.0.0.1:4000/v1",
               "apiKey": "sk-wolinet-admin-2026"
             },
             {
               "id": "deepseek-r1",
               "model": "deepseek-r1",
-              "url": "http://127.0.0.1:4000/v1",
-              "apiKey": "sk-wolinet-admin-2026"
-            },
-            {
-              "id": "wolinex-general",
-              "model": "wolinex-general",
               "url": "http://127.0.0.1:4000/v1",
               "apiKey": "sk-wolinet-admin-2026"
             }
