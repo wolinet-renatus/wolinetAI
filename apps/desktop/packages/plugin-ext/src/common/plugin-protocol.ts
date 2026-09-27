@@ -1,0 +1,676 @@
+// *****************************************************************************
+// Copyright (C) 2018 Red Hat, Inc. and others.
+//
+// This program and the accompanying materials are made available under the
+// terms of the Eclipse Public License v. 2.0 which is available at
+// http://www.eclipse.org/legal/epl-2.0.
+//
+// This Source Code may also be made available under the following Secondary
+// Licenses when the conditions for such availability set forth in the Eclipse
+// Public License v. 2.0 are satisfied: GNU General Public License, version 2
+// with the GNU Classpath Exception which is available at
+// https://www.gnu.org/software/classpath/license.html.
+//
+// SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0
+// *****************************************************************************
+import { RpcServer } from '@theia/core/lib/common/messaging/proxy-factory';
+import { RPCProtocol } from './rpc-protocol';
+import { Disposable } from '@theia/core/lib/common/disposable';
+import { LogPart, KeysToAnyValues, KeysToKeysToAnyValue } from './types';
+import { PluginAPIFactory, Plugin } from './plugin-api-rpc';
+import { ExtPluginApi } from './plugin-ext-api-contribution';
+import { ProblemMatcherContribution, ProblemPatternContribution, TaskDefinition } from '@theia/task/lib/common';
+import { ColorDefinition } from '@theia/core/lib/common/color';
+import { ResourceLabelFormatter } from '@theia/core/lib/common/label-protocol';
+import { PreferenceSchema } from '@theia/core';
+import { PluginIdentifiers } from './plugin-identifiers';
+import {
+    getPluginId,
+    toPluginUrl as toPluginUrlFromUtils
+} from '@theia/plugin-utils/lib/common/plugin-model';
+import {
+    PLUGIN_HOST_BACKEND,
+    PLUGIN_HOST_FRONTEND,
+    PluginEntryPoint,
+    PluginLifecycle,
+    PluginManifest,
+    PluginMetadata,
+    PluginModel,
+    PluginPackageCapabilities,
+    PluginType,
+    DeployedPlugin as DeployedPluginBase,
+} from '@theia/plugin-utils/lib/common/manifest-types';
+import {
+    AutoClosingPair,
+    AutoClosingPairConditional,
+    CustomEditorPriority,
+    CustomEditorSelector,
+    EnterAction,
+    FoldingMarkers,
+    FoldingRules,
+    IndentationRules,
+    OnEnterRule,
+    PluginColorContribution,
+    PluginIconContribution,
+    PluginIconThemeContribution,
+    PluginJsonValidationContribution,
+    PluginManifestContribution,
+    PluginNotebookRendererContribution,
+    PluginPackageAuthenticationProvider,
+    PluginPackageCommand,
+    PluginPackageCustomEditor,
+    PluginPackageDebuggersContribution,
+    PluginPackageGrammarsContribution,
+    PluginPackageKeybinding,
+    PluginPackageLanguageContribution,
+    PluginPackageLanguageContributionConfiguration,
+    PluginPackageLanguageModelToolContribution,
+    PluginPackageLocalization,
+    PluginPackageMcpServerDefinitionProviderContribution,
+    PluginPackageMenu,
+    PluginPackageNotebook,
+    PluginPackageNotebookPreload,
+    PluginPackageSnippetsContribution,
+    PluginPackageSubmenu,
+    PluginPackageTerminal,
+    PluginPackageTerminalProfile,
+    PluginPackageTranslation,
+    PluginPackageView,
+    PluginPackageViewContainer,
+    PluginPackageViewWelcome,
+    PluginPackageWalkthrough,
+    PluginPackageWalkthroughStep,
+    PluginPackageWalkthroughStepMedia,
+    PluginTaskDefinitionContribution,
+    PluginThemeContribution,
+    PluginUiTheme,
+    PluginViewType,
+    PlatformSpecificAdapterContribution,
+    RegExpOptions,
+    ScopeMap,
+    type GrammarsContribution,
+    type IconUrl,
+    type JSONObject,
+    type NormalizedCommand,
+    type NormalizedCustomEditor,
+    type NormalizedIcon,
+    type NormalizedIconTheme,
+    type NormalizedKeybinding,
+    type NormalizedLanguage,
+    type NormalizedLanguageConfiguration,
+    type NormalizedLocalization,
+    type NormalizedPluginContribution,
+    type NormalizedSnippet,
+    type NormalizedSubmenu,
+    type NormalizedTerminalProfile,
+    type NormalizedTheme,
+    type NormalizedTranslation,
+    type NormalizedViewContainer,
+    type NormalizedViewWelcome,
+    type WalkthroughContribution,
+    type WalkthroughStepContribution,
+    type WalkthroughStepMedia,
+} from '@theia/plugin-utils/lib/common/contribution-types';
+
+export { PluginIdentifiers };
+export { getPluginId };
+export { toPluginUrlFromUtils as toPluginUrl };
+export {
+    PLUGIN_HOST_BACKEND,
+    PLUGIN_HOST_FRONTEND,
+    PluginEntryPoint,
+    PluginLifecycle,
+    PluginManifest,
+    PluginModel,
+    PluginPackageCapabilities,
+    PluginMetadata,
+    PluginType
+};
+export const hostedServicePath = '/services/hostedPlugin';
+
+/**
+ * Plugin engine (API) type, i.e. 'theiaPlugin', 'vscode', 'theiaHeadlessPlugin', etc.
+ */
+export type PluginEngine = string;
+
+/**
+ * Loaded plugin package with stricter fields used by `@theia/plugin-ext`.
+ */
+export interface PluginPackage extends PluginManifest {
+    // The publisher is not guaranteed to be defined for unpublished plugins. https://github.com/microsoft/vscode-vsce/commit/a38657ece04c20e4fbde15d5ac1ed39ca51cb856
+    publisher: string | undefined;
+    engines: {
+        [type in PluginEngine]: string;
+    };
+    displayName: string;
+    description: string;
+    contributes?: PluginPackageContribution;
+}
+export namespace PluginPackage {
+    export const toPluginUrl = toPluginUrlFromUtils;
+}
+
+export {
+    AutoClosingPair,
+    AutoClosingPairConditional,
+    CustomEditorPriority,
+    CustomEditorSelector,
+    EnterAction,
+    FoldingMarkers,
+    FoldingRules,
+    type GrammarsContribution,
+    IndentationRules,
+    OnEnterRule,
+    PluginColorContribution,
+    PluginIconContribution,
+    PluginIconThemeContribution,
+    PluginJsonValidationContribution,
+    PluginManifestContribution,
+    PluginNotebookRendererContribution,
+    PluginPackageAuthenticationProvider,
+    PluginPackageCommand,
+    PluginPackageCustomEditor,
+    PluginPackageDebuggersContribution,
+    PluginPackageGrammarsContribution,
+    PluginPackageKeybinding,
+    PluginPackageLanguageContribution,
+    PluginPackageLanguageContributionConfiguration,
+    PluginPackageLanguageModelToolContribution,
+    PluginPackageLocalization,
+    PluginPackageMcpServerDefinitionProviderContribution,
+    PluginPackageMenu,
+    PluginPackageNotebook,
+    PluginPackageNotebookPreload,
+    PluginPackageSnippetsContribution,
+    PluginPackageSubmenu,
+    PluginPackageTerminal,
+    PluginPackageTerminalProfile,
+    PluginPackageTranslation,
+    PluginPackageView,
+    PluginPackageViewContainer,
+    PluginPackageViewWelcome,
+    PluginPackageWalkthrough,
+    PluginPackageWalkthroughStep,
+    PluginPackageWalkthroughStepMedia,
+    PluginTaskDefinitionContribution,
+    PluginThemeContribution,
+    PluginUiTheme,
+    PluginViewType,
+    PlatformSpecificAdapterContribution,
+    RegExpOptions,
+    ScopeMap,
+    type IconUrl,
+    type JSONObject,
+    type WalkthroughContribution,
+    type WalkthroughStepContribution,
+    type WalkthroughStepMedia,
+};
+
+/**
+ * Strict `contributes` typing for scanned plugin packages.
+ */
+export interface PluginPackageContribution extends PluginManifestContribution {
+    problemMatchers?: PluginProblemMatcherContribution[];
+    problemPatterns?: PluginProblemPatternContribution[];
+    resourceLabelFormatters?: ResourceLabelFormatter[];
+}
+
+export interface PluginProblemMatcherContribution extends ProblemMatcherContribution {
+    name: string;
+}
+
+export interface PluginProblemPatternContribution extends ProblemPatternContribution {
+    name: string;
+}
+
+export const PluginScanner = Symbol('PluginScanner');
+/**
+ * This scanner process package.json object and returns plugin metadata objects.
+ */
+export interface PluginScanner {
+    /**
+     * The type of plugin's API (engine name)
+     */
+    apiType: PluginEngine;
+
+    /**
+     * Creates plugin's model.
+     *
+     * @param {PluginPackage} plugin
+     * @returns {PluginModel}
+     */
+    getModel(plugin: PluginPackage): PluginModel;
+
+    /**
+     * Creates plugin's lifecycle.
+     *
+     * @returns {PluginLifecycle}
+     */
+    getLifecycle(plugin: PluginPackage): PluginLifecycle;
+
+    getContribution(plugin: PluginPackage): Promise<PluginContribution | undefined>;
+
+    /**
+     * A mapping between a dependency as its defined in package.json
+     * and its deployable form, e.g. `publisher.name` -> `vscode:extension/publisher.name`
+     */
+    getDependencies(plugin: PluginPackage): Map<string, string> | undefined;
+}
+
+/**
+ * A plugin resolver is handling how to resolve a plugin link into a local resource.
+ */
+export const PluginDeployerResolver = Symbol('PluginDeployerResolver');
+/**
+ * A resolver handle a set of resource
+ */
+export interface PluginDeployerResolver {
+
+    init?(pluginDeployerResolverInit: PluginDeployerResolverInit): void;
+
+    accept(pluginSourceId: string): boolean;
+
+    resolve(pluginResolverContext: PluginDeployerResolverContext, options?: PluginDeployOptions): Promise<void>;
+
+}
+
+export const PluginDeployerDirectoryHandler = Symbol('PluginDeployerDirectoryHandler');
+export interface PluginDeployerDirectoryHandler {
+    accept(pluginDeployerEntry: PluginDeployerEntry): Promise<boolean>;
+
+    handle(context: PluginDeployerDirectoryHandlerContext): Promise<void>;
+}
+
+export const PluginDeployerFileHandler = Symbol('PluginDeployerFileHandler');
+export interface PluginDeployerFileHandler {
+
+    accept(pluginDeployerEntry: PluginDeployerEntry): Promise<boolean>;
+
+    handle(context: PluginDeployerFileHandlerContext): Promise<void>;
+}
+
+export interface PluginDeployerResolverInit {
+
+}
+
+export interface PluginDeployerResolverContext {
+
+    addPlugin(pluginId: string, path: string): void;
+
+    getPlugins(): PluginDeployerEntry[];
+
+    getOriginId(): string;
+
+}
+
+export interface PluginDeployerStartContext {
+    readonly userEntries: string[]
+    readonly systemEntries: string[]
+}
+
+export const PluginDeployer = Symbol('PluginDeployer');
+export interface PluginDeployer {
+
+    start(): Promise<void>;
+
+}
+
+export const PluginDeployerParticipant = Symbol('PluginDeployerParticipant');
+/**
+ * A participant can hook into the plugin deployer lifecycle.
+ */
+export interface PluginDeployerParticipant {
+    onWillStart?(context: PluginDeployerStartContext): Promise<void>;
+}
+
+export enum PluginDeployerEntryType {
+
+    FRONTEND,
+
+    BACKEND,
+
+    HEADLESS // Deployed in the Theia Node server outside the context of a frontend/backend connection
+}
+
+export interface UnresolvedPluginEntry {
+    id: string;
+    type?: PluginType;
+}
+
+export interface PluginDeployerEntry {
+
+    /**
+     * ID (before any resolution)
+     */
+    id(): string;
+
+    /**
+     * Original resolved path
+     */
+    originalPath(): string;
+
+    /**
+     * Local path on the filesystem.
+     */
+    path(): string;
+
+    /**
+     * Get a specific entry
+     */
+    getValue<T>(key: string): T;
+
+    /**
+     * Store a value
+     */
+    storeValue<T>(key: string, value: T): void;
+
+    /**
+     * Update path
+     */
+    updatePath(newPath: string): void;
+
+    getChanges(): string[];
+
+    isFile(): Promise<boolean>;
+
+    isDirectory(): Promise<boolean>;
+
+    /**
+     * Resolved if a resolver has handle this plugin
+     */
+    isResolved(): boolean;
+
+    resolvedBy(): string;
+
+    /**
+     * Accepted when a handler is telling this location can go live
+     */
+    isAccepted(...types: PluginDeployerEntryType[]): boolean;
+
+    accept(...types: PluginDeployerEntryType[]): void;
+
+    hasError(): boolean;
+
+    type: PluginType
+    /**
+     * A fs path to a directory where a plugin is located.
+     * Depending on a plugin format it can be different from `path`.
+     * Use `path` if you want to resolve something within a plugin, like `README.md` file.
+     * Use `rootPath` if you want to manipulate the entire plugin location, like delete or move it.
+     */
+    rootPath: string
+}
+
+export interface PluginDeployerFileHandlerContext {
+
+    unzip(sourcePath: string, destPath: string): Promise<void>;
+
+    pluginEntry(): PluginDeployerEntry;
+
+}
+
+export interface PluginDeployerDirectoryHandlerContext {
+
+    copy(origin: string, target: string): Promise<void>;
+
+    pluginEntry(): PluginDeployerEntry;
+
+}
+
+/**
+ * Static plugin contributions after normalization.
+ * Narrows shim/`unknown` fields from {@link NormalizedPluginContribution} to core/task types.
+ */
+export type PluginContribution = Omit<NormalizedPluginContribution,
+    'configuration' | 'colors' | 'taskDefinitions' | 'problemMatchers' | 'problemPatterns' | 'resourceLabelFormatters'
+> & {
+    configuration?: PreferenceSchema[];
+    colors?: ColorDefinition[];
+    taskDefinitions?: TaskDefinition[];
+    problemMatchers?: ProblemMatcherContribution[];
+    problemPatterns?: ProblemPatternContribution[];
+    resourceLabelFormatters?: ResourceLabelFormatter[];
+};
+
+export type NotebookContribution = PluginPackageNotebook;
+
+export type NotebookRendererContribution = PluginNotebookRendererContribution;
+
+export type notebookPreloadContribution = PluginPackageNotebookPreload;
+
+export type AuthenticationProviderInformation = PluginPackageAuthenticationProvider;
+
+export type TerminalProfile = NormalizedTerminalProfile;
+
+export type Localization = NormalizedLocalization;
+
+export type Translation = NormalizedTranslation;
+
+export type SnippetContribution = NormalizedSnippet;
+
+export type UiTheme = PluginUiTheme;
+
+export type ThemeContribution = NormalizedTheme;
+
+export type IconThemeContribution = NormalizedIconTheme;
+
+export type IconDefinition = Extract<NormalizedIcon['defaults'], { fontCharacter: string }>;
+
+export type IconDefaults = NormalizedIcon['defaults'];
+
+export type IconContribution = NormalizedIcon;
+
+export namespace IconContribution {
+    export function isIconDefinition(defaults: IconDefaults): defaults is IconDefinition {
+        return 'fontCharacter' in defaults;
+    }
+}
+
+/**
+ * The language contribution
+ */
+export type LanguageContribution = NormalizedLanguage;
+
+export type LanguageConfiguration = NormalizedLanguageConfiguration;
+
+export type DebuggerContribution = PluginPackageDebuggersContribution;
+
+/**
+ * Custom Editors contribution
+ */
+export type CustomEditor = NormalizedCustomEditor;
+
+/**
+ * Views Containers contribution
+ */
+export type ViewContainer = NormalizedViewContainer;
+
+/**
+ * View contribution
+ */
+export type View = PluginPackageView;
+
+/**
+ * View Welcome contribution
+ */
+export type ViewWelcome = NormalizedViewWelcome;
+
+export type PluginCommand = NormalizedCommand;
+
+/**
+ * Menu contribution
+ */
+export type Menu = PluginPackageMenu;
+
+export type Submenu = NormalizedSubmenu;
+
+/**
+ * Keybinding contribution
+ */
+export type Keybinding = NormalizedKeybinding;
+
+/**
+ * The export function of initialization module of backend plugin.
+ */
+export interface BackendInitializationFn {
+    (apiFactory: PluginAPIFactory, plugin: Plugin): void;
+}
+
+export interface BackendLoadingFn {
+    (rpc: RPCProtocol, plugin: Plugin): void;
+}
+
+export interface PluginContext {
+    subscriptions: Disposable[];
+}
+
+export interface ExtensionContext {
+    subscriptions: Disposable[];
+}
+
+export const MetadataProcessor = Symbol('MetadataProcessor');
+export interface MetadataProcessor {
+    process(pluginMetadata: PluginMetadata): void;
+}
+
+export const HostedPluginClient = Symbol('HostedPluginClient');
+export interface HostedPluginClient {
+    postMessage(pluginHost: string, buffer: Uint8Array): Promise<void>;
+
+    log(logPart: LogPart): void;
+
+    onDidDeploy(): void;
+}
+
+export interface PluginDependencies {
+    metadata: PluginMetadata
+    /**
+     * Actual listing of plugin dependencies.
+     * Mapping from {@link PluginIdentifiers.UnversionedId external representation} of plugin identity to a string
+     * that can be used to identify the resolver for the specific plugin case, e.g. with scheme `vscode://<id>`.
+     */
+    mapping?: Map<string, string>
+}
+
+export const PluginDeployerHandler = Symbol('PluginDeployerHandler');
+export interface PluginDeployerHandler {
+    /**
+     * May be called concurrently with {@link deployBackendPlugins}. Implementations must ensure
+     * the two calls can run in parallel.
+     */
+    deployFrontendPlugins(frontendPlugins: PluginDeployerEntry[]): Promise<number | undefined>;
+    /**
+     * May be called concurrently with {@link deployFrontendPlugins}. Implementations must ensure
+     * the two calls can run in parallel.
+     */
+    deployBackendPlugins(backendPlugins: PluginDeployerEntry[]): Promise<number | undefined>;
+    getDeployedPluginIds(): Promise<readonly PluginIdentifiers.VersionedId[]>;
+
+    getDeployedPlugins(): Promise<DeployedPlugin[]>;
+    getDeployedPluginsById(pluginId: string): DeployedPlugin[];
+
+    getDeployedPlugin(pluginId: PluginIdentifiers.VersionedId): DeployedPlugin | undefined;
+    /**
+     * Removes the plugin from the location it originally resided on disk.
+     * Unless `--uncompressed-plugins-in-place` is passed to the CLI, this operation is safe.
+     */
+    uninstallPlugin(pluginId: PluginIdentifiers.VersionedId): Promise<boolean>;
+
+    /**
+     * Removes the plugin from the locations to which it had been deployed.
+     * This operation is not safe - references to deleted assets may remain.
+     */
+    undeployPlugin(pluginId: PluginIdentifiers.VersionedId): Promise<boolean>;
+
+    getPluginDependencies(pluginToBeInstalled: PluginDeployerEntry): Promise<PluginDependencies | undefined>;
+
+    /**
+     * Marks the given plugins as "disabled". While the plugin remains installed, it will no longer
+     * be used. Has no effect if the plugin is not installed
+     * @param pluginId the plugin to disable
+     * @returns whether the plugin was installed, enabled and could be disabled
+     */
+    disablePlugin(pluginId: PluginIdentifiers.UnversionedId): Promise<boolean>;
+
+    /**
+     * Marks the given plugins as "enabled". Has no effect if the plugin is not installed.
+     * @param pluginId the plugin to enabled
+     * @returns whether the plugin was installed, disabled and could be enabled
+     */
+    enablePlugin(pluginId: PluginIdentifiers.UnversionedId): Promise<boolean>;
+
+}
+
+export type DeployedPlugin = DeployedPluginBase<PluginContribution>;
+
+export const HostedPluginServer = Symbol('HostedPluginServer');
+export interface HostedPluginServer extends RpcServer<HostedPluginClient> {
+
+    getDeployedPluginIds(): Promise<PluginIdentifiers.VersionedId[]>;
+
+    getInstalledPluginIds(): Promise<PluginIdentifiers.VersionedId[]>;
+
+    getUninstalledPluginIds(): Promise<readonly PluginIdentifiers.VersionedId[]>;
+
+    getDisabledPluginIds(): Promise<readonly PluginIdentifiers.UnversionedId[]>;
+
+    getDeployedPlugins(ids: PluginIdentifiers.VersionedId[]): Promise<DeployedPlugin[]>;
+
+    getExtPluginAPI(): Promise<ExtPluginApi[]>;
+
+    onMessage(targetHost: string, message: Uint8Array): Promise<void>;
+
+}
+
+export interface WorkspaceStorageKind {
+    workspace?: string | undefined;
+    roots: string[];
+}
+export type GlobalStorageKind = undefined;
+export type PluginStorageKind = GlobalStorageKind | WorkspaceStorageKind;
+
+export interface PluginDeployOptions {
+    version: string;
+    /** Instructs the deployer to ignore any existing plugins with different versions */
+    ignoreOtherVersions?: boolean;
+}
+
+export const pluginServerJsonRpcPath = '/services/plugin-ext';
+export const PluginServer = Symbol('PluginServer');
+export interface PluginServer {
+
+    /**
+     * Deploy a plugin.
+     *
+     * @param type whether a plugin is installed by a system or a user, defaults to a user
+     */
+    install(pluginEntry: string, type?: PluginType, options?: PluginDeployOptions): Promise<void>;
+    uninstall(pluginId: PluginIdentifiers.VersionedId): Promise<void>;
+
+    enablePlugin(pluginId: PluginIdentifiers.UnversionedId): Promise<boolean>;
+    disablePlugin(pluginId: PluginIdentifiers.UnversionedId): Promise<boolean>;
+
+    getInstalledPlugins(): Promise<readonly PluginIdentifiers.VersionedId[]>;
+    getUninstalledPlugins(): Promise<readonly PluginIdentifiers.VersionedId[]>;
+    getDisabledPlugins(): Promise<readonly PluginIdentifiers.UnversionedId[]>;
+
+    setStorageValue(key: string, value: KeysToAnyValues, kind: PluginStorageKind): Promise<boolean>;
+    getStorageValue(key: string, kind: PluginStorageKind): Promise<KeysToAnyValues>;
+    getAllStorageValues(kind: PluginStorageKind): Promise<KeysToKeysToAnyValue>;
+}
+
+export const ServerPluginRunner = Symbol('ServerPluginRunner');
+export interface ServerPluginRunner {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    acceptMessage(pluginHostId: string, jsonMessage: Uint8Array): boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onMessage(pluginHostId: string, jsonMessage: Uint8Array): void;
+    setClient(client: HostedPluginClient): void;
+    setDefault(defaultRunner: ServerPluginRunner): void;
+    clientClosed(): void;
+}
+
+export const PluginHostEnvironmentVariable = Symbol('PluginHostEnvironmentVariable');
+export interface PluginHostEnvironmentVariable {
+    process(env: NodeJS.ProcessEnv): void;
+}
