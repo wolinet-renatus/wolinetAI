@@ -1,0 +1,134 @@
+# ==============================================================================
+# Wolinet AI - Sovereign Enterprise Platform .gitignore
+# ==============================================================================
+
+# OS & Editor Artifacts
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Environment, Secrets & Local Credentials
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.pem
+*.key
+*.cert
+*.crt
+
+# Python & Virtual Environments
+.venv
+.venv/
+**/.venv
+**/.venv/
+venv
+venv/
+**/venv/
+env
+env/
+**/env/
+ENV/
+__pycache__/
+**/*.py[cod]
+**/*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Pytest & Testing
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Node.js & Frontend Dependencies
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.pnpm-store/
+.next/
+**/.next/
+.turbo/
+.vercel/
+coverage/
+.npm-logs/
+
+# Temporary UI Build Output (Exclude intermediate next export out)
+gateway/ui/litellm-dashboard/out/
+inference/frontend/out/
+
+# Preserve Essential Embedded Production Distribution Bundles
+!gateway/litellm/proxy/_experimental/out/
+!gateway/litellm/proxy/_experimental/out/**
+!inference/xinference/ui/web/dist/
+!inference/xinference/ui/web/dist/**
+!apps/web-client/dist/
+!apps/web-client/dist/**
+!packages/wolinet-sdk/dist/
+!packages/wolinet-sdk/dist/**
+
+# macOS / Swift Builds
+*.app/
+*.dSYM/
+.build/
+apps/desktop/Packages/
+apps/desktop/.build/
+xcuserdata/
+DerivedData/
+
+# Large Model Weights (Keep configuration JSONs, ignore raw weights)
+models/*.gguf
+models/*.bin
+models/*.safetensors
+models/*.pt
+models/*.onnx
+!models/registrations/
+
+# Logs & Runtime Storage
+*.log
+logs/
+*.pid
+scratch/
+.system_generated/
+.tempmediaStorage/
+.litespeed/
+
+# Local Caches & Database files
+*.sqlite
+*.sqlite3
+*.db
+.litellm_cache/

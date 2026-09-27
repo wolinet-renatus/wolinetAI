@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "model_name": "whisper-large-v3-turbo",
+  "model_description": "OpenAI Whisper Large v3 Turbo - Ultra-fast, highly accurate multilingual speech-to-text recognition model.",
+  "model_family": "whisper",
+  "model_ability": [
+    "audio2text"
+  ],
+  "multilingual": true,
+  "model_specs": [
+    {
+      "model_format": "pytorch",
+      "quantization": "none",
+      "model_id": "openai/whisper-large-v3-turbo",
+      "model_hub": "huggingface",
+      "model_revision": null
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "model_name": "harrier-oss-v1-0.6b",
+  "model_description": "Microsoft Harrier OSS v1 0.6B - SOTA multilingual text embedding model with 1024 dimensions and 32,768 context window by Microsoft.",
+  "dimensions": 1024,
+  "max_tokens": 32768,
+  "language": ["en", "multilingual"],
+  "model_specs": [
+    {
+      "model_format": "pytorch",
+      "quantization": "none",
+      "model_id": "microsoft/harrier-oss-v1-0.6b",
+      "model_hub": "huggingface",
+      "model_revision": null
+    }
+  ]
+}

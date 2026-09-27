@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "model_name": "bge-small-en-v1.5",
+  "model_description": "BGE Small English Embedding v1.5 - Fast, lightweight sentence embedding model by BAAI. Ideal for RAG pipelines and semantic search.",
+  "dimensions": 384,
+  "max_tokens": 512,
+  "language": ["en"],
+  "model_specs": [
+    {
+      "model_format": "pytorch",
+      "quantization": "none",
+      "model_id": "BAAI/bge-small-en-v1.5",
+      "model_hub": "huggingface",
+      "model_revision": null
+    }
+  ]
+}

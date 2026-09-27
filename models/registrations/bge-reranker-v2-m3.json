@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "model_name": "bge-reranker-v2-m3",
+  "model_description": "BGE Reranker v2-M3 by BAAI - Multilingual reranker for RAG pipelines. Reranks retrieved documents by relevance to improve answer quality.",
+  "language": ["en", "zh", "multilingual"],
+  "max_tokens": 8192,
+  "model_specs": [
+    {
+      "model_format": "pytorch",
+      "quantization": "none",
+      "model_id": "BAAI/bge-reranker-v2-m3",
+      "model_hub": "huggingface",
+      "model_revision": null
+    }
+  ]
+}

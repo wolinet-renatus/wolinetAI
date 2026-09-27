@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "model_name": "whisper-small",
+  "model_description": "OpenAI Whisper Small - Fast speech-to-text model. Multilingual ASR with 244M parameters. Best speed/accuracy tradeoff for real-time transcription.",
+  "model_family": "whisper",
+  "model_ability": ["audio2text"],
+  "multilingual": true,
+  "model_specs": [
+    {
+      "model_format": "pytorch",
+      "quantization": "none",
+      "model_id": "openai/whisper-small",
+      "model_hub": "huggingface",
+      "model_revision": null
+    }
+  ]
+}

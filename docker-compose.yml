@@ -1,0 +1,61 @@
+# ==============================================================================
+# Wolinet AI - Self-Hosted Enterprise Docker Compose
+# Runs:
+# 1. Xinference Engine (GPU / CPU Multi-backend GGUF runner)
+# 2. LiteLLM AI Gateway (Cost routing, budget caps, cloud failover)
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Xinference Inference Engine (Tier 1: Local Heavy-Duty)
+  # ----------------------------------------------------------------------------
+  inference:
+    image: xprobe/xinference:latest
+    container_name: wolinet-inference
+    restart: unless-stopped
+    ports:
+      - "9997:9997"
+    environment:
+      - XINFERENCE_HOME=/root/.xinference
+      - XINFERENCE_AUTH_ADVANCED=false
+      - HF_ENDPOINT=https://hf-mirror.com
+    volumes:
+      - ./models:/models
+      - xinference_data:/root/.xinference
+    command: >
+      xinference-local -H 0.0.0.0 -p 9997
+    # Uncomment the following section if running on an NVIDIA GPU server:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # ----------------------------------------------------------------------------
+  # 2. AI Gateway Layer (LiteLLM)
+  # ----------------------------------------------------------------------------
+  gateway:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: wolinet-gateway
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - LITELLM_CONFIG_PATH=/app/config.yaml
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - WOLINET_GATEWAY_MASTER_KEY=${WOLINET_GATEWAY_MASTER_KEY}
+    volumes:
+      - ./gateway/config.yaml:/app/config.yaml
+    depends_on:
+      - inference
+    command: >
+      --config /app/config.yaml --port 4000 --host 0.0.0.0
+
+volumes:
+  xinference_data:
