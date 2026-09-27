@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "model_name": "GOT-OCR2_0",
+  "model_family": "ocr",
+  "model_ability": [
+    "ocr"
+  ],
+  "model_description": "General OCR Theory 2.0 (GOT-OCR-2.0) by StepFun on Hugging Face. State-of-the-art optical character recognition and document analysis.",
+  "model_id": "stepfun-ai/GOT-OCR2_0",
+  "model_hub": "huggingface"
+}

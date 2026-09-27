@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "model_name": "qwen-image-2.1",
+  "model_family": "stable_diffusion",
+  "model_ability": [
+    "text2image",
+    "image2image",
+    "inpainting"
+  ],
+  "model_description": "Qwen-Image-2.1 Uncensored GGUF Diffusion Model by 0xSojalSec on Hugging Face",
+  "model_id": "Qwen/Qwen-Image-2.1",
+  "model_hub": "huggingface",
+  "cache_config": {
+    "ignore_patterns": [
+      "transformer/*.safetensors",
+      "*.safetensors.index.json"
+    ]
+  },
+  "gguf_model_id": "0xSojalSec/Qwen-Image-2.1-Uncensored-GGUF",
+  "gguf_quantizations": [
+    "Q8_0",
+    "q8_0",
+    "Q4_K_M",
+    "q4_k_m",
+    "Q4_0",
+    "q4_0",
+    "Q5_K_M",
+    "q5_k_m",
+    "Q6_K",
+    "q6_k"
+  ],
+  "gguf_model_file_name_template": "qwen-image-2.1-{quantization}.gguf"
+}

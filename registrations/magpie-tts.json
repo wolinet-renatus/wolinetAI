@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "model_name": "magpie-tts",
+  "model_description": "NVIDIA Magpie TTS Multilingual 357M - Multilingual text-to-speech model supporting 12+ languages.",
+  "model_family": "magpie_tts",
+  "model_ability": [
+    "text2audio"
+  ],
+  "multilingual": true,
+  "language": "multilingual",
+  "model_lang": [
+    "ar", "de", "en", "es", "fr", "hi", "it", "ja", "ko", "pt", "vi", "zh"
+  ],
+  "model_id": "nvidia/magpie_tts_multilingual_357m",
+  "model_hub": "huggingface",
+  "model_specs": [
+    {
+      "model_format": "pytorch",
+      "quantization": "none",
+      "model_id": "nvidia/magpie_tts_multilingual_357m",
+      "model_hub": "huggingface",
+      "model_revision": null
+    }
+  ]
+}
