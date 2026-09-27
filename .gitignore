@@ -110,6 +110,10 @@ apps/desktop/.build/
 xcuserdata/
 DerivedData/
 
+# Compiled Binaries (build locally from vendored source)
+apps/cli/wolinet-cli
+wolinet-cli
+
 # Large Model Weights (Keep configuration JSONs, ignore raw weights)
 models/*.gguf
 models/*.bin

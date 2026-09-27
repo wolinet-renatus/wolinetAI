@@ -1,0 +1,39 @@
+# ==============================================================================
+# Wolinet AI CLI - Sovereign AI Developer Configuration (.crushrc)
+# Powered by Charm Crush (v0.96.1)
+# ==============================================================================
+
+# Configure Wolinet Sovereign AI Gateway (LiteLLM Proxy)
+provider add wolinet \
+  --type litellm \
+  --base-url "${LITELLM_BASE_URL:-http://127.0.0.1:4000/v1}" \
+  --api-key "${LITELLM_API_KEY:-sk-wolinet-admin-2026}"
+
+# Register default models available on Wolinet Gateway
+model add wolinet/wolinex-coder \
+  --name "Wolinet Sovereign Coder (Local GGUF)" \
+  --context-window 32768 \
+  --default-max-tokens 8192
+
+model add wolinet/qwen2.5-coder-3b \
+  --name "Qwen 2.5 Coder 3B (Local GGUF)" \
+  --context-window 32768 \
+  --default-max-tokens 8192
+
+model add wolinet/deepseek-coder-1.3b \
+  --name "DeepSeek Coder 1.3B (Local Fast GGUF)" \
+  --context-window 16384 \
+  --default-max-tokens 4096
+
+# Auto-allow non-destructive inspection tools
+permissions allow view ls grep
+
+# Setup LSP language servers
+lsp add typescript --command "typescript-language-server" --args --stdio
+lsp add go --command "gopls"
+lsp add python --command "pyright-langserver" --args --stdio
+
+# Options
+option initialize-as AGENTS.md
+option attribution-trailer-style co-authored-by
+option attribution-generated-with true
