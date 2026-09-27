@@ -1,0 +1,1178 @@
+.. _models_llm_index:
+
+=====================
+Large language Models
+=====================
+
+The following is a list of built-in LLM in Xinference:
+
+.. list-table::
+   :widths: 25 25 25 50
+   :header-rows: 1
+
+   * - MODEL NAME
+     - ABILITIES
+     - COTNEXT_LENGTH
+     - DESCRIPTION
+
+
+   * - :ref:`baichuan-2 <models_llm_baichuan-2>`
+     - generate
+     - 4096
+     - Baichuan2 is an open-source Transformer based LLM that is trained on both Chinese and English data.
+
+   * - :ref:`baichuan-2-chat <models_llm_baichuan-2-chat>`
+     - chat
+     - 4096
+     - Baichuan2-chat is a fine-tuned version of the Baichuan LLM, specializing in chatting.
+
+   * - :ref:`baichuan-m2 <models_llm_baichuan-m2>`
+     - chat, reasoning, hybrid, tools
+     - 131072
+     - Baichuan-M2-32B is Baichuan AI's medical-enhanced reasoning model, the second medical model released by Baichuan. Designed for real-world medical reasoning tasks, this model builds upon Qwen2.5-32B with an innovative Large Verifier System. Through domain-specific fine-tuning on real-world medical questions, it achieves breakthrough medical performance while maintaining strong general capabilities.
+
+   * - :ref:`code-llama <models_llm_code-llama>`
+     - generate
+     - 100000
+     - Code-Llama is an open-source LLM trained by fine-tuning LLaMA2 for generating and discussing code.
+
+   * - :ref:`code-llama-instruct <models_llm_code-llama-instruct>`
+     - chat
+     - 100000
+     - Code-Llama-Instruct is an instruct-tuned version of the Code-Llama LLM.
+
+   * - :ref:`code-llama-python <models_llm_code-llama-python>`
+     - generate
+     - 100000
+     - Code-Llama-Python is a fine-tuned version of the Code-Llama LLM, specializing in Python.
+
+   * - :ref:`codegeex4 <models_llm_codegeex4>`
+     - chat
+     - 131072
+     - the open-source version of the latest CodeGeeX4 model series
+
+   * - :ref:`codeqwen1.5 <models_llm_codeqwen1.5>`
+     - generate
+     - 65536
+     - CodeQwen1.5 is the Code-Specific version of Qwen1.5. It is a transformer-based decoder-only language model pretrained on a large amount of data of codes.
+
+   * - :ref:`codeqwen1.5-chat <models_llm_codeqwen1.5-chat>`
+     - chat
+     - 65536
+     - CodeQwen1.5 is the Code-Specific version of Qwen1.5. It is a transformer-based decoder-only language model pretrained on a large amount of data of codes.
+
+   * - :ref:`codestral-v0.1 <models_llm_codestral-v0.1>`
+     - generate
+     - 32768
+     - Codestrall-22B-v0.1 is trained on a diverse dataset of 80+ programming languages, including the most popular ones, such as Python, Java, C, C++, JavaScript, and Bash
+
+   * - :ref:`cogagent <models_llm_cogagent>`
+     - chat, vision
+     - 4096
+     - The CogAgent-9B-20241220 model is based on GLM-4V-9B, a bilingual open-source VLM base model. Through data collection and optimization, multi-stage training, and strategy improvements, CogAgent-9B-20241220 achieves significant advancements in GUI perception, inference prediction accuracy, action space completeness, and task generalizability. 
+
+   * - :ref:`deepseek <models_llm_deepseek>`
+     - generate
+     - 4096
+     - DeepSeek LLM, trained from scratch on a vast dataset of 2 trillion tokens in both English and Chinese. 
+
+   * - :ref:`deepseek-chat <models_llm_deepseek-chat>`
+     - chat
+     - 4096
+     - DeepSeek LLM is an advanced language model comprising 67 billion parameters. It has been trained from scratch on a vast dataset of 2 trillion tokens in both English and Chinese.
+
+   * - :ref:`deepseek-coder <models_llm_deepseek-coder>`
+     - generate
+     - 16384
+     - Deepseek Coder is composed of a series of code language models, each trained from scratch on 2T tokens, with a composition of 87% code and 13% natural language in both English and Chinese. 
+
+   * - :ref:`deepseek-coder-instruct <models_llm_deepseek-coder-instruct>`
+     - chat
+     - 16384
+     - deepseek-coder-instruct is a model initialized from deepseek-coder-base and fine-tuned on 2B tokens of instruction data.
+
+   * - :ref:`deepseek-prover-v2 <models_llm_deepseek-prover-v2>`
+     - chat, reasoning
+     - 163840
+     - We introduce DeepSeek-Prover-V2, an open-source large language model designed for formal theorem proving in Lean 4, with initialization data collected through a recursive theorem proving pipeline powered by DeepSeek-V3. The cold-start training procedure begins by prompting DeepSeek-V3 to decompose complex problems into a series of subgoals. The proofs of resolved subgoals are synthesized into a chain-of-thought process, combined with DeepSeek-V3's step-by-step reasoning, to create an initial cold start for reinforcement learning. This process enables us to integrate both informal and formal mathematical reasoning into a unified model
+
+   * - :ref:`deepseek-r1 <models_llm_deepseek-r1>`
+     - chat, reasoning
+     - 163840
+     - DeepSeek-R1, which incorporates cold-start data before RL. DeepSeek-R1 achieves performance comparable to OpenAI-o1 across math, code, and reasoning tasks.
+
+   * - :ref:`deepseek-r1-0528 <models_llm_deepseek-r1-0528>`
+     - chat, reasoning, tools
+     - 163840
+     - DeepSeek-R1, which incorporates cold-start data before RL. DeepSeek-R1 achieves performance comparable to OpenAI-o1 across math, code, and reasoning tasks.
+
+   * - :ref:`deepseek-r1-0528-qwen3 <models_llm_deepseek-r1-0528-qwen3>`
+     - chat, reasoning
+     - 131072
+     - The DeepSeek R1 model has undergone a minor version upgrade, with the current version being DeepSeek-R1-0528. In the latest update, DeepSeek R1 has significantly improved its depth of reasoning and inference capabilities by leveraging increased computational resources and introducing algorithmic optimization mechanisms during post-training. The model has demonstrated outstanding performance across various benchmark evaluations, including mathematics, programming, and general logic. Its overall performance is now approaching that of leading models, such as O3 and Gemini 2.5 Pro
+
+   * - :ref:`deepseek-r1-distill-llama <models_llm_deepseek-r1-distill-llama>`
+     - chat, reasoning
+     - 131072
+     - deepseek-r1-distill-llama is distilled from DeepSeek-R1 based on Llama
+
+   * - :ref:`deepseek-r1-distill-qwen <models_llm_deepseek-r1-distill-qwen>`
+     - chat, reasoning
+     - 131072
+     - deepseek-r1-distill-qwen is distilled from DeepSeek-R1 based on Qwen
+
+   * - :ref:`deepseek-v2-chat <models_llm_deepseek-v2-chat>`
+     - chat
+     - 128000
+     - DeepSeek-V2, a strong Mixture-of-Experts (MoE) language model characterized by economical training and efficient inference. 
+
+   * - :ref:`deepseek-v2-chat-0628 <models_llm_deepseek-v2-chat-0628>`
+     - chat
+     - 128000
+     - DeepSeek-V2-Chat-0628 is an improved version of DeepSeek-V2-Chat. 
+
+   * - :ref:`deepseek-v2.5 <models_llm_deepseek-v2.5>`
+     - chat
+     - 128000
+     - DeepSeek-V2.5 is an upgraded version that combines DeepSeek-V2-Chat and DeepSeek-Coder-V2-Instruct. The new model integrates the general and coding abilities of the two previous versions.
+
+   * - :ref:`deepseek-v3 <models_llm_deepseek-v3>`
+     - chat
+     - 163840
+     - DeepSeek-V3, a strong Mixture-of-Experts (MoE) language model with 671B total parameters with 37B activated for each token. 
+
+   * - :ref:`deepseek-v3-0324 <models_llm_deepseek-v3-0324>`
+     - chat
+     - 163840
+     - DeepSeek-V3, a strong Mixture-of-Experts (MoE) language model with 671B total parameters with 37B activated for each token. 
+
+   * - :ref:`deepseek-v3.1 <models_llm_deepseek-v3.1>`
+     - chat, reasoning, hybrid, tools
+     - 131072
+     - DeepSeek-V3.1 is a hybrid model that supports both thinking mode and non-thinking mode.
+
+   * - :ref:`deepseek-v3.2 <models_llm_deepseek-v3.2>`
+     - chat, reasoning, hybrid, tools
+     - 163840
+     - We introduce DeepSeek-V3.2, a model that harmonizes high computational efficiency with superior reasoning and agent performance
+
+   * - :ref:`deepseek-v3.2-exp <models_llm_deepseek-v3.2-exp>`
+     - chat, reasoning, hybrid, tools
+     - 163840
+     - We are excited to announce the official release of DeepSeek-V3.2-Exp, an experimental version of our model. As an intermediate step toward our next-generation architecture, V3.2-Exp builds upon V3.1-Terminus by introducing DeepSeek Sparse Attention—a sparse attention mechanism designed to explore and validate optimizations for training and inference efficiency in long-context scenarios.
+
+   * - :ref:`deepseek-v4-flash <models_llm_deepseek-v4-flash>`
+     - chat, reasoning, hybrid, tools
+     - 163840
+     - We present a preview version of DeepSeek-V4 series, including two strong Mixture-of-Experts (MoE) language models — DeepSeek-V4-Pro with 1.6T parameters (49B activated) and DeepSeek-V4-Flash with 284B parameters (13B activated) — both supporting a context length of one million tokens.
+
+   * - :ref:`deepseek-v4-flash-0731 <models_llm_deepseek-v4-flash-0731>`
+     - chat, reasoning, hybrid, tools
+     - 1048576
+     - Official DeepSeek-V4-Flash release with enhanced agentic capabilities and an attached DSpark speculative decoding module.
+
+   * - :ref:`deepseek-v4-pro <models_llm_deepseek-v4-pro>`
+     - chat, reasoning, hybrid, tools
+     - 163840
+     - We present a preview version of DeepSeek-V4 series, including two strong Mixture-of-Experts (MoE) language models — DeepSeek-V4-Pro with 1.6T parameters (49B activated) and DeepSeek-V4-Flash with 284B parameters (13B activated) — both supporting a context length of one million tokens.
+
+   * - :ref:`deepseek-vl2 <models_llm_deepseek-vl2>`
+     - chat, vision
+     - 4096
+     - DeepSeek-VL2, an advanced series of large Mixture-of-Experts (MoE) Vision-Language Models that significantly improves upon its predecessor, DeepSeek-VL. DeepSeek-VL2 demonstrates superior capabilities across various tasks, including but not limited to visual question answering, optical character recognition, document/table/chart understanding, and visual grounding.
+
+   * - :ref:`dianjin-r1 <models_llm_dianjin-r1>`
+     - chat, reasoning, hybrid, tools
+     - 32768
+     - Tongyi DianJin is a financial intelligence solution platform built by Alibaba Cloud, dedicated to providing financial business developers with a convenient artificial intelligence application development environment.
+
+   * - :ref:`ernie4.5 <models_llm_ernie4.5>`
+     - chat
+     - 131072
+     - ERNIE 4.5, a new family of large-scale multimodal models comprising 10 distinct variants.
+
+   * - :ref:`fin-r1 <models_llm_fin-r1>`
+     - chat
+     - 131072
+     - Fin-R1 is a large language model specifically designed for the field of financial reasoning
+
+   * - :ref:`gemma-3-1b-it <models_llm_gemma-3-1b-it>`
+     - chat
+     - 32768
+     - Gemma is a family of lightweight, state-of-the-art open models from Google, built from the same research and technology used to create the Gemini models.
+
+   * - :ref:`gemma-3-it <models_llm_gemma-3-it>`
+     - chat, vision
+     - 131072
+     - Gemma is a family of lightweight, state-of-the-art open models from Google, built from the same research and technology used to create the Gemini models.
+
+   * - :ref:`gemma-4 <models_llm_gemma-4>`
+     - generate, chat, reasoning, tools, audio, vision, hybrid
+     - 262144
+     - Gemma is a family of open models built by Google DeepMind. Gemma 4 models are multimodal, handling text and image input (with audio supported on small models) and generating text output.
+
+   * - :ref:`glm-4.1v-thinking <models_llm_glm-4.1v-thinking>`
+     - chat, vision, reasoning, tools
+     - 65536
+     - GLM-4.1V-9B-Thinking, designed to explore the upper limits of reasoning in vision-language models.
+
+   * - :ref:`glm-4.5 <models_llm_glm-4.5>`
+     - chat, reasoning, hybrid, tools
+     - 131072
+     - The GLM-4.5 series models are foundation models designed for intelligent agents. 
+
+   * - :ref:`glm-4.5v <models_llm_glm-4.5v>`
+     - chat, vision, reasoning, tools
+     - 131072
+     - GLM-4.5V is based on ZhipuAI’s next-generation flagship text foundation model GLM-4.5-Air (106B parameters, 12B active). It continues the technical approach of GLM-4.1V-Thinking, achieving SOTA performance among models of the same scale on 42 public vision-language benchmarks.
+
+   * - :ref:`glm-4.6 <models_llm_glm-4.6>`
+     - chat, reasoning, hybrid, tools
+     - 202752
+     - GLM-4.6 significantly enhances context length (up to 200K tokens), code generation, reasoning with tool use, agent capabilities, and human-aligned writing compared to GLM-4.5.
+
+   * - :ref:`glm-4.7 <models_llm_glm-4.7>`
+     - chat, reasoning, hybrid, tools
+     - 202752
+     - GLM-4.7 significantly advances core and multilingual agentic coding, UI/vibe coding, tool use, and complex reasoning—outperforming GLM-4.6 across benchmarks like SWE-bench, Terminal Bench 2.0, τ²-Bench, and HLE—while also improving chat, creative writing, and role-play.
+
+   * - :ref:`glm-4.7-flash <models_llm_glm-4.7-flash>`
+     - chat, reasoning, hybrid, tools
+     - 202752
+     - GLM-4.7-Flash is a 30B-A3B MoE model. As the strongest model in the 30B class, it offers a lightweight deployment option that balances performance and efficiency.
+
+   * - :ref:`glm-4v <models_llm_glm-4v>`
+     - chat, vision
+     - 8192
+     - GLM4 is the open source version of the latest generation of pre-trained models in the GLM-4 series launched by Zhipu AI.
+
+   * - :ref:`glm-5 <models_llm_glm-5>`
+     - chat, vision, tools, reasoning
+     - 202752
+     - We are launching GLM-5, targeting complex systems engineering and long-horizon agentic tasks. Scaling is still one of the most important ways to improve the intelligence efficiency of Artificial General Intelligence (AGI). Compared to GLM-4.5, GLM-5 scales from 355B parameters (32B active) to 744B parameters (40B active), and increases pre-training data from 23T to 28.5T tokens. GLM-5 also integrates DeepSeek Sparse Attention (DSA), largely reducing deployment cost while preserving long-context capacity.  Reinforcement learning aims to bridge the gap between competence and excellence in pre-trained models. However, deploying it at scale for LLMs is a challenge due to the RL training inefficiency. To this end, we developed slime, a novel asynchronous RL infrastructure that substantially improves training throughput and efficiency, enabling more fine-grained post-training iterations. With advances in both pre-training and post-training, GLM-5 delivers significant improvement compared to GLM-4.7 across a wide range of academic benchmarks and achieves best-in-class performance among all open-source models in the world on reasoning, coding, and agentic tasks, closing the gap with frontier models.
+
+   * - :ref:`glm-5.1 <models_llm_glm-5.1>`
+     - chat, vision, tools, reasoning, hybrid
+     - 202752
+     - GLM-5.1 is our next-generation flagship model for agentic engineering, with significantly stronger coding capabilities than its predecessor. It achieves state-of-the-art performance on SWE-Bench Pro and leads GLM-5 by a wide margin on NL2Repo (repo generation) and Terminal-Bench 2.0 (real-world terminal tasks).
+
+   * - :ref:`glm-5.2 <models_llm_glm-5.2>`
+     - chat, tools, reasoning, hybrid
+     - 1048576
+     - We're introducing GLM-5.2, our latest flagship model for long-horizon tasks
+
+   * - :ref:`glm-edge-chat <models_llm_glm-edge-chat>`
+     - chat
+     - 8192
+     - The GLM-Edge series is our attempt to face the end-side real-life scenarios, which consists of two sizes of large-language dialogue models and multimodal comprehension models (GLM-Edge-1.5B-Chat, GLM-Edge-4B-Chat, GLM-Edge-V-2B, GLM-Edge-V-5B). Among them, the 1.5B / 2B model is mainly for platforms such as mobile phones and cars, and the 4B / 5B model is mainly for platforms such as PCs.
+
+   * - :ref:`glm4-0414 <models_llm_glm4-0414>`
+     - chat, tools
+     - 32768
+     - The GLM family welcomes new members, the GLM-4-32B-0414 series models, featuring 32 billion parameters. Its performance is comparable to OpenAI’s GPT series and DeepSeek’s V3/R1 series
+
+   * - :ref:`glm4-chat <models_llm_glm4-chat>`
+     - chat, tools
+     - 131072
+     - GLM4 is the open source version of the latest generation of pre-trained models in the GLM-4 series launched by Zhipu AI.
+
+   * - :ref:`glm4-chat-1m <models_llm_glm4-chat-1m>`
+     - chat, tools
+     - 1048576
+     - GLM4 is the open source version of the latest generation of pre-trained models in the GLM-4 series launched by Zhipu AI.
+
+   * - :ref:`gpt-2 <models_llm_gpt-2>`
+     - generate
+     - 1024
+     - GPT-2 is a Transformer-based LLM that is trained on WebTest, a 40 GB dataset of Reddit posts with 3+ upvotes.
+
+   * - :ref:`gpt-oss <models_llm_gpt-oss>`
+     - chat, reasoning
+     - 131072
+     - gpt-oss series, OpenAI’s open-weight models designed for powerful reasoning, agentic tasks, and versatile developer use cases.
+
+   * - :ref:`huatuogpt-o1-llama-3.1 <models_llm_huatuogpt-o1-llama-3.1>`
+     - chat, tools
+     - 131072
+     - HuatuoGPT-o1 is a medical LLM designed for advanced medical reasoning. It generates a complex thought process, reflecting and refining its reasoning, before providing a final response.
+
+   * - :ref:`huatuogpt-o1-qwen2.5 <models_llm_huatuogpt-o1-qwen2.5>`
+     - chat, tools
+     - 32768
+     - HuatuoGPT-o1 is a medical LLM designed for advanced medical reasoning. It generates a complex thought process, reflecting and refining its reasoning, before providing a final response.
+
+   * - :ref:`hy-mt2-1.8b <models_llm_hy-mt2-1.8b>`
+     - chat
+     - 262144
+     - Hy-MT2-1.8B is a dense multilingual translation model from Tencent Hunyuan, supporting 33 languages with instruction-following capabilities for complex translation scenarios.
+
+   * - :ref:`hy-mt2-30b-a3b <models_llm_hy-mt2-30b-a3b>`
+     - chat
+     - 262144
+     - Hy-MT2-30B-A3B is a Mixture-of-Experts multilingual translation model from Tencent Hunyuan, supporting 33 languages with SOTA performance for complex professional domains.
+
+   * - :ref:`hy-mt2-7b <models_llm_hy-mt2-7b>`
+     - chat
+     - 262144
+     - Hy-MT2-7B is a dense multilingual translation model from Tencent Hunyuan, supporting 33 languages with balanced performance for general-purpose high-quality translation.
+
+   * - :ref:`internlm3-instruct <models_llm_internlm3-instruct>`
+     - chat, tools
+     - 32768
+     - InternLM3 has open-sourced an 8-billion parameter instruction model, InternLM3-8B-Instruct, designed for general-purpose usage and advanced reasoning.
+
+   * - :ref:`internvl3 <models_llm_internvl3>`
+     - chat, vision
+     - 8192
+     - InternVL3, an advanced multimodal large language model (MLLM) series that demonstrates superior overall performance.
+
+   * - :ref:`kat-v1 <models_llm_kat-v1>`
+     - chat
+     - 131072
+     - Kwaipilot-AutoThink ranks first among all open-source models on LiveCodeBench Pro, a challenging benchmark explicitly designed to prevent data leakage, and even surpasses strong proprietary systems such as Seed and o3-mini.
+
+   * - :ref:`kimi-k2.5 <models_llm_kimi-k2.5>`
+     - chat, vision
+     - 262144
+     - Kimi K2.5 is an open-source, native multimodal agentic model built through continual pretraining on approximately 15 trillion mixed visual and text tokens atop Kimi-K2-Base. It seamlessly integrates vision and language understanding with advanced agentic capabilities, instant and thinking modes, as well as conversational and agentic paradigms.
+
+   * - :ref:`kimi-k3 <models_llm_kimi-k3>`
+     - chat, vision
+     - 1048576
+     - Kimi K3 is an open-weight, native multimodal agentic model and our most capable model to date.
+
+   * - :ref:`ling-3.0-flash <models_llm_ling-3.0-flash>`
+     - chat, tools, reasoning, hybrid
+     - 262144
+     - Ling-3.0-flash is a native hybrid-linear reasoning MoE model with 124B total parameters and 5.1B activated parameters per token.
+
+   * - :ref:`ling-3.0-tiny <models_llm_ling-3.0-tiny>`
+     - chat, tools, reasoning, hybrid
+     - 131072
+     - Ling-3.0-tiny is a lightweight hybrid-reasoning MoE model with 7.9B total parameters and 1.3B activated parameters per token.
+
+   * - :ref:`llama-2 <models_llm_llama-2>`
+     - generate
+     - 4096
+     - Llama-2 is the second generation of Llama, open-source and trained on a larger amount of data.
+
+   * - :ref:`llama-2-chat <models_llm_llama-2-chat>`
+     - chat
+     - 4096
+     - Llama-2-Chat is a fine-tuned version of the Llama-2 LLM, specializing in chatting.
+
+   * - :ref:`llama-3 <models_llm_llama-3>`
+     - generate
+     - 8192
+     - Llama 3 is an auto-regressive language model that uses an optimized transformer architecture
+
+   * - :ref:`llama-3-instruct <models_llm_llama-3-instruct>`
+     - chat
+     - 8192
+     - The Llama 3 instruction tuned models are optimized for dialogue use cases and outperform many of the available open source chat models on common industry benchmarks..
+
+   * - :ref:`llama-3.1 <models_llm_llama-3.1>`
+     - generate
+     - 131072
+     - Llama 3.1 is an auto-regressive language model that uses an optimized transformer architecture
+
+   * - :ref:`llama-3.1-instruct <models_llm_llama-3.1-instruct>`
+     - chat, tools
+     - 131072
+     - The Llama 3.1 instruction tuned models are optimized for dialogue use cases and outperform many of the available open source chat models on common industry benchmarks..
+
+   * - :ref:`llama-3.2-vision <models_llm_llama-3.2-vision>`
+     - generate, vision
+     - 131072
+     - The Llama 3.2-Vision instruction-tuned models are optimized for visual recognition, image reasoning, captioning, and answering general questions about an image...
+
+   * - :ref:`llama-3.2-vision-instruct <models_llm_llama-3.2-vision-instruct>`
+     - chat, vision
+     - 131072
+     - Llama 3.2-Vision instruction-tuned models are optimized for visual recognition, image reasoning, captioning, and answering general questions about an image...
+
+   * - :ref:`llama-3.3-instruct <models_llm_llama-3.3-instruct>`
+     - chat, tools
+     - 131072
+     - The Llama 3.3 instruction tuned models are optimized for dialogue use cases and outperform many of the available open source chat models on common industry benchmarks..
+
+   * - :ref:`marco-o1 <models_llm_marco-o1>`
+     - chat, tools
+     - 32768
+     - Marco-o1: Towards Open Reasoning Models for Open-Ended Solutions
+
+   * - :ref:`mineru2.5-2509-1.2b <models_llm_mineru2.5-2509-1.2b>`
+     - chat, vision
+     - 32768
+     - MinerU2.5-2509-1.2B is a vision language model for document understanding.
+
+   * - :ref:`minicpm-2b-dpo-bf16 <models_llm_minicpm-2b-dpo-bf16>`
+     - chat
+     - 4096
+     - MiniCPM is an End-Size LLM developed by ModelBest Inc. and TsinghuaNLP, with only 2.4B parameters excluding embeddings.
+
+   * - :ref:`minicpm-2b-dpo-fp16 <models_llm_minicpm-2b-dpo-fp16>`
+     - chat
+     - 4096
+     - MiniCPM is an End-Size LLM developed by ModelBest Inc. and TsinghuaNLP, with only 2.4B parameters excluding embeddings.
+
+   * - :ref:`minicpm-2b-dpo-fp32 <models_llm_minicpm-2b-dpo-fp32>`
+     - chat
+     - 4096
+     - MiniCPM is an End-Size LLM developed by ModelBest Inc. and TsinghuaNLP, with only 2.4B parameters excluding embeddings.
+
+   * - :ref:`minicpm-2b-sft-bf16 <models_llm_minicpm-2b-sft-bf16>`
+     - chat
+     - 4096
+     - MiniCPM is an End-Size LLM developed by ModelBest Inc. and TsinghuaNLP, with only 2.4B parameters excluding embeddings.
+
+   * - :ref:`minicpm-2b-sft-fp32 <models_llm_minicpm-2b-sft-fp32>`
+     - chat
+     - 4096
+     - MiniCPM is an End-Size LLM developed by ModelBest Inc. and TsinghuaNLP, with only 2.4B parameters excluding embeddings.
+
+   * - :ref:`minicpm-v-2.6 <models_llm_minicpm-v-2.6>`
+     - chat, vision
+     - 32768
+     - MiniCPM-V 2.6 is the latest model in the MiniCPM-V series. The model is built on SigLip-400M and Qwen2-7B with a total of 8B parameters.
+
+   * - :ref:`minicpm-v-4.5 <models_llm_minicpm-v-4.5>`
+     - chat, vision
+     - 32768
+     - MiniCPM-V 4.5 is an improved version in the MiniCPM-V series with enhanced multimodal capabilities and better performance.
+
+   * - :ref:`minicpm-v-4.6 <models_llm_minicpm-v-4.6>`
+     - chat, vision
+     - 262144
+     - MiniCPM-V 4.6 is the latest and most edge-deployment-friendly model in the MiniCPM-V series, with only 1.3B parameters (1.3B activated). It is built on SigLIP2-400M and Qwen3.5-0.8B, and supports single-image, multi-image, and video understanding.
+
+   * - :ref:`minicpm-v-4.6-thinking <models_llm_minicpm-v-4.6-thinking>`
+     - chat, vision, reasoning
+     - 262144
+     - MiniCPM-V 4.6 Thinking is a reasoning-tuned version of MiniCPM-V 4.6. It supports deep reasoning for more complex problem solving, while inheriting the single-image, multi-image, and video understanding capabilities of the MiniCPM-V family.
+
+   * - :ref:`minicpm3-4b <models_llm_minicpm3-4b>`
+     - chat
+     - 32768
+     - MiniCPM3-4B is the 3rd generation of MiniCPM series. The overall performance of MiniCPM3-4B surpasses Phi-3.5-mini-Instruct and GPT-3.5-Turbo-0125, being comparable with many recent 7B~9B models.
+
+   * - :ref:`minicpm4 <models_llm_minicpm4>`
+     - chat
+     - 32768
+     - MiniCPM4 series are highly efficient large language models (LLMs) designed explicitly for end-side devices, which achieves this efficiency through systematic innovation in four key dimensions: model architecture, training data, training algorithms, and inference systems.
+
+   * - :ref:`minicpm5-1b <models_llm_minicpm5-1b>`
+     - chat, reasoning, hybrid, tools
+     - 131072
+     - MiniCPM5-1B is the first model in the MiniCPM5 series. It is a dense 1B Transformer built for on-device, local deployment, and resource-constrained scenarios, reaching 1B-class open-source SOTA. Supports hybrid thinking via enable_thinking and native XML-style tool calling (MCP-compatible).
+
+   * - :ref:`minimax-m2 <models_llm_minimax-m2>`
+     - chat, tools, reasoning
+     - 196608
+     - MiniMax-M2, a Mini model built for Max coding & agentic workflows.
+
+   * - :ref:`minimax-m2.5 <models_llm_minimax-m2.5>`
+     - chat, tools, reasoning
+     - 196608
+     - MiniMax-M2.5, a Mini model built for Max coding & agentic workflows.
+
+   * - :ref:`minimax-m2.7 <models_llm_minimax-m2.7>`
+     - chat, tools, reasoning, hybrid
+     - 204800
+     - MiniMax-M2.7 is our first model deeply participating in its own evolution. M2.7 is capable of building complex agent harnesses and completing highly elaborate productivity tasks, leveraging Agent Teams, complex Skills, and dynamic tool search
+
+   * - :ref:`minimax-m3 <models_llm_minimax-m3>`
+     - chat, vision, tools, reasoning, hybrid
+     - 1048576
+     - MiniMax-M3 is a native multimodal model with 1M context. It has ~428B parameters and ~23B activated parameters.
+
+   * - :ref:`mistral-instruct-v0.1 <models_llm_mistral-instruct-v0.1>`
+     - chat
+     - 8192
+     - Mistral-7B-Instruct is a fine-tuned version of the Mistral-7B LLM on public datasets, specializing in chatting.
+
+   * - :ref:`mistral-instruct-v0.2 <models_llm_mistral-instruct-v0.2>`
+     - chat
+     - 8192
+     - The Mistral-7B-Instruct-v0.2 Large Language Model (LLM) is an improved instruct fine-tuned version of Mistral-7B-Instruct-v0.1.
+
+   * - :ref:`mistral-instruct-v0.3 <models_llm_mistral-instruct-v0.3>`
+     - chat
+     - 32768
+     - The Mistral-7B-Instruct-v0.2 Large Language Model (LLM) is an improved instruct fine-tuned version of Mistral-7B-Instruct-v0.1.
+
+   * - :ref:`mistral-large-instruct <models_llm_mistral-large-instruct>`
+     - chat
+     - 131072
+     - Mistral-Large-Instruct-2407 is an advanced dense Large Language Model (LLM) of 123B parameters with state-of-the-art reasoning, knowledge and coding capabilities.
+
+   * - :ref:`mistral-nemo-instruct <models_llm_mistral-nemo-instruct>`
+     - chat
+     - 1024000
+     - The Mistral-Nemo-Instruct-2407 Large Language Model (LLM) is an instruct fine-tuned version of the Mistral-Nemo-Base-2407
+
+   * - :ref:`mistral-v0.1 <models_llm_mistral-v0.1>`
+     - generate
+     - 8192
+     - Mistral-7B is a unmoderated Transformer based LLM claiming to outperform Llama2 on all benchmarks.
+
+   * - :ref:`mixtral-8x22b-instruct-v0.1 <models_llm_mixtral-8x22b-instruct-v0.1>`
+     - chat
+     - 65536
+     - The Mixtral-8x22B-Instruct-v0.1 Large Language Model (LLM) is an instruct fine-tuned version of the Mixtral-8x22B-v0.1, specializing in chatting.
+
+   * - :ref:`mixtral-instruct-v0.1 <models_llm_mixtral-instruct-v0.1>`
+     - chat
+     - 32768
+     - Mistral-8x7B-Instruct is a fine-tuned version of the Mistral-8x7B LLM, specializing in chatting.
+
+   * - :ref:`mixtral-v0.1 <models_llm_mixtral-v0.1>`
+     - generate
+     - 32768
+     - The Mixtral-8x7B Large Language Model (LLM) is a pretrained generative Sparse Mixture of Experts.
+
+   * - :ref:`moonlight-16b-a3b-instruct <models_llm_moonlight-16b-a3b-instruct>`
+     - chat
+     - 8192
+     - Kimi Muon is Scalable for LLM Training
+
+   * - :ref:`nex-n2 <models_llm_nex-n2>`
+     - chat, vision, tools, reasoning, hybrid
+     - 262144
+     - Nex-N2 is a series of multimodal large language models developed by nex-agi, built on the Qwen3.5 MoE architecture. It supports text, image, and video understanding, with advanced reasoning and tool-use capabilities.
+
+   * - :ref:`openhermes-2.5 <models_llm_openhermes-2.5>`
+     - chat
+     - 8192
+     - Openhermes 2.5 is a fine-tuned version of Mistral-7B-v0.1 on primarily GPT-4 generated data.
+
+   * - :ref:`opt <models_llm_opt>`
+     - generate
+     - 2048
+     - Opt is an open-source, decoder-only, Transformer based LLM that was designed to replicate GPT-3.
+
+   * - :ref:`orion-chat <models_llm_orion-chat>`
+     - chat
+     - 4096
+     - Orion-14B series models are open-source multilingual large language models trained from scratch by OrionStarAI.
+
+   * - :ref:`ornith-1.0-35b <models_llm_ornith-1.0-35b>`
+     - chat, vision, tools, reasoning, hybrid
+     - 262144
+     - Ornith-1.0-35B is a 35B-total / 3B-activated Mixture-of-Experts multimodal model built on the Qwen3.5 MoE architecture (Qwen3_5MoeForConditionalGeneration). It combines hybrid linear/full attention, 256 routed experts (8 per token) plus a shared expert, multimodal RoPE, and multi-token prediction, with vision and video understanding via the Qwen3VL processor.
+
+   * - :ref:`ornith-1.5-35b-a3b <models_llm_ornith-1.5-35b-a3b>`
+     - chat, vision, tools, reasoning, hybrid
+     - 262144
+     - Ornith-1.5-35B-A3B is a 35B-total / 3B-activated Mixture-of-Experts multimodal model built on the Qwen3.5 MoE architecture (Qwen3_5MoeForConditionalGeneration), supporting text, image, and video understanding with reasoning and tool-use capabilities.
+
+   * - :ref:`ornith-1.5-397b <models_llm_ornith-1.5-397b>`
+     - chat, vision, tools, reasoning, hybrid
+     - 262144
+     - Ornith-1.5-397B is a 397B-total Mixture-of-Experts multimodal model built on the Qwen3.5 MoE architecture (Qwen3_5MoeForConditionalGeneration), supporting text, image, and video understanding with reasoning and tool-use capabilities.
+
+   * - :ref:`ovis2 <models_llm_ovis2>`
+     - chat, vision
+     - 32768
+     - Ovis (Open VISion) is a novel Multimodal Large Language Model (MLLM) architecture, designed to structurally align visual and textual embeddings.
+
+   * - :ref:`phi-2 <models_llm_phi-2>`
+     - generate
+     - 2048
+     - Phi-2 is a 2.7B Transformer based LLM used for research on model safety, trained with data similar to Phi-1.5 but augmented with synthetic texts and curated websites.
+
+   * - :ref:`phi-3-mini-128k-instruct <models_llm_phi-3-mini-128k-instruct>`
+     - chat
+     - 128000
+     - The Phi-3-Mini-128K-Instruct is a 3.8 billion-parameter, lightweight, state-of-the-art open model trained using the Phi-3 datasets.
+
+   * - :ref:`phi-3-mini-4k-instruct <models_llm_phi-3-mini-4k-instruct>`
+     - chat
+     - 4096
+     - The Phi-3-Mini-4k-Instruct is a 3.8 billion-parameter, lightweight, state-of-the-art open model trained using the Phi-3 datasets.
+
+   * - :ref:`qvq-72b-preview <models_llm_qvq-72b-preview>`
+     - chat, vision
+     - 32768
+     - QVQ-72B-Preview is an experimental research model developed by the Qwen team, focusing on enhancing visual reasoning capabilities.
+
+   * - :ref:`qwen-chat <models_llm_qwen-chat>`
+     - chat
+     - 32768
+     - Qwen-chat is a fine-tuned version of the Qwen LLM trained with alignment techniques, specializing in chatting.
+
+   * - :ref:`qwen1.5-chat <models_llm_qwen1.5-chat>`
+     - chat, tools
+     - 32768
+     - Qwen1.5 is the beta version of Qwen2, a transformer-based decoder-only language model pretrained on a large amount of data.
+
+   * - :ref:`qwen1.5-moe-chat <models_llm_qwen1.5-moe-chat>`
+     - chat, tools
+     - 32768
+     - Qwen1.5-MoE is a transformer-based MoE decoder-only language model pretrained on a large amount of data.
+
+   * - :ref:`qwen2-audio-instruct <models_llm_qwen2-audio-instruct>`
+     - chat, audio
+     - 32768
+     - Qwen2-Audio: A large-scale audio-language model which is capable of accepting various audio signal inputs and performing audio analysis or direct textual responses with regard to speech instructions.
+
+   * - :ref:`qwen2-instruct <models_llm_qwen2-instruct>`
+     - chat, tools
+     - 32768
+     - Qwen2 is the new series of Qwen large language models
+
+   * - :ref:`qwen2-moe-instruct <models_llm_qwen2-moe-instruct>`
+     - chat, tools
+     - 32768
+     - Qwen2 is the new series of Qwen large language models. 
+
+   * - :ref:`qwen2-vl-instruct <models_llm_qwen2-vl-instruct>`
+     - chat, vision
+     - 32768
+     - Qwen2-VL: To See the World More Clearly.Qwen2-VL is the latest version of the vision language models in the Qwen model familities.
+
+   * - :ref:`qwen2.5 <models_llm_qwen2.5>`
+     - generate
+     - 32768
+     - Qwen2.5 is the latest series of Qwen large language models. For Qwen2.5, we release a number of base language models and instruction-tuned language models ranging from 0.5 to 72 billion parameters.
+
+   * - :ref:`qwen2.5-coder <models_llm_qwen2.5-coder>`
+     - generate
+     - 32768
+     - Qwen2.5-Coder is the latest series of Code-Specific Qwen large language models (formerly known as CodeQwen).
+
+   * - :ref:`qwen2.5-coder-instruct <models_llm_qwen2.5-coder-instruct>`
+     - chat, tools
+     - 32768
+     - Qwen2.5-Coder is the latest series of Code-Specific Qwen large language models (formerly known as CodeQwen).
+
+   * - :ref:`qwen2.5-instruct <models_llm_qwen2.5-instruct>`
+     - chat, tools
+     - 32768
+     - Qwen2.5 is the latest series of Qwen large language models. For Qwen2.5, we release a number of base language models and instruction-tuned language models ranging from 0.5 to 72 billion parameters.
+
+   * - :ref:`qwen2.5-instruct-1m <models_llm_qwen2.5-instruct-1m>`
+     - chat
+     - 1010000
+     - Qwen2.5-1M is the long-context version of the Qwen2.5 series models, supporting a context length of up to 1M tokens.
+
+   * - :ref:`qwen2.5-omni <models_llm_qwen2.5-omni>`
+     - chat, vision, audio, omni
+     - 32768
+     - Qwen2.5-Omni: the new flagship end-to-end multimodal model in the Qwen series.
+
+   * - :ref:`qwen2.5-vl-instruct <models_llm_qwen2.5-vl-instruct>`
+     - chat, vision
+     - 128000
+     - Qwen2.5-VL: Qwen2.5-VL is the latest version of the vision language models in the Qwen model familities.
+
+   * - :ref:`qwen3 <models_llm_qwen3>`
+     - chat, reasoning, hybrid, tools
+     - 40960
+     - Qwen3 is the latest generation of large language models in Qwen series, offering a comprehensive suite of dense and mixture-of-experts (MoE) models. Built upon extensive training, Qwen3 delivers groundbreaking advancements in reasoning, instruction-following, agent capabilities, and multilingual support.
+
+   * - :ref:`qwen3-coder <models_llm_qwen3-coder>`
+     - chat, tools
+     - 262144
+     - we're announcing Qwen3-Coder, our most agentic code model to date
+
+   * - :ref:`qwen3-instruct <models_llm_qwen3-instruct>`
+     - chat, tools
+     - 262144
+     - We introduce the updated version of the Qwen3-235B-A22B non-thinking mode, named Qwen3-235B-A22B-Instruct-2507
+
+   * - :ref:`qwen3-next-instruct <models_llm_qwen3-next-instruct>`
+     - chat, tools
+     - 262144
+     - Qwen3-Next-80B-A3B is the first installment in the Qwen3-Next series
+
+   * - :ref:`qwen3-next-thinking <models_llm_qwen3-next-thinking>`
+     - chat, reasoning, tools
+     - 262144
+     - Qwen3-Next-80B-A3B is the first installment in the Qwen3-Next series
+
+   * - :ref:`qwen3-omni-instruct <models_llm_qwen3-omni-instruct>`
+     - chat, vision, audio, omni, tools
+     - 262144
+     - Qwen3-Omni is the natively end-to-end multilingual omni-modal foundation models. It processes text, images, audio, and video, and delivers real-time streaming responses in both text and natural speech. We introduce several architectural upgrades to improve performance and efficiency.
+
+   * - :ref:`qwen3-omni-thinking <models_llm_qwen3-omni-thinking>`
+     - chat, vision, audio, omni, reasoning, tools
+     - 262144
+     - Qwen3-Omni is the natively end-to-end multilingual omni-modal foundation models. It processes text, images, audio, and video, and delivers real-time streaming responses in both text and natural speech. We introduce several architectural upgrades to improve performance and efficiency.
+
+   * - :ref:`qwen3-thinking <models_llm_qwen3-thinking>`
+     - chat, reasoning, tools
+     - 262144
+     - we have continued to scale the thinking capability of Qwen3-235B-A22B, improving both the quality and depth of reasoning
+
+   * - :ref:`qwen3-vl-instruct <models_llm_qwen3-vl-instruct>`
+     - chat, vision, tools
+     - 262144
+     - Meet Qwen3-VL — the most powerful vision-language model in the Qwen series to date.
+
+   * - :ref:`qwen3-vl-thinking <models_llm_qwen3-vl-thinking>`
+     - chat, vision, reasoning, tools
+     - 262144
+     - Meet Qwen3-VL — the most powerful vision-language model in the Qwen series to date.
+
+   * - :ref:`qwen3.5 <models_llm_qwen3.5>`
+     - chat, vision, tools, reasoning, hybrid
+     - 262144
+     - Over recent months, we have intensified our focus on developing foundation models that deliver exceptional utility and performance. Qwen3.5 represents a significant leap forward, integrating breakthroughs in multimodal learning, architectural efficiency, reinforcement learning scale, and global accessibility to empower developers and enterprises with unprecedented capability and efficiency.
+
+   * - :ref:`qwen3.6 <models_llm_qwen3.6>`
+     - chat, vision, tools, reasoning, hybrid
+     - 262144
+     - Following the February release of the Qwen3.5 series, we're pleased to share the first open-weight variant of Qwen3.6. Built on direct feedback from the community, Qwen3.6 prioritizes stability and real-world utility, offering developers a more intuitive, responsive, and genuinely productive coding experience.
+
+   * - :ref:`qwen3.8 <models_llm_qwen3.8>`
+     - chat, vision, tools, reasoning, hybrid
+     - 262144
+     - Built on the architectural foundation of Qwen3.5, Qwen3.8 delivers substantial gains across coding, professional work, research, and long-horizon agentic tasks. Qwen3.8-27B brings these advances to a compact, deployment-friendly dense model: a native vision-language model that understands images and videos, with flexible thinking control.
+
+   * - :ref:`qwen3.8-max <models_llm_qwen3.8-max>`
+     - chat, tools, reasoning
+     - 262144
+     - Qwen3.8-2.4T-A95B is a text-only Mixture-of-Experts model with 2.4 trillion total parameters and 95 billion activated parameters, designed for coding, research, professional work, and long-horizon agentic tasks.
+
+   * - :ref:`qwenlong-l1 <models_llm_qwenlong-l1>`
+     - chat
+     - 32768
+     - QwenLong-L1: Towards Long-Context Large Reasoning Models with Reinforcement Learning
+
+   * - :ref:`qwq-32b <models_llm_qwq-32b>`
+     - chat, reasoning, tools
+     - 131072
+     - QwQ is the reasoning model of the Qwen series. Compared with conventional instruction-tuned models, QwQ, which is capable of thinking and reasoning, can achieve significantly enhanced performance in downstream tasks, especially hard problems. QwQ-32B is the medium-sized reasoning model, which is capable of achieving competitive performance against state-of-the-art reasoning models, e.g., DeepSeek-R1, o1-mini.
+
+   * - :ref:`qwq-32b-preview <models_llm_qwq-32b-preview>`
+     - chat
+     - 32768
+     - QwQ-32B-Preview is an experimental research model developed by the Qwen Team, focused on advancing AI reasoning capabilities.
+
+   * - :ref:`seallm_v2 <models_llm_seallm_v2>`
+     - generate
+     - 8192
+     - We introduce SeaLLM-7B-v2, the state-of-the-art multilingual LLM for Southeast Asian (SEA) languages
+
+   * - :ref:`seallm_v2.5 <models_llm_seallm_v2.5>`
+     - generate
+     - 8192
+     - We introduce SeaLLM-7B-v2.5, the state-of-the-art multilingual LLM for Southeast Asian (SEA) languages
+
+   * - :ref:`seallms-v3 <models_llm_seallms-v3>`
+     - chat
+     - 32768
+     - SeaLLMs - Large Language Models for Southeast Asia
+
+   * - :ref:`seed-oss <models_llm_seed-oss>`
+     - chat, reasoning, tools
+     - 524288
+     - Seed-OSS is a series of open-source large language models developed by ByteDance's Seed Team, designed for powerful long-context, reasoning, agent and general capabilities, and versatile developer-friendly features. Although trained with only 12T tokens, Seed-OSS achieves excellent performance on several popular open benchmarks.
+
+   * - :ref:`skywork-or1 <models_llm_skywork-or1>`
+     - chat
+     - 131072
+     - We release the final version of Skywork-OR1 (Open Reasoner 1) series of models, including
+
+   * - :ref:`skywork-or1-preview <models_llm_skywork-or1-preview>`
+     - chat
+     - 32768
+     - The Skywork-OR1 (Open Reasoner 1) model series consists of powerful math and code reasoning models trained using large-scale rule-based reinforcement learning with carefully designed datasets and training recipes.
+
+   * - :ref:`spark-x2.5 <models_llm_spark-x2.5>`
+     - chat, tools, reasoning, hybrid
+     - 1048576
+     - Spark-X2.5 is a compact general-purpose instruction model series with 1.7B and 4B checkpoints, native 1M-token context, reasoning, and tool-use support.
+
+   * - :ref:`spark-x2.5-base <models_llm_spark-x2.5-base>`
+     - generate
+     - 1048576
+     - Spark-X2.5 base checkpoints in 1.7B and 4B sizes for continued pretraining and completion workloads.
+
+   * - :ref:`telechat <models_llm_telechat>`
+     - chat
+     - 8192
+     - The TeleChat is a large language model developed and trained by China Telecom Artificial Intelligence Technology Co., LTD. The 7B model base is trained with 1.5 trillion Tokens and 3 trillion Tokens and Chinese high-quality corpus.
+
+   * - :ref:`tiny-llama <models_llm_tiny-llama>`
+     - generate
+     - 2048
+     - The TinyLlama project aims to pretrain a 1.1B Llama model on 3 trillion tokens.
+
+   * - :ref:`vibethinker <models_llm_vibethinker>`
+     - chat, tools
+     - 131072
+     - VibeThinker is a series of dense reasoning language models developed by WeiboAI. Built on the Qwen2 architecture with a post-training methodology centered on the Spectrum-to-Signal Principle (SSP), VibeThinker demonstrates strong reasoning capabilities in mathematics and coding despite its compact size.
+
+   * - :ref:`xiyansql-qwencoder-2504 <models_llm_xiyansql-qwencoder-2504>`
+     - chat, tools
+     - 32768
+     - The XiYanSQL-QwenCoder models, as multi-dialect SQL base models, demonstrating robust SQL generation capabilities.
+
+   * - :ref:`yi <models_llm_yi>`
+     - generate
+     - 4096
+     - The Yi series models are large language models trained from scratch by developers at 01.AI.
+
+   * - :ref:`yi-1.5 <models_llm_yi-1.5>`
+     - generate
+     - 4096
+     - Yi-1.5 is an upgraded version of Yi. It is continuously pre-trained on Yi with a high-quality corpus of 500B tokens and fine-tuned on 3M diverse fine-tuning samples.
+
+   * - :ref:`yi-1.5-chat <models_llm_yi-1.5-chat>`
+     - chat
+     - 4096
+     - Yi-1.5 is an upgraded version of Yi. It is continuously pre-trained on Yi with a high-quality corpus of 500B tokens and fine-tuned on 3M diverse fine-tuning samples.
+
+   * - :ref:`yi-1.5-chat-16k <models_llm_yi-1.5-chat-16k>`
+     - chat
+     - 16384
+     - Yi-1.5 is an upgraded version of Yi. It is continuously pre-trained on Yi with a high-quality corpus of 500B tokens and fine-tuned on 3M diverse fine-tuning samples.
+
+   * - :ref:`yi-200k <models_llm_yi-200k>`
+     - generate
+     - 262144
+     - The Yi series models are large language models trained from scratch by developers at 01.AI.
+
+   * - :ref:`yi-chat <models_llm_yi-chat>`
+     - chat
+     - 4096
+     - The Yi series models are large language models trained from scratch by developers at 01.AI.
+
+
+.. toctree::
+   :maxdepth: 3
+
+  
+   baichuan-2
+  
+   baichuan-2-chat
+  
+   baichuan-m2
+  
+   code-llama
+  
+   code-llama-instruct
+  
+   code-llama-python
+  
+   codegeex4
+  
+   codeqwen1.5
+  
+   codeqwen1.5-chat
+  
+   codestral-v0.1
+  
+   cogagent
+  
+   deepseek
+  
+   deepseek-chat
+  
+   deepseek-coder
+  
+   deepseek-coder-instruct
+  
+   deepseek-prover-v2
+  
+   deepseek-r1
+  
+   deepseek-r1-0528
+  
+   deepseek-r1-0528-qwen3
+  
+   deepseek-r1-distill-llama
+  
+   deepseek-r1-distill-qwen
+  
+   deepseek-v2-chat
+  
+   deepseek-v2-chat-0628
+  
+   deepseek-v2.5
+  
+   deepseek-v3
+  
+   deepseek-v3-0324
+  
+   deepseek-v3.1
+  
+   deepseek-v3.2
+  
+   deepseek-v3.2-exp
+  
+   deepseek-v4-flash
+  
+   deepseek-v4-flash-0731
+  
+   deepseek-v4-pro
+  
+   deepseek-vl2
+  
+   dianjin-r1
+  
+   ernie4.5
+  
+   fin-r1
+  
+   gemma-3-1b-it
+  
+   gemma-3-it
+  
+   gemma-4
+  
+   glm-4.1v-thinking
+  
+   glm-4.5
+  
+   glm-4.5v
+  
+   glm-4.6
+  
+   glm-4.7
+  
+   glm-4.7-flash
+  
+   glm-4v
+  
+   glm-5
+  
+   glm-5.1
+  
+   glm-5.2
+  
+   glm-edge-chat
+  
+   glm4-0414
+  
+   glm4-chat
+  
+   glm4-chat-1m
+  
+   gpt-2
+  
+   gpt-oss
+  
+   huatuogpt-o1-llama-3.1
+  
+   huatuogpt-o1-qwen2.5
+  
+   hy-mt2-1.8b
+  
+   hy-mt2-30b-a3b
+  
+   hy-mt2-7b
+  
+   internlm3-instruct
+  
+   internvl3
+  
+   kat-v1
+  
+   kimi-k2.5
+  
+   kimi-k3
+  
+   ling-3.0-flash
+  
+   ling-3.0-tiny
+  
+   llama-2
+  
+   llama-2-chat
+  
+   llama-3
+  
+   llama-3-instruct
+  
+   llama-3.1
+  
+   llama-3.1-instruct
+  
+   llama-3.2-vision
+  
+   llama-3.2-vision-instruct
+  
+   llama-3.3-instruct
+  
+   marco-o1
+  
+   mineru2.5-2509-1.2b
+  
+   minicpm-2b-dpo-bf16
+  
+   minicpm-2b-dpo-fp16
+  
+   minicpm-2b-dpo-fp32
+  
+   minicpm-2b-sft-bf16
+  
+   minicpm-2b-sft-fp32
+  
+   minicpm-v-2.6
+  
+   minicpm-v-4.5
+  
+   minicpm-v-4.6
+  
+   minicpm-v-4.6-thinking
+  
+   minicpm3-4b
+  
+   minicpm4
+  
+   minicpm5-1b
+  
+   minimax-m2
+  
+   minimax-m2.5
+  
+   minimax-m2.7
+  
+   minimax-m3
+  
+   mistral-instruct-v0.1
+  
+   mistral-instruct-v0.2
+  
+   mistral-instruct-v0.3
+  
+   mistral-large-instruct
+  
+   mistral-nemo-instruct
+  
+   mistral-v0.1
+  
+   mixtral-8x22b-instruct-v0.1
+  
+   mixtral-instruct-v0.1
+  
+   mixtral-v0.1
+  
+   moonlight-16b-a3b-instruct
+  
+   nex-n2
+  
+   openhermes-2.5
+  
+   opt
+  
+   orion-chat
+  
+   ornith-1.0-35b
+  
+   ornith-1.5-35b-a3b
+  
+   ornith-1.5-397b
+  
+   ovis2
+  
+   phi-2
+  
+   phi-3-mini-128k-instruct
+  
+   phi-3-mini-4k-instruct
+  
+   qvq-72b-preview
+  
+   qwen-chat
+  
+   qwen1.5-chat
+  
+   qwen1.5-moe-chat
+  
+   qwen2-audio-instruct
+  
+   qwen2-instruct
+  
+   qwen2-moe-instruct
+  
+   qwen2-vl-instruct
+  
+   qwen2.5
+  
+   qwen2.5-coder
+  
+   qwen2.5-coder-instruct
+  
+   qwen2.5-instruct
+  
+   qwen2.5-instruct-1m
+  
+   qwen2.5-omni
+  
+   qwen2.5-vl-instruct
+  
+   qwen3
+  
+   qwen3-coder
+  
+   qwen3-instruct
+  
+   qwen3-next-instruct
+  
+   qwen3-next-thinking
+  
+   qwen3-omni-instruct
+  
+   qwen3-omni-thinking
+  
+   qwen3-thinking
+  
+   qwen3-vl-instruct
+  
+   qwen3-vl-thinking
+  
+   qwen3.5
+  
+   qwen3.6
+  
+   qwen3.8
+  
+   qwen3.8-max
+  
+   qwenlong-l1
+  
+   qwq-32b
+  
+   qwq-32b-preview
+  
+   seallm_v2
+  
+   seallm_v2.5
+  
+   seallms-v3
+  
+   seed-oss
+  
+   skywork-or1
+  
+   skywork-or1-preview
+  
+   spark-x2.5
+
+   spark-x2.5-base
+
+   telechat
+  
+   tiny-llama
+  
+   vibethinker
+  
+   xiyansql-qwencoder-2504
+  
+   yi
+  
+   yi-1.5
+  
+   yi-1.5-chat
+  
+   yi-1.5-chat-16k
+  
+   yi-200k
+  
+   yi-chat
+  

@@ -1,0 +1,48 @@
+.. _models_video_index:
+
+================
+Video Models
+================
+
+The following is a list of built-in video models in Xinference:
+
+
+.. toctree::
+   :maxdepth: 1
+
+  
+   cogvideox-2b
+  
+   cogvideox-5b
+  
+   hunyuanvideo
+  
+   ltx-2-dev
+
+   ltx-2-distilled
+
+   ltx-2.3-dev
+
+   ltx-2.3-distilled
+
+   minimax-h3
+  
+   wan2.1-1.3b
+  
+   wan2.1-14b
+  
+   wan2.1-flf2v-14b-720p
+  
+   wan2.1-i2v-14b-480p
+  
+   wan2.1-i2v-14b-720p
+  
+   wan2.2-a14b
+  
+   wan2.2-animate-2-14b
+  
+   wan2.2-animate-2-14b-distilled
+  
+   wan2.2-i2v-a14b
+  
+   wan2.2-ti2v-5b

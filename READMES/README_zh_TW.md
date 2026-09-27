@@ -1,0 +1,209 @@
+<div align="center">
+<img src="../assets/xorbits-logo.png"  width="180px" alt="xorbits" />
+
+# Xorbits Inference：讓模型部署變得簡單 🤖
+
+<p align="center">
+  <a href="https://xinference.co">Xinference Enterprise</a> ·
+  <a href="https://inference.readthedocs.io/en/latest/getting_started/installation.html#installation">自我託管（Self-Hosting）</a> ·
+  <a href="https://inference.readthedocs.io/">文件</a>
+</p>
+
+[![PyPI Latest Release](https://img.shields.io/pypi/v/xinference.svg?style=for-the-badge)](https://pypi.org/project/xinference/)
+[![License](https://img.shields.io/pypi/l/xinference.svg?style=for-the-badge)](https://github.com/xorbitsai/inference/blob/main/LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/xorbitsai/inference/python.yaml?branch=main&style=for-the-badge&label=GITHUB%20ACTIONS&logo=github)](https://actions-badge.atrox.dev/xorbitsai/inference/goto?ref=main)
+[![Docker Pulls](https://img.shields.io/docker/pulls/xprobe/xinference?style=for-the-badge&logo=docker)](https://hub.docker.com/r/xprobe/xinference)
+[![Discord](https://img.shields.io/badge/join_Discord-5462eb.svg?logo=discord&style=for-the-badge&logoColor=%23f5f5f5)](https://discord.gg/Xw9tszSkr5)
+[![Telegram](https://img.shields.io/badge/join_Telegram-26A5E4.svg?logo=telegram&style=for-the-badge&logoColor=white)](https://t.me/+nCNpwmySwk9iYmI1)
+[![Twitter](https://img.shields.io/twitter/follow/xorbitsio?logo=x&style=for-the-badge)](https://twitter.com/xorbitsio)
+
+<p align="center">
+  <a href="../README.md"><img alt="English" src="https://img.shields.io/badge/English-d9d9d9?style=for-the-badge"></a>
+  <a href="./README_ja_JP.md"><img alt="日本語" src="https://img.shields.io/badge/日本語-d9d9d9?style=for-the-badge"></a>
+  <a href="./README_ko.md"><img alt="한국어" src="https://img.shields.io/badge/한국어-d9d9d9?style=for-the-badge"></a>
+  <a href="./README_de.md"><img alt="Deutsch" src="https://img.shields.io/badge/Deutsch-d9d9d9?style=for-the-badge"></a>
+  <a href="./README_fr.md"><img alt="Français" src="https://img.shields.io/badge/Français-d9d9d9?style=for-the-badge"></a>
+  <br>
+  <a href="./README_es.md"><img alt="Español" src="https://img.shields.io/badge/Español-d9d9d9?style=for-the-badge"></a>
+  <a href="./README_it.md"><img alt="Italiano" src="https://img.shields.io/badge/Italiano-d9d9d9?style=for-the-badge"></a>
+  <a href="./README_pt_BR.md"><img alt="Português" src="https://img.shields.io/badge/Português-d9d9d9?style=for-the-badge"></a>
+  <a href="./README_zh_TW.md"><img alt="繁體中文" src="https://img.shields.io/badge/繁體中文-454545?style=for-the-badge"></a>
+  <a href="./README_zh_CN.md"><img alt="简体中文" src="https://img.shields.io/badge/简体中文-d9d9d9?style=for-the-badge"></a>
+</p>
+</div>
+<br />
+
+Xorbits Inference（Xinference）是一個強大且通用的函式庫，適用於語言模型、語音識別與多模態模型。使用 Xinference，您可以只用一條指令部署自有模型或整合的尖端模型並將其提供為服務。研究者、開發者與資料科學家皆能充分發揮現代 AI 模型的能力。
+
+<div align="center">
+<i><a href="https://discord.gg/Xw9tszSkr5">👉 加入我們的 Discord 社群！</a> · <a href="https://t.me/+nCNpwmySwk9iYmI1">加入我們的 Telegram 群組</a></i>
+</div>
+
+## 🔥 重點功能與更新
+### 框架強化
+- Xinference 3.0.0 已發布，包含遷移說明與破壞性變更：[版本說明](https://xinference.cn/release_notes/v3.0.0.html)
+- 原生 Agent 部署：Xinference 與 [Xagent](https://github.com/xorbitsai/xagent) 整合，支援動態規劃、工具使用與自動化多步驟推論，突破靜態 pipeline 的限制。
+- 自動批次（Batching）：多個併發請求會自動合併以大幅提升吞吐量。 : [#4197](https://github.com/xorbitsai/inference/pull/4197)
+- [Xllamacpp](https://github.com/xorbitsai/xllamacpp)：Xinference 團隊維護的新一代 llama.cpp Python binding，支援連續批次並更適合生產環境。 : [#2997](https://github.com/xorbitsai/inference/pull/2997)
+- 分散式推論：模型可在多個 worker 之間分散執行： [#2877](https://github.com/xorbitsai/inference/pull/2877)
+- vLLM 改進：在多個複本之間共享 KV-cache： [#2732](https://github.com/xorbitsai/inference/pull/2732)
+### 新增模型
+- 內建支援 [MiniCPM5-2B](https://huggingface.co/openbmb/MiniCPM5-2B)： [#5506](https://github.com/xorbitsai/inference/pull/5506)
+- 內建支援 Fish Audio 系列（[S1-mini](https://huggingface.co/fishaudio/s1-mini)、[S2-Pro](https://huggingface.co/fishaudio/s2-pro)）： [#5490](https://github.com/xorbitsai/inference/pull/5490)
+- 內建支援 [MonkeyOCR](https://huggingface.co/echo840/MonkeyOCR)： [#5475](https://github.com/xorbitsai/inference/pull/5475)
+- 內建支援 [dots.ocr](https://huggingface.co/rednote-hilab/dots.ocr)： [#5468](https://github.com/xorbitsai/inference/pull/5468)
+- 內建支援 JoyAI 影像編輯系列（[Edit](https://huggingface.co/jdopensource/JoyAI-Image-Edit-Diffusers)、[Edit Plus](https://huggingface.co/jdopensource/JoyAI-Image-Edit-Plus-Diffusers)）： [#5458](https://github.com/xorbitsai/inference/pull/5458)
+- 內建支援 [Breeze-TTS-2](https://huggingface.co/BreezeBlue/Breeze-TTS-2)： [#5437](https://github.com/xorbitsai/inference/pull/5437)
+- 內建支援 WeMM-Embedding 系列（[2B](https://huggingface.co/tencent/WeMM-Embedding-2B)、[4B](https://huggingface.co/tencent/WeMM-Embedding-4B)、[9B](https://huggingface.co/tencent/WeMM-Embedding-9B)）： [#5439](https://github.com/xorbitsai/inference/pull/5439)
+- 內建支援 [NaviDC-OCR](https://huggingface.co/StarDoc-AI/NaviDC-OCR)： [#5431](https://github.com/xorbitsai/inference/pull/5431)
+- 內建支援 [Kimi-K3](https://huggingface.co/moonshotai/Kimi-K3)： [#5417](https://github.com/xorbitsai/inference/pull/5417)
+- 內建支援世界模型（[Matrix-Game-3.0-5B](https://huggingface.co/Skywork/Matrix-Game-3.0)、[HY-WorldPlay-5B](https://huggingface.co/tencent/HY-WorldPlay)、[Astra](https://huggingface.co/EvanEternal/Astra)）： [#5414](https://github.com/xorbitsai/inference/pull/5414)
+- 內建支援 Krea 2 系列（[Raw](https://huggingface.co/krea/Krea-2-Raw)、[Turbo](https://huggingface.co/krea/Krea-2-Turbo)）： [#5419](https://github.com/xorbitsai/inference/pull/5419)
+- 內建支援 [ACE-Step 1.5](https://huggingface.co/ACE-Step/Ace-Step1.5)： [#5413](https://github.com/xorbitsai/inference/pull/5413)
+- 內建支援 Ornith 1.5 系列（[35B-A3B](https://modelscope.cn/models/ornith-ai/Ornith-1.5-35B-A3B)、[397B](https://modelscope.cn/models/ornith-ai/Ornith-1.5-397B)）： [#5406](https://github.com/xorbitsai/inference/pull/5406)、[#5405](https://github.com/xorbitsai/inference/pull/5405)
+- 內建支援 [GLM-5.2](https://huggingface.co/zai-org/GLM-5.2)： [#5404](https://github.com/xorbitsai/inference/pull/5404)
+- 內建支援 [GLM-Image](https://huggingface.co/zai-org/GLM-Image)： [#5394](https://github.com/xorbitsai/inference/pull/5394)
+- 內建支援 HiDream-O1 系列（[Image](https://huggingface.co/HiDream-ai/HiDream-O1-Image)、[Image-Dev](https://huggingface.co/HiDream-ai/HiDream-O1-Image-Dev)、[Image-Dev-2604](https://huggingface.co/HiDream-ai/HiDream-O1-Image-Dev-2604)）： [#5370](https://github.com/xorbitsai/inference/pull/5370)
+- 內建支援 [SenseNova-U1.5-8B-MoT](https://huggingface.co/sensenova/SenseNova-U1.5-8B-MoT)： [#5369](https://github.com/xorbitsai/inference/pull/5369)
+- 內建支援 [Ideogram4](https://huggingface.co/ideogram-ai/ideogram-4-nf4-diffusers)： [#5367](https://github.com/xorbitsai/inference/pull/5367)
+- 內建支援 [DeepSeek-V4-Flash-0731](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731)： [#5371](https://github.com/xorbitsai/inference/pull/5371)
+- 內建支援 [FireRedTTS3](https://huggingface.co/FireRedTeam/FireRedTTS3)： [#5352](https://github.com/xorbitsai/inference/pull/5352)
+- 內建支援 [MiniMax-H3 Lightning LoRA](https://huggingface.co/lightx2v/Minimax-h3-Turbo)： [#5338](https://github.com/xorbitsai/inference/pull/5338)
+- 內建支援 [MiniMax-Music3](https://huggingface.co/MiniMaxAI/MiniMax-Music3)： [#5345](https://github.com/xorbitsai/inference/pull/5345)
+- 內建支援 Qwen3.8 系列（[27B](https://huggingface.co/Qwen/Qwen3.8-27B)、[2.4T-A95B](https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B)）： [#5337](https://github.com/xorbitsai/inference/pull/5337)、[#5339](https://github.com/xorbitsai/inference/pull/5339)
+- 內建支援 [jina-reranker-m0](https://huggingface.co/jinaai/jina-reranker-m0)： [#5327](https://github.com/xorbitsai/inference/pull/5327)
+### 整合項目
+- [Xagent](https://github.com/xorbitsai/xagent)：企業級 Agent 平台，具規劃、記憶與工具整合。
+- [Dify](https://docs.dify.ai/advanced/model-configuration/xinference)：LLMOps 平台，快速建立可視化與控制的應用。
+- [FastGPT](https://github.com/labring/FastGPT)：基於 LLM 的知識平台，用於資料處理與模型呼叫。
+- [RAGFlow](https://github.com/infiniflow/ragflow)：用於深度文件理解的開源 RAG 引擎。
+- [MaxKB](https://github.com/1Panel-dev/MaxKB)：具有 RAG 整合的開源知識庫助理。
+
+## 主要功能
+🌟 模型部署更簡單：簡化 LLM、語音識別與多模態模型的上線流程。實驗與生產模型都能透過單一命令設定與部署。
+
+⚡️ 方便使用的尖端模型：只需一條指令即可嘗試整合的最新模型。Xinference 提供對最先進開源模型的存取。
+
+🖥 異構硬體支援：有效利用 GPU 與 CPU（例如透過 [ggml](https://github.com/ggerganov/ggml)），以加速推論。
+
+⚙️ 彈性的 API 與介面：OpenAI 相容的 RESTful API（包含 Function Calling）、RPC、CLI、Web UI 等。
+
+🌐 分散式部署：方便在多台設備與機器間分散推論工作。
+
+🔌 第三方整合：支援與 [LangChain](https://python.langchain.com/docs/integrations/providers/xinference)、[LlamaIndex]、[Dify]、[Chatbox] 等整合。
+
+## 為何選擇 Xinference
+| 功能                                         | Xinference | FastChat | OpenLLM | RayLLM |
+|----------------------------------------------|------------|----------|---------|--------|
+| OpenAI 相容的 RESTful API                      | ✅         | ✅        | ✅       | ✅      |
+| vLLM 整合                                    | ✅         | ✅        | ✅       | ✅      |
+| 多種推論引擎（GGML、TensorRT）                 | ✅         | ❌        | ✅       | ✅      |
+| 支援多種平台（CPU、Metal）                    | ✅         | ✅        | ❌       | ❌      |
+| 多節點集群部署                                | ✅         | ❌        | ❌       | ✅      |
+| 影像模型（文字→影像）                         | ✅         | ✅        | ❌       | ❌      |
+| 文字嵌入模型                                  | ✅         | ❌        | ❌       | ❌      |
+| 多模態模型                                    | ✅         | ❌        | ❌       | ❌      |
+| 語音模型                                      | ✅         | ❌        | ❌       | ❌      |
+| OpenAI 類 Function Calling 支援               | ✅         | ❌        | ❌       | ❌      |
+
+## 使用 Xinference
+
+- **Self-Hosting Xinference Community Edition**
+  請依照 [快速上手指南](#getting-started) 在本地啟動 Xinference。詳細說明請參閱文件：https://inference.readthedocs.io/。
+
+- **Xinference for Enterprise**
+  若需企業功能與支援，請聯絡： mailto:info@xinference.co?subject=[GitHub]Business%20License%20Inquiry
+
+## 保持更新
+
+在 GitHub 為 Xinference 加星，以取得發布更新通知。
+
+![star-us](../assets/stay_ahead.gif)
+
+## 開始使用
+
+* [文件](https://inference.readthedocs.io/en/latest/index.html)
+* [內建模型](https://inference.readthedocs.io/en/latest/models/builtin/index.html)
+* [自訂模型](https://inference.readthedocs.io/en/latest/models/custom.html)
+* [部署文件](https://inference.readthedocs.io/en/latest/getting_started/using_xinference.html)
+
+### Docker
+
+具有 NVIDIA GPU 的使用者可以使用 Xinference Docker 映像。請在安裝前確認系統已安裝 Docker 與 CUDA。
+
+```bash
+docker run --name xinference -d -p 9997:9997 -e XINFERENCE_HOME=/data -v </on/your/host>:/data --gpus all xprobe/xinference:latest xinference-local -H 0.0.0.0
+```
+
+### K8s (Helm)
+
+在已啟用 GPU 的 Kubernetes 叢集中，執行下列指令安裝：
+
+```
+# 新增 Helm 倉庫
+helm repo add xinference https://xorbitsai.github.io/xinference-helm-charts
+
+# 更新索引並檢視版本
+helm repo update xinference
+helm search repo xinference/xinference --devel --versions
+
+# 安裝 Xinference
+helm install xinference xinference/xinference -n xinference --version 0.0.1-v<xinference_release_version>
+```
+
+更多 K8s 選項請參閱文件。
+
+### 快速上手
+
+使用 pip 安裝 Xinference：
+
+```bash
+pip install "xinference[all]"
+```
+
+啟動本地實例：
+
+```bash
+$ xinference-local
+```
+
+啟動後可透過 Web UI、cURL、CLI 或 Python 客戶端來使用。
+
+![web UI](../assets/screenshot.png)
+
+## 參與專案
+
+| 平台                                                                     | 目的                                     |
+|--------------------------------------------------------------------------|-----------------------------------------|
+| [Github Issues](https://github.com/xorbitsai/inference/issues)            | 報告錯誤與功能請求                       |
+| [Discord](https://discord.gg/Xw9tszSkr5)                                 | 與其他使用者協作                         |
+| [Telegram](https://t.me/+nCNpwmySwk9iYmI1)                               | 社群討論                                 |
+| [Twitter](https://twitter.com/xorbitsio)                                 | 新聞與公告                               |
+
+## 引用
+
+若本專案對您有幫助，請以以下格式引用：
+
+```bibtex
+@inproceedings{lu2024xinference,
+    title = "Xinference: Making Large Model Serving Easy",
+    author = "Lu, Weizheng and Xiong, Lingfeng and Zhang, Feng and Qin, Xuye and Chen, Yueguo",
+    booktitle = "Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing: System Demonstrations",
+    month = nov,
+    year = "2024",
+    address = "Miami, Florida, USA",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2024.emnlp-demo.30",
+    pages = "291--300",
+}
+```
+
+## 貢獻者
+
+<a href="https://github.com/xorbitsai/inference/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=xorbitsai/inference" />
+</a>
+
+## 星星歷史
+
+[![Star History Chart](https://star-history.dera.page/svg?repos=xorbitsai/inference&type=Date)](https://star-history.dera.page/#xorbitsai/inference&Date)

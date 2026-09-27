@@ -1,0 +1,197 @@
+.. _tools:
+
+=====================
+Tools
+=====================
+
+Learn how to connect LLM with external tools.
+
+
+Introduction
+============
+
+With the ``tools`` ability you can have your model use external tools. 
+
+
+Like `OpenAI's Function calling API <https://platform.openai.com/docs/guides/function-calling>`_, you can define the functions along
+with their parameters and have the model dynamically choose which function to call and what parameters to pass to it.
+
+This is the general process for calling a function:
+
+1. You submit a query, detailing the functions, their parameters, and descriptions.
+2. The LLM decides whether to initiate the function. If chosen not to, it replies in everyday language,
+   either offering a solution based on its inherent understanding or asking further details about the query
+   and tool usage. On deciding to use a tool, it recommends the suitable API and instructions for its usage, framed in JSON.
+3. Following that, you implement the API call within your application and send the returned response back to the LLM
+   for result analysis and proceeding with the next steps.
+
+There is no dedicated API endpoint implemented for ``tools`` ability. It must be used in combination with Chat API.
+  
+Supported models
+-------------------
+
+The ``tools`` ability is supported with the following models in Xinference:
+
+* :ref:`models_llm_glm4-chat`
+* :ref:`models_llm_glm4-chat-1m`
+* :ref:`models_llm_llama-3.1-instruct`
+* :ref:`models_llm_llama-3.3-instruct`
+* :ref:`models_llm_qwen1.5-chat`
+* :ref:`models_llm_qwen1.5-moe-chat`
+* :ref:`models_llm_qwen2-instruct`
+* :ref:`models_llm_qwen2-moe-instruct`
+* :ref:`models_llm_qwen2.5-instruct`
+* :ref:`models_llm_qwen2.5-coder-instruct`
+* :ref:`models_llm_qwq-32b`
+* :ref:`models_llm_qwen3`
+* :ref:`models_llm_qwen3-instruct`
+* :ref:`models_llm_qwen3-coder`
+* :ref:`models_llm_deepseek-v3`
+* :ref:`models_llm_deepseek-r1-0528`
+
+Quickstart
+==============
+
+An optional parameter ``tools`` in the Chat API can be used to provide function specifications.
+The purpose of this is to enable models to generate function arguments which adhere to the provided specifications. 
+
+Example using OpenAI Client
+------------------------------
+
+.. code-block::
+
+    import openai
+
+    client = openai.Client(
+        api_key="cannot be empty", 
+        base_url="http://<XINFERENCE_HOST>:<XINFERENCE_PORT>/v1"
+    )
+    response = client.chat.completions.create(
+        model="<MODEL_UID>",
+        messages=[{
+            "role": "user",
+            "content": "Call me an Uber ride type 'Plus' in Berkeley at zipcode 94704 in 10 minutes"
+        }],
+        tools=[
+            {
+                "type": "function",
+                "function": {
+                    "name": "uber_ride",
+                    "description": "Find suitable ride for customers given the location, "
+                    "type of ride, and the amount of time the customer is "
+                    "willing to wait as parameters",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "loc": {
+                                "type": "int",
+                                "description": "Location of the starting place of the Uber ride",
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": ["plus", "comfort", "black"],
+                                "description": "Types of Uber ride user is ordering",
+                            },
+                            "time": {
+                                "type": "int",
+                                "description": "The amount of time in minutes the customer is willing to wait",
+                            },
+                        },
+                    },
+                },
+            }
+        ],
+    )
+    print(response.choices[0].message)
+
+
+The output will be:
+
+.. code-block:: json
+
+  {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+          "id": "call_ad2f383f-31c7-47d9-87b7-3abe928e629c", 
+          "type": "function", 
+          "function": {
+              "name": "uber_ride", 
+              "arguments": "{\"loc\": 94704, \"type\": \"plus\", \"time\": 10}"
+          }
+      ],
+  }
+
+Example using Anthropic Client
+------------------------------
+
+.. code-block::
+
+    import anthropic
+    import json
+    import uuid
+
+    client = anthropic.Anthropic(
+        api_key="cannot be empty",
+        base_url="http://localhost:9997"
+    )
+
+    response = client.messages.create(
+        model="qwen3",
+        max_tokens=1024,
+        messages=[
+            {
+                "role": "user",
+                "content": "What's the weather like in Beijing?"
+            }
+        ],
+        tools=[
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_weather",
+                    "description": "Get weather information for a city",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "city": {
+                                "type": "string",
+                                "description": "The city name",
+                            },
+                        },
+                        "required": ["city"]
+                    },
+                },
+            }
+        ],
+        tool_choice={"type": "auto"}
+    )
+
+
+The output will be:
+
+.. code-block:: json
+
+    {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+            "id": "call_26884d11-ff6b-48fb-ada7-734f3fd0dfcc",
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "arguments": "{\"city\": \"Beijing\"}"
+            }
+        ],
+    }
+
+
+.. note::
+
+  Finish reason will be ``tool_calls`` if the LLM uses a tool call. Othewise it will be the default finish reason.
+
+
+.. note::
+
+  The API will not actually execute any function calls. It is up to developers to execute function calls using model outputs.
+

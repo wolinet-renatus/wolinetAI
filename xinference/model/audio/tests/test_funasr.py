@@ -1,0 +1,216 @@
+# Copyright 2022-2026 Xinference Holdings Pte. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os.path
+
+import requests
+
+
+def test_restful_api_for_funasr(setup):
+    endpoint, _ = setup
+    from ....client import Client
+
+    client = Client(endpoint)
+
+    model_uid = client.launch_model(
+        model_uid="SenseVoiceSmall",
+        model_name="SenseVoiceSmall",
+        model_type="audio",
+    )
+    model = client.get_model(model_uid)
+    response = requests.get("https://github.com/openai/whisper/raw/main/tests/jfk.flac")
+    audio = response.content
+
+    response = model.transcriptions(audio)
+    transcription = response["text"].lower()
+    assert "my fellow americans" in transcription
+    assert "your country" in transcription
+    assert "do for you" in transcription
+
+    # Test openai API
+    import openai
+
+    zh_cn_audio_path = os.path.join(
+        os.path.dirname(__file__), "common_voice_zh-CN_38026095.mp3"
+    )
+    client = openai.Client(api_key="not empty", base_url=f"{endpoint}/v1")
+    with open(zh_cn_audio_path, "rb") as f:
+        completion = client.audio.transcriptions.create(model=model_uid, file=f)
+        assert "列表" in completion.text
+        assert "香港" in completion.text
+        assert "航空" in completion.text
+
+
+def test_verbose_for_funasr(setup):
+    endpoint, _ = setup
+    from ....client import Client
+
+    client = Client(endpoint)
+
+    model_uid = client.launch_model(
+        model_uid="paraformer-zh-spk",
+        model_name="paraformer-zh-spk",
+        model_type="audio",
+    )
+    model = client.get_model(model_uid)
+    audio_path = os.path.join(os.path.dirname(__file__), "jfk.flac")
+    with open(audio_path, "rb") as f:
+        audio = f.read()
+
+    response = model.transcriptions(audio, response_format="verbose_json")
+    assert response["text"]
+    assert len(response["segments"]) == 1
+
+    assert response["text"]
+    assert len(response["words"]) == 22
+
+    zh_cn_audio_path = os.path.join(
+        os.path.dirname(__file__), "common_voice_zh-CN_38026095.mp3"
+    )
+
+    # Test openai API
+    import openai
+
+    client = openai.Client(api_key="not empty", base_url=f"{endpoint}/v1")
+    with open(zh_cn_audio_path, "rb") as f:
+        completion = client.audio.transcriptions.create(
+            model=model_uid,
+            file=f,
+            response_format="verbose_json",
+        )
+        assert len(completion.segments) == 1
+        assert len(completion.words) > 0
+
+
+def _new_funasr_model(generate_result=None):
+    from types import SimpleNamespace
+
+    from ..funasr import FunASRModel
+
+    model = FunASRModel(
+        model_uid="funasr-test",
+        model_path="unused",
+        model_spec=SimpleNamespace(default_transcription_config={}),
+    )
+    model._model = SimpleNamespace(generate=lambda **_: generate_result)
+    return model
+
+
+def _install_fake_funasr(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    funasr = ModuleType("funasr")
+    utils = ModuleType("funasr.utils")
+    postprocess = ModuleType("funasr.utils.postprocess_utils")
+    postprocess.rich_transcription_postprocess = lambda text: text
+    funasr.utils = utils
+    utils.postprocess_utils = postprocess
+    monkeypatch.setitem(sys.modules, "funasr", funasr)
+    monkeypatch.setitem(sys.modules, "funasr.utils", utils)
+    monkeypatch.setitem(sys.modules, "funasr.utils.postprocess_utils", postprocess)
+
+
+def test_funasr_converts_empty_timestamps():
+    model = _new_funasr_model()
+
+    response = model.convert_to_openai_format({"text": "", "timestamp": []})
+
+    assert response == {
+        "task": "transcribe",
+        "text": "",
+        "duration": 0,
+        "words": [],
+        "segments": [],
+    }
+
+
+def test_funasr_converts_missing_or_invalid_timestamps():
+    model = _new_funasr_model()
+
+    missing = model.convert_to_openai_format({"text": ""})
+    invalid = model.convert_to_openai_format(
+        {"text": "", "timestamp": [None, [], ["invalid", 1]]}
+    )
+
+    assert missing["words"] == []
+    assert missing["segments"] == []
+    assert invalid["words"] == []
+    assert invalid["segments"] == []
+
+
+def test_funasr_converts_timestamps_without_sentence_info():
+    model = _new_funasr_model()
+    input_data = {
+        "text": "hello world",
+        "timestamp": [[1000, 1500], [1500, 2500]],
+    }
+    expected = {
+        "task": "transcribe",
+        "text": "hello world",
+        "duration": 1.5,
+        "words": [
+            {"start": 1.0, "end": 1.5},
+            {"start": 1.5, "end": 2.5},
+        ],
+        "segments": [],
+    }
+
+    assert model.convert_to_openai_format(input_data) == expected
+    assert (
+        model.convert_to_openai_format({**input_data, "sentence_info": None})
+        == expected
+    )
+
+
+def test_funasr_rejects_empty_audio():
+    import pytest
+
+    from ....core.exceptions import InvalidAudioInputError
+
+    with pytest.raises(InvalidAudioInputError, match="audio is empty"):
+        _new_funasr_model().transcriptions(b"")
+
+
+def test_funasr_returns_empty_json_for_no_speech(monkeypatch):
+    _install_fake_funasr(monkeypatch)
+
+    response = _new_funasr_model([]).transcriptions(b"audio")
+
+    assert response == {"text": ""}
+
+
+def test_funasr_returns_empty_verbose_json_for_no_speech(monkeypatch):
+    _install_fake_funasr(monkeypatch)
+
+    response = _new_funasr_model([]).transcriptions(
+        b"audio", response_format="verbose_json"
+    )
+
+    assert response == {
+        "task": "transcribe",
+        "text": "",
+        "duration": 0,
+        "words": [],
+        "segments": [],
+    }
+
+
+def test_funasr_rejects_invalid_result(monkeypatch):
+    import pytest
+
+    _install_fake_funasr(monkeypatch)
+
+    with pytest.raises(RuntimeError, match="returned invalid result"):
+        _new_funasr_model(None).transcriptions(b"audio")

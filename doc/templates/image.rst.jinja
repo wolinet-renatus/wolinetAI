@@ -1,0 +1,39 @@
+.. _models_builtin_{{ model_name|lower }}:
+
+{{ "=" * model_name|length }}
+{{ model_name }}
+{{ "=" * model_name|length }}
+
+- **Model Name:** {{ model_name }}
+- **Model Family:** {{ model_family }}
+- **Abilities:** {{ model_ability }}
+- **Available ControlNet:** {{ available_controlnet }}
+
+Specifications
+^^^^^^^^^^^^^^
+
+- **Model ID:** {{ model_id }}
+{%- if gguf_quantizations %}
+- **GGUF Model ID**: {{ gguf_model_id }}
+- **GGUF Quantizations**: {{ gguf_quantizations }}
+{% endif %}
+{%- if lightning_model_id %}
+- **Lightning Model ID**: {{ lightning_model_id }}
+- **Lightning Versions**: {{ lightning_versions }}
+{% endif %}
+
+Execute the following command to launch the model::
+
+   xinference launch --model-name {{ model_name }} --model-type image
+
+{% if gguf_quantizations %}
+For GGUF quantization, using below command::
+
+    xinference launch --model-name {{ model_name }} --model-type image --gguf_quantization ${{ '{' }}gguf_quantization{{ '}' }} --cpu_offload True
+{% endif %}
+
+{% if lightning_versions %}
+For Lightning LoRA acceleration, using below command::
+
+    xinference launch --model-name {{ model_name }} --model-type image --lightning_version ${{ '{' }}lightning_version{{ '}' }}
+{% endif %}

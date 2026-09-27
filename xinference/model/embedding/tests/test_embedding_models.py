@@ -1,0 +1,615 @@
+# Copyright 2022-2026 Xinference Holdings Pte. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import json
+import os
+import shutil
+import tempfile
+
+import pytest
+
+from xinference._model_catalog import load_model_catalog
+
+from ..cache_manager import EmbeddingCacheManager as CacheManager
+from ..core import (
+    EMBEDDING_MODEL_DESCRIPTIONS,
+    EmbeddingModelFamilyV2,
+    TransformersEmbeddingSpecV1,
+)
+from ..embed_family import BUILTIN_EMBEDDING_MODELS, EMBEDDING_ENGINES
+
+TEST_MODEL_SPEC = EmbeddingModelFamilyV2(
+    version=2,
+    model_name="gte-small",
+    dimensions=384,
+    max_tokens=512,
+    language=["en"],
+    model_specs=[
+        TransformersEmbeddingSpecV1(
+            model_format="pytorch",
+            model_id="thenlper/gte-small",
+            model_revision="d8e2604cadbeeda029847d19759d219e0ce2e6d8",
+            quantization="none",
+        )
+    ],
+)
+
+TEST_MODEL_SPEC2 = EmbeddingModelFamilyV2(
+    version=2,
+    model_name="gte-small",
+    dimensions=384,
+    max_tokens=512,
+    language=["en"],
+    model_specs=[
+        TransformersEmbeddingSpecV1(
+            model_format="pytorch",
+            model_id="thenlper/gte-small",
+            model_revision="c20abe89ac0cdf484944ebdc26ecaaa1bfc9cf89",
+            quantization="none",
+        )
+    ],
+)
+
+TEST_MODEL_SPEC_FROM_MODELSCOPE = EmbeddingModelFamilyV2(
+    version=2,
+    model_name="bge-small-zh-v1.5",
+    dimensions=512,
+    max_tokens=512,
+    language=["zh"],
+    model_specs=[
+        TransformersEmbeddingSpecV1(
+            model_format="pytorch",
+            model_id="Xorbits/bge-small-zh-v1.5",
+            model_revision="v0.0.2",
+            quantization="none",
+            model_hub="modelscope",
+        )
+    ],
+)
+
+
+def test_engine_supported():
+    model_name = "bge-small-en-v1.5"
+    assert model_name in EMBEDDING_ENGINES
+    assert "flag" in EMBEDDING_ENGINES[model_name]
+    assert "sentence_transformers" in EMBEDDING_ENGINES[model_name]
+
+
+def test_multimodal_model_abilities_are_exposed():
+    expected = {
+        "jina-clip-v2": ["embed_vision"],
+        "jina-embeddings-v4": ["embed_vision"],
+        "jina-embeddings-v5-omni-nano": [
+            "embed_vision",
+            "embed_video",
+            "embed_audio",
+        ],
+        "jina-embeddings-v5-omni-small": [
+            "embed_vision",
+            "embed_video",
+            "embed_audio",
+        ],
+        "gme-Qwen2-VL-2B-Instruct": ["embed_vision"],
+        "gme-Qwen2-VL-7B-Instruct": ["embed_vision"],
+        "Qwen3-VL-Embedding-2B": ["embed_vision", "embed_video"],
+        "Qwen3-VL-Embedding-8B": ["embed_vision", "embed_video"],
+        "WeMM-Embedding-2B": ["embed_vision", "embed_video"],
+        "WeMM-Embedding-4B": ["embed_vision", "embed_video"],
+        "WeMM-Embedding-9B": ["embed_vision", "embed_video"],
+    }
+
+    for model_name, abilities in expected.items():
+        family = BUILTIN_EMBEDDING_MODELS[model_name][0]
+        assert family.model_ability == abilities
+        assert family.to_description()["model_ability"] == ["embed", *abilities]
+
+
+def test_jina_v5_requires_transformers_5_compatible_sentence_transformers():
+    from packaging.requirements import InvalidRequirement, Requirement
+    from packaging.utils import canonicalize_name
+
+    from .. import _install
+
+    _install()
+    matched_families = []
+    for families in BUILTIN_EMBEDDING_MODELS.values():
+        for family in families:
+            if family.virtualenv is None:
+                continue
+
+            requirements = {}
+            for package in family.virtualenv.packages:
+                try:
+                    requirement = Requirement(package)
+                except InvalidRequirement:
+                    continue
+                requirements[canonicalize_name(requirement.name)] = requirement
+
+            transformers = requirements.get("transformers")
+            if transformers is None or not any(
+                spec.operator == "==" and spec.version == "5.7.0"
+                for spec in transformers.specifier
+            ):
+                continue
+
+            matched_families.append(family.model_name)
+            sentence_transformers = requirements.get("sentence-transformers")
+            assert sentence_transformers is not None, family.model_name
+            assert str(sentence_transformers.specifier) == ">=5.2.0", family.model_name
+
+    assert matched_families
+
+
+def test_jina_v3_pins_custom_flash_attn_wheel():
+    from .. import _install
+
+    _install()
+    family = BUILTIN_EMBEDDING_MODELS["jina-embeddings-v3"][0]
+
+    assert family.virtualenv is not None
+    assert "flash-attn==2.8.3.post1" in family.virtualenv.packages
+
+
+def test_bce_embedding_vllm_engine_params_with_virtualenv():
+    from ....model.utils import (
+        _collect_virtualenv_engine_markers,
+        get_engine_params_by_name_with_virtual_env,
+    )
+    from .. import _install
+
+    _install()
+    family = BUILTIN_EMBEDDING_MODELS["bce-embedding-base_v1"][0]
+    assert "vllm" in _collect_virtualenv_engine_markers(family)
+
+    params = get_engine_params_by_name_with_virtual_env(
+        "embedding", "bce-embedding-base_v1", enable_virtual_env=True
+    )
+    assert isinstance(params, dict)
+    assert "vllm" in params
+    assert isinstance(params["vllm"], list)
+    assert params["vllm"]
+    assert params["vllm"][0]["model_format"] == "pytorch"
+    assert params["vllm"][0]["quantization"] == "none"
+
+
+async def test_model_from_modelscope():
+    from ..core import create_embedding_model_instance
+
+    model_path = CacheManager(TEST_MODEL_SPEC_FROM_MODELSCOPE).cache()
+    model = create_embedding_model_instance(
+        "mock",
+        "bge-small-zh-v1.5",
+        "sentence_transformers",
+        model_path=model_path,
+    )
+    # input is a string
+    input_text = "乱条犹未变初黄，倚得东风势便狂。解把飞花蒙日月，不知天地有清霜。"
+    model.load()
+    r = await model.create_embedding(input_text)
+    assert len(r["data"]) == 1
+    for d in r["data"]:
+        assert len(d["embedding"]) == 512
+    shutil.rmtree(model_path, ignore_errors=True)
+
+
+def test_get_cache_status():
+    model_path = None
+    try:
+        cache_manager = CacheManager(TEST_MODEL_SPEC)
+        assert cache_manager.get_cache_status() is False
+        model_path = cache_manager.cache()
+        assert cache_manager.get_cache_status() is True
+    finally:
+        if model_path is not None:
+            shutil.rmtree(model_path, ignore_errors=True)
+
+
+def test_from_local_uri():
+    from ..custom import CustomEmbeddingModelFamilyV2
+
+    tmp_dir = tempfile.mkdtemp()
+
+    model_family = CustomEmbeddingModelFamilyV2(
+        model_name="custom_test_a",
+        dimensions=1024,
+        max_tokens=2048,
+        language=["zh"],
+        model_specs=[
+            TransformersEmbeddingSpecV1(
+                model_format="pytorch",
+                model_id="test/custom_test_a",
+                model_uri=os.path.abspath(tmp_dir),
+                quantization="none",
+            )
+        ],
+    )
+
+    cache_dir = CacheManager(model_family).cache()
+    assert os.path.exists(cache_dir)
+    assert os.path.islink(cache_dir)
+    assert os.path.samefile(os.path.realpath(cache_dir), tmp_dir)
+    os.remove(cache_dir)
+    shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def test_register_custom_embedding():
+    from ....constants import XINFERENCE_CACHE_DIR
+    from ..custom import (
+        CustomEmbeddingModelFamilyV2,
+        register_embedding,
+        unregister_embedding,
+    )
+
+    tmp_dir = tempfile.mkdtemp()
+
+    # correct
+    model_family = CustomEmbeddingModelFamilyV2(
+        model_name="custom_test_b",
+        dimensions=1024,
+        max_tokens=2048,
+        language=["zh"],
+        model_specs=[
+            TransformersEmbeddingSpecV1(
+                model_format="pytorch",
+                model_id="test/custom_test_b",
+                model_uri=os.path.abspath(tmp_dir),
+                quantization="none",
+            )
+        ],
+    )
+
+    register_embedding(model_family, False)
+    CacheManager(model_family).cache()
+    model_cache_path = os.path.join(
+        XINFERENCE_CACHE_DIR, "v2", f"{model_family.model_name}-pytorch-none"
+    )
+    assert os.path.exists(model_cache_path)
+    assert os.path.islink(model_cache_path)
+    os.remove(model_cache_path)
+
+    # Invalid path
+    model_family = CustomEmbeddingModelFamilyV2(
+        model_name="custom_test_b-v15",
+        dimensions=1024,
+        max_tokens=2048,
+        language=["zh"],
+        model_specs=[
+            TransformersEmbeddingSpecV1(
+                model_format="pytorch",
+                model_id="test/custom_test_b",
+                model_uri="file:///c/d",
+                quantization="none",
+            )
+        ],
+    )
+    with pytest.raises(ValueError):
+        register_embedding(model_family, False)
+
+    # name conflict
+    model_family = CustomEmbeddingModelFamilyV2(
+        model_name="custom_test_c",
+        dimensions=1024,
+        max_tokens=2048,
+        language=["zh"],
+        model_specs=[
+            TransformersEmbeddingSpecV1(
+                model_format="pytorch",
+                model_id="test/custom_test_c",
+                model_uri=os.path.abspath(tmp_dir),
+                quantization="none",
+            )
+        ],
+    )
+    register_embedding(model_family, False)
+    with pytest.raises(ValueError):
+        register_embedding(model_family, False)
+
+    # unregister
+    unregister_embedding("custom_test_b")
+    unregister_embedding("custom_test_c")
+    with pytest.raises(ValueError):
+        unregister_embedding("custom_test_d")
+
+    shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def test_register_fault_embedding():
+    import warnings
+
+    from ....constants import XINFERENCE_MODEL_DIR
+    from .. import _install
+
+    embedding_dir = os.path.join(XINFERENCE_MODEL_DIR, "v2", "embedding")
+
+    os.makedirs(embedding_dir, exist_ok=True)
+    file_path = os.path.join(embedding_dir, "GTE.json")
+
+    data = {
+        "model_name": "GTE",
+        "model_hub": "huggingface",
+        "dimensions": 768,
+        "max_tokens": 512,
+        "language": ["en", "zh"],
+        "model_specs": [
+            {
+                "model_format": "pytorch",
+                "model_id": None,
+                "model_revision": None,
+                "model_uri": "/new_data/cache/gte-Qwen2",
+                "quantization": "none",
+            }
+        ],
+    }
+
+    with open(file_path, "w") as f:
+        json.dump(data, f, indent=4)
+
+    all_warnings = []
+
+    def custom_warning_handler(
+        message, category, filename, lineno, file=None, line=None
+    ):
+        warning_info = {
+            "message": str(message),
+            "category": category.__name__,
+            "filename": filename,
+            "lineno": lineno,
+        }
+        all_warnings.append(warning_info)
+
+    old_showwarning = warnings.showwarning
+    warnings.showwarning = custom_warning_handler
+
+    try:
+        _install()
+
+        warnings.showwarning = old_showwarning
+
+        with pytest.warns(UserWarning) as record:
+            _install()
+
+        found_warning = False
+        for warning in record:
+            message = str(warning.message)
+            if (
+                "has error" in message
+                and (
+                    "Invalid model URI" in message
+                    or "Model URI cannot be a relative path" in message
+                )
+                and "/new_data/cache/gte-Qwen2" in message
+            ):
+                found_warning = True
+                break
+
+        assert (
+            found_warning
+        ), f"Expected warning about invalid model URI not found. Warnings: {[str(w.message) for w in record]}"
+
+    finally:
+        warnings.showwarning = old_showwarning
+
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+
+def test_convert_ids_to_tokens():
+    from ..core import create_embedding_model_instance
+
+    model_path = CacheManager(TEST_MODEL_SPEC_FROM_MODELSCOPE).cache()
+    model = create_embedding_model_instance(
+        "mock",
+        "bge-small-zh-v1.5",
+        "sentence_transformers",
+        model_path=model_path,
+    )
+    model.load()
+
+    ids = [[8074, 8059, 8064, 8056], [144, 147, 160, 160, 158]]
+    tokens = model.convert_ids_to_tokens(ids)
+
+    assert isinstance(tokens, list)
+    assert tokens == [["ｘ", "ｉ", "ｎ", "ｆ"], ["b", "e", "r", "r", "p"]]
+
+    shutil.rmtree(model_path, ignore_errors=True)
+
+
+def test_register_builtin_model_is_idempotent():
+    # Worker.update_model_type() calls register_builtin_model() again on
+    # every runtime hub-refresh, on the same already-imported process. It
+    # must leave the engine registry as if it had only run once.
+    from .. import register_builtin_model
+    from ..embed_family import SUPPORTED_ENGINES
+
+    register_builtin_model()
+    model_name = next(iter(EMBEDDING_ENGINES))
+    baseline_classes = {
+        engine: list(classes) for engine, classes in SUPPORTED_ENGINES.items()
+    }
+    baseline_engine_entries = sum(
+        len(specs) for specs in EMBEDDING_ENGINES[model_name].values()
+    )
+    baseline_model_table = sum(
+        len(specs) for specs in BUILTIN_EMBEDDING_MODELS.values()
+    )
+
+    for _ in range(3):
+        register_builtin_model()
+
+    assert {
+        engine: list(classes) for engine, classes in SUPPORTED_ENGINES.items()
+    } == baseline_classes
+    assert (
+        sum(len(specs) for specs in EMBEDDING_ENGINES[model_name].values())
+        == baseline_engine_entries
+    )
+    # BUILTIN_EMBEDDING_MODELS itself must not grow either: load_model_family_from_json
+    # unconditionally appended a fresh spec per model name on every refresh, independent
+    # of the engine-class and engine-entry guards above.
+    assert (
+        sum(len(specs) for specs in BUILTIN_EMBEDDING_MODELS.values())
+        == baseline_model_table
+    )
+
+
+def test_register_builtin_model_downloaded_catalog_merge_is_idempotent(
+    tmp_path, monkeypatch
+):
+    # Worker.update_model_type() re-parses a downloaded catalog file and
+    # merges it into the built-in table on every refresh. A downloaded entry
+    # that is value-identical to the built-in one (same content, same
+    # updated_at) must not keep padding the family list on repeat refreshes.
+    from .... import constants
+    from .. import register_builtin_model
+
+    monkeypatch.setattr(constants, "XINFERENCE_MODEL_DIR", str(tmp_path))
+
+    spec_path = os.path.join(os.path.dirname(__file__), "..", "models")
+    raw_entry = load_model_catalog(spec_path)[0]
+    model_name = raw_entry["model_name"]
+
+    register_builtin_model()
+
+    builtin_dir = os.path.join(str(tmp_path), "v2", "builtin", "embedding")
+    os.makedirs(builtin_dir, exist_ok=True)
+    catalog_path = os.path.join(builtin_dir, "embedding_models.json")
+    with open(catalog_path, "w") as f:
+        json.dump([raw_entry], f)
+
+    register_builtin_model()
+    baseline_count = len(BUILTIN_EMBEDDING_MODELS[model_name])
+
+    for _ in range(3):
+        register_builtin_model()
+
+    assert len(BUILTIN_EMBEDDING_MODELS[model_name]) == baseline_count
+    # the vetted built-in entry must still be present, not shadowed out
+    # by the freshly re-parsed downloaded duplicate.
+    assert any(f.is_builtin for f in BUILTIN_EMBEDDING_MODELS[model_name])
+
+
+def test_register_builtin_model_preserves_equal_timestamp_family_engines(
+    tmp_path, monkeypatch
+):
+    from .... import constants
+    from .. import register_builtin_model
+
+    monkeypatch.setattr(constants, "XINFERENCE_MODEL_DIR", str(tmp_path))
+    monkeypatch.setattr(constants, "XINFERENCE_ENABLE_VIRTUAL_ENV", True)
+
+    spec_path = os.path.join(os.path.dirname(__file__), "..", "models")
+    downloaded_entry = next(
+        entry
+        for entry in load_model_catalog(spec_path)
+        if entry["model_name"] == "bge-m3"
+    )
+    # Keep the same updated_at but only one of the built-in family's formats.
+    # The merge intentionally retains both distinct equal-timestamp families,
+    # so the derived engine table must contain the union of their formats.
+    downloaded_entry["model_specs"] = [downloaded_entry["model_specs"][1]]
+
+    builtin_dir = os.path.join(str(tmp_path), "v2", "builtin", "embedding")
+    os.makedirs(builtin_dir, exist_ok=True)
+    catalog_path = os.path.join(builtin_dir, "embedding_models.json")
+    with open(catalog_path, "w") as f:
+        json.dump([downloaded_entry], f)
+
+    register_builtin_model()
+    assert len(BUILTIN_EMBEDDING_MODELS["bge-m3"]) == 2
+    engine_formats = {
+        param["model_format"]
+        for params in EMBEDDING_ENGINES["bge-m3"].values()
+        for param in params
+    }
+    assert {"pytorch", "ggufv2"}.issubset(engine_formats)
+    baseline_engines = {
+        engine: list(params) for engine, params in EMBEDDING_ENGINES["bge-m3"].items()
+    }
+    register_builtin_model()
+    assert EMBEDDING_ENGINES["bge-m3"] == baseline_engines
+
+
+def test_register_builtin_model_preserves_downloaded_provenance(tmp_path, monkeypatch):
+    # A downloaded family newer than its built-in counterpart correctly wins
+    # the merge and keeps is_builtin=False on the first refresh that sees it.
+    # A later refresh must not silently promote it to is_builtin=True: that
+    # flag gates allow_trust_remote_code(), so promoting a downloaded family
+    # bypasses the operator opt-in this dedup guard exists to protect.
+    from .... import constants
+    from .. import register_builtin_model
+
+    monkeypatch.setattr(constants, "XINFERENCE_MODEL_DIR", str(tmp_path))
+
+    spec_path = os.path.join(os.path.dirname(__file__), "..", "models")
+    raw_entry = load_model_catalog(spec_path)[0]
+    model_name = raw_entry["model_name"]
+    raw_entry["updated_at"] = raw_entry["updated_at"] + 1
+
+    register_builtin_model()
+
+    builtin_dir = os.path.join(str(tmp_path), "v2", "builtin", "embedding")
+    os.makedirs(builtin_dir, exist_ok=True)
+    catalog_path = os.path.join(builtin_dir, "embedding_models.json")
+    with open(catalog_path, "w") as f:
+        json.dump([raw_entry], f)
+
+    register_builtin_model()
+    active = BUILTIN_EMBEDDING_MODELS[model_name]
+    assert len(active) == 1
+    assert active[0].is_builtin is False
+
+    for _ in range(3):
+        register_builtin_model()
+
+    active = BUILTIN_EMBEDDING_MODELS[model_name]
+    assert len(active) == 1
+    assert active[0].is_builtin is False
+
+
+def test_register_builtin_model_prunes_stale_derived_entries_on_catalog_removal(
+    tmp_path, monkeypatch
+):
+    # A downloaded-only model still in EMBEDDING_ENGINES/EMBEDDING_MODEL_DESCRIPTIONS
+    # after it drops out of a later catalog refresh keeps advertising a launch
+    # config and a description, even though BUILTIN_EMBEDDING_MODELS (the table
+    # both derive from) no longer has it.
+    from .... import constants
+    from .. import register_builtin_model
+
+    monkeypatch.setattr(constants, "XINFERENCE_MODEL_DIR", str(tmp_path))
+
+    spec_path = os.path.join(os.path.dirname(__file__), "..", "models")
+    raw_entry = load_model_catalog(spec_path)[0]
+    downloaded_only = dict(raw_entry)
+    downloaded_only["model_name"] = "downloaded-only-catalog-removal-test"
+
+    builtin_dir = os.path.join(str(tmp_path), "v2", "builtin", "embedding")
+    os.makedirs(builtin_dir, exist_ok=True)
+    catalog_path = os.path.join(builtin_dir, "embedding_models.json")
+    with open(catalog_path, "w") as f:
+        json.dump([downloaded_only], f)
+
+    register_builtin_model()
+    assert "downloaded-only-catalog-removal-test" in BUILTIN_EMBEDDING_MODELS
+    assert "downloaded-only-catalog-removal-test" in EMBEDDING_ENGINES
+    assert "downloaded-only-catalog-removal-test" in EMBEDDING_MODEL_DESCRIPTIONS
+
+    # A later refresh's catalog no longer lists the model (removed upstream).
+    with open(catalog_path, "w") as f:
+        json.dump([], f)
+
+    register_builtin_model()
+    assert "downloaded-only-catalog-removal-test" not in BUILTIN_EMBEDDING_MODELS
+    assert "downloaded-only-catalog-removal-test" not in EMBEDDING_ENGINES
+    assert "downloaded-only-catalog-removal-test" not in EMBEDDING_MODEL_DESCRIPTIONS

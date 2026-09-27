@@ -1,0 +1,241 @@
+# Copyright 2022-2026 XProbe Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+import sys
+import threading
+import time
+
+import pytest
+
+from ...client.restful.restful_client import Client as RESTfulClient
+from ...model.scheduler.core import AbortRequestMessage
+
+
+class BaseThread(threading.Thread):
+    def __init__(self):
+        super().__init__()
+        self._ex = None
+
+    def run_internal(self):
+        super().run()
+
+    def run(self):
+        try:
+            self.run_internal()
+        except BaseException as e:
+            self._ex = e
+
+    def join(self, timeout=None):
+        super().join()
+        if self._ex is not None:
+            raise self._ex
+
+
+class InferenceThread(BaseThread):
+    def __init__(self, prompt, generate_config, client, model):
+        super().__init__()
+        self._prompt = [{"role": "user", "content": prompt}]
+        self._generate_config = generate_config
+        self._client = client
+        self._model = model
+        self._ex = None
+
+    @property
+    def stream(self):
+        return self._generate_config.get("stream", False)
+
+    def run_internal(self):
+        if self.stream:
+            results = []
+            for res in self._model.chat(
+                self._prompt, generate_config=self._generate_config
+            ):
+                results.append(res)
+            assert len(results) > 0
+        else:
+            res = self._model.chat(self._prompt, generate_config=self._generate_config)
+            assert isinstance(res, dict)
+            choices = res["choices"]
+            assert isinstance(choices, list)
+            choice = choices[0]["message"]
+            assert isinstance(choice, dict)
+            content = choice["content"]
+            assert len(content) > 0
+
+
+class InferenceThreadWithError(InferenceThread):
+    def __init__(self, prompt, generate_config, client, model, sleep=None):
+        super().__init__(prompt, generate_config, client, model)
+        self._sleep = sleep
+
+    def run_internal(self):
+        if self._sleep is not None:
+            time.sleep(self._sleep)
+        if self.stream:
+            with pytest.raises(Exception):
+                for res in self._model.chat(
+                    self._prompt, generate_config=self._generate_config
+                ):
+                    print(res)
+        else:
+            with pytest.raises(Exception):
+                self._model.chat(self._prompt, generate_config=self._generate_config)
+
+
+class AbortThread(BaseThread):
+    def __init__(self, client, model_uid, request_id, expected_res, sleep=None):
+        super().__init__()
+        self._client = client
+        self._model_uid = model_uid
+        self._request_id = request_id
+        self._sleep = sleep
+        self._expected_res = expected_res
+
+    def run_internal(self):
+        if self._sleep is not None:
+            time.sleep(self._sleep)
+        result = self._client.abort_request(self._model_uid, self._request_id)
+        assert result["msg"] == self._expected_res
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="does not run on windows github CI due to its terrible runtime",
+)
+def test_continuous_batching(setup):
+    endpoint, _ = setup
+    client = RESTfulClient(endpoint)
+
+    # launch model using client
+    model_uid_res = client.launch_model(
+        model_engine="transformers",
+        model_type="LLM",
+        model_name="qwen2.5-instruct",
+        quantization="none",
+        model_format="pytorch",
+        model_size_in_billions="0_5",
+    )
+    assert model_uid_res == "qwen2.5-instruct"
+
+    model = client.get_model(model_uid_res)
+
+    # test correct
+    thread1 = InferenceThread("1+1=3正确吗？", {"stream": True}, client, model)
+    thread2 = InferenceThread(
+        "中国的首都是哪座城市？", {"stream": False}, client, model
+    )
+    thread1.start()
+    thread2.start()
+    thread1.join()
+    thread2.join()
+
+    # test error generate config
+    messages = [{"role": "user", "content": "你好"}]
+    with pytest.raises(RuntimeError):
+        model.chat(messages, generate_config={"max_tokens": 99999999999999999})
+
+    with pytest.raises(RuntimeError):
+        model.chat(messages, generate_config={"stream_interval": 0})
+
+    # test error with other correct requests
+    thread1 = InferenceThread("1+1=3正确吗？", {"stream": True}, client, model)
+    thread2 = InferenceThread(
+        "中国的首都是哪座城市？", {"stream": False}, client, model
+    )
+    thread3 = InferenceThreadWithError(
+        "猫和狗有什么区别？",
+        {"stream": True, "max_tokens": 99999999999999},
+        client,
+        model,
+    )
+    thread4 = InferenceThreadWithError(
+        "简介篮球的发展历史。", {"stream": False, "stream_interval": 0}, client, model
+    )
+
+    thread1.start()
+    thread2.start()
+    thread3.start()
+    thread4.start()
+    thread1.join()
+    thread2.join()
+    thread3.join()
+    thread4.join()
+
+    # test same request ids
+    # The first request must still be generating when the duplicate one
+    # arrives, otherwise its request id is already evicted from the scheduler
+    # and no error is raised; ask for a long completion to avoid the race.
+    thread1 = InferenceThread(
+        "请写一篇两百字左右的短文，介绍篮球运动的发展历史。",
+        {"stream": True, "request_id": "aaabbb", "max_tokens": 512},
+        client,
+        model,
+    )
+    thread2 = InferenceThreadWithError(
+        "中国的首都是哪座城市？",
+        {"stream": False, "request_id": "aaabbb"},
+        client,
+        model,
+        0.03,
+    )
+    thread1.start()
+    thread2.start()
+    thread1.join()
+    thread2.join()
+
+    # test abort request for stream
+    # Long completion for the same reason as above: the abort must land while
+    # the request is still running.
+    thread1 = InferenceThread(
+        "请写一篇两百字左右的短文，介绍猫和狗的区别。",
+        {"stream": True, "request_id": "aaabbb", "max_tokens": 512},
+        client,
+        model,
+    )
+    thread2 = AbortThread(
+        client, model_uid_res, "bbbaaa", AbortRequestMessage.NOT_FOUND.name
+    )
+    thread3 = AbortThread(client, "abcd", "aaabbb", AbortRequestMessage.NO_OP.name)
+    thread4 = AbortThread(
+        client, model_uid_res, "aaabbb", AbortRequestMessage.DONE.name, 0.01
+    )
+    thread1.start()
+    thread2.start()
+    thread3.start()
+    thread4.start()
+    with pytest.raises(Exception):
+        thread1.join()
+    thread2.join()
+    thread3.join()
+    thread4.join()
+
+    # test abort request for non-stream
+    thread1 = InferenceThread(
+        "请写一篇两百字左右的短文，介绍猫和狗的区别。",
+        {"request_id": "aaabbb", "max_tokens": 512},
+        client,
+        model,
+    )
+    thread2 = AbortThread(
+        client, model_uid_res, "aaabbb", AbortRequestMessage.DONE.name, 0.01
+    )
+    thread1.start()
+    thread2.start()
+    with pytest.raises(Exception):
+        thread1.join()
+    thread2.join()
+
+    # correctly terminate model
+    client.terminate_model(model_uid_res)

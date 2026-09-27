@@ -1,0 +1,622 @@
+ .. _image:
+
+========
+Images
+========
+
+Learn how to generate images with Xinference.
+
+
+Introduction
+==================
+
+
+The Images API provides two methods for interacting with images:
+
+
+* The Text-to-image endpoint create images from scratch based on a text prompt.
+* The Image-to-image endpoint allows you to generate a variation of a given image.
+
+
+.. list-table:: 
+   :widths: 25  50
+   :header-rows: 1
+
+   * - API ENDPOINT
+     - OpenAI-compatible ENDPOINT
+
+   * - Text-to-Image API
+     - /v1/images/generations
+
+   * - Image-to-image API
+     - /v1/images/variations
+
+Supported models
+-------------------
+
+The Text-to-image API is supported with the following models in Xinference:
+
+* sd-turbo
+* sdxl-turbo
+* stable-diffusion-v1.5
+* stable-diffusion-xl-base-1.0
+* sd3-medium
+* sd3.5-medium
+* sd3.5-large
+* sd3.5-large-turbo
+* FLUX.1-schnell
+* FLUX.1-dev
+* Kolors
+* hunyuandit-v1.2
+* hunyuandit-v1.2-distilled
+* cogview4
+* Qwen-Image
+* GLM-Image
+* Ideogram4
+* HiDream-O1-Image
+* HiDream-O1-Image-Dev
+* HiDream-O1-Image-Dev-2604
+* Krea-2-Raw
+* Krea-2-Turbo
+
+Image-to-image supported models:
+
+* Flux.1-Kontext-dev
+* Qwen-Image-Edit
+* GLM-Image
+* HiDream-O1-Image
+* HiDream-O1-Image-Dev
+
+
+HiDream-O1 runtime notes
+------------------------
+
+All three HiDream-O1 checkpoints are available from Hugging Face with revision
+``main`` and ModelScope with revision ``master``. They require an NVIDIA CUDA
+GPU and PyTorch 2.10 or newer. Flash Attention is optional; Xinference disables
+it by default for compatibility.
+
+.. list-table::
+   :widths: 30 15 55
+   :header-rows: 1
+
+   * - Model
+     - Default steps
+     - Usage and scheduler defaults
+   * - HiDream-O1-Image
+     - 50
+     - Text-to-image, instruction-based editing, and multiple reference images;
+       uses the official default scheduler.
+   * - HiDream-O1-Image-Dev
+     - 28
+     - Text-to-image, editing, and multiple reference images; single-reference
+       editing uses the flow-matching scheduler, while text-to-image and
+       multi-reference generation use the flash scheduler.
+   * - HiDream-O1-Image-Dev-2604
+     - 28
+     - Text-to-image only; uses the checkpoint's float32 loading and sampling
+       defaults.
+
+
+Image engines
+-------------------
+
+Text-to-image models run on the ``diffusers`` engine by default. On Linux with
+NVIDIA GPUs, the following models can also run on the ``SGLang`` engine
+(powered by `sglang-diffusion <https://docs.sglang.io/docs/sglang-diffusion/installation>`_)
+or the ``vLLM`` engine
+(powered by `vllm-omni <https://docs.vllm.ai/projects/vllm-omni/>`_)
+for faster inference:
+
+* FLUX.1-dev
+* GLM-Image (SGLang only)
+* Krea-2-Raw (SGLang only)
+* Krea-2-Turbo (SGLang only)
+* Qwen-Image
+* Qwen-Image-2512
+* Z-Image
+* Z-Image-Turbo
+* sd3.5-medium (vLLM only)
+
+On the vLLM engine, models whose vllm-omni pipeline supports request-level
+batching (e.g. sd3.5-medium, Qwen-Image, FLUX.1-dev) can additionally batch
+concurrent requests on the GPU; pass ``max_num_seqs`` at launch to set the
+maximum batch size.
+
+SGLang 0.5.20 or newer also accepts concurrent image requests for native dynamic batching. Set ``batching_max_size`` and optionally ``batching_delay_ms`` at launch. For vLLM-Omni 0.28, set ``max_num_seqs``; supported pipelines can additionally use ``step_execution=true`` for experimental continuous batching. Batching is opt-in, requires compatible requests and model support, and increases GPU memory usage. Send independent API requests concurrently; ``n`` only controls the number of outputs within one request.
+
+To use them, install SGLang with diffusion support via
+``pip install 'sglang[diffusion]>=0.5.20,<0.6'``, or vLLM-Omni together with a vLLM of the
+same major.minor version via ``pip install 'vllm-omni==0.28.*' 'vllm==0.28.*'``,
+then launch the model with ``--model-engine SGLang`` or
+``--model-engine vLLM``, for example:
+
+.. code-block:: bash
+
+    xinference launch --model-name Z-Image-Turbo --model-type image --model-engine SGLang
+    xinference launch --model-name Z-Image-Turbo --model-type image --model-engine vLLM
+
+Note that GGUF quantization, Lightning acceleration, LoRA and controlnet are
+only available on the ``diffusers`` engine.
+
+
+Ideogram4
+-------------------
+
+:ref:`Ideogram4 <models_builtin_ideogram4>` uses the NF4 checkpoint and
+requires an NVIDIA CUDA GPU. The checkpoint is distributed under the Ideogram
+4 Non-Commercial Model Agreement, and its repositories are gated. Accept the
+license and authenticate with the selected model hub before launching.
+
+Ideogram4 accepts plain text prompts, but serialized structured JSON captions
+provide the best quality and control.
+
+To download from ModelScope for an individual launch::
+
+   xinference launch --model-name Ideogram4 --model-type image --download_hub modelscope
+
+
+GLM-Image
+-------------------
+
+:ref:`GLM-Image <models_builtin_glm-image>` supports both text-to-image
+generation and single- or multi-reference image-to-image generation through
+the same ``GlmImagePipeline``. Output width and height must both be divisible
+by 32.
+
+The ``diffusers`` engine uses ``diffusers==0.38.0`` and
+``transformers==5.0.0``. Xinference installs these packages automatically when
+per-model virtual environments are enabled.
+
+The Hugging Face source is ``zai-org/GLM-Image`` at revision ``main``. The
+ModelScope source is ``ZhipuAI/GLM-Image`` at revision ``master``.
+
+To download from ModelScope for an individual launch::
+
+   xinference launch --model-name GLM-Image --model-type image --download_hub modelscope
+
+On Linux with NVIDIA GPUs, text-to-image generation can also use SGLang::
+
+   xinference launch --model-name GLM-Image --model-type image --model-engine SGLang
+
+The SGLang engine currently exposes only text-to-image generation. Use the
+default ``diffusers`` engine for image-to-image generation.
+
+
+Quickstart
+===================
+
+Text-to-image
+--------------------
+
+The Text-to-image API mimics OpenAI's `create images API <https://platform.openai.com/docs/api-reference/images/create>`_.
+We can try Text-to-image API out either via cURL, OpenAI Client, or Xinference's python client:
+
+.. tabs::
+
+  .. code-tab:: bash cURL
+
+    curl -X 'POST' \
+      'http://<XINFERENCE_HOST>:<XINFERENCE_PORT>/v1/images/generations' \
+      -H 'accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "model": "<MODEL_UID>",
+        "prompt": "an apple",
+      }'
+
+
+  .. code-tab:: python OpenAI Python Client
+
+    import openai
+
+    client = openai.Client(
+        api_key="cannot be empty", 
+        base_url="http://<XINFERENCE_HOST>:<XINFERENCE_PORT>/v1"
+    )
+    client.images.generate(
+        model=<MODEL_UID>, 
+        prompt="an apple"
+    )
+
+  .. code-tab:: python Xinference Python Client
+
+    from xinference.client import Client
+
+    client = Client("http://<XINFERENCE_HOST>:<XINFERENCE_PORT>")
+
+    model = client.get_model("<MODEL_UID>")
+    input_text = "an apple"
+    model.text_to_image(input_text)
+
+
+  .. code-tab:: json output
+
+    {
+      "created": 1697536913,
+      "data": [
+        {
+          "url": "/home/admin/.xinference/image/605d2f545ac74142b8031455af31ee33.jpg",
+          "b64_json": null
+        }
+      ]
+    }
+
+Image-to-image
+--------------------
+
+The Image-to-image API mimics OpenAI's `create image variation API <https://platform.openai.com/docs/api-reference/images/createVariation>`_.
+We can try image-to-image API out either via cURL, OpenAI Client, or Xinference's python client:
+
+.. tabs::
+
+  .. code-tab:: bash cURL
+
+    curl -X 'POST' \
+      'http://<XINFERENCE_HOST>:<XINFERENCE_PORT>/v1/images/variations' \
+      -F model=<MODEL_UID> \
+      -F image=@xxx.jpg \
+      -F prompt="an apple"
+
+
+  .. code-tab:: python OpenAI Python Client
+
+    import openai
+
+    client = openai.Client(
+        api_key="cannot be empty",
+        base_url="http://<XINFERENCE_HOST>:<XINFERENCE_PORT>/v1"
+    )
+    client.images.create_variation(
+        model=<MODEL_UID>,
+        image=open("image_edit_original.png", "rb"),
+        prompt="an apple"
+    )
+
+  .. code-tab:: python Xinference Python Client
+
+    from xinference.client import Client
+
+    client = Client("http://<XINFERENCE_HOST>:<XINFERENCE_PORT>")
+
+    model = client.get_model("<MODEL_UID>")
+    input_text = "an apple"
+    with open("xxx.jpg", "rb") as f:
+        model.image_to_image(f.read(), input_text)
+
+
+  .. code-tab:: json output
+
+    {
+      "created": 1697536913,
+      "data": [
+        {
+          "url": "/home/admin/.xinference/image/605d2f545ac74142b8031455af31ee33.jpg",
+          "b64_json": null
+        }
+      ]
+    }
+
+Memory optimization for Large Image Models e.g. SD3-Medium, FLUX.1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+
+    From v0.16.1, Xinference by default enabled quantization for
+    large image models like Flux.1 and SD3.5 series.
+    So if your Xinference version is newer than v0.16.1,
+    You barely need to do anything to run those large image models on GPUs with small memory.
+
+Useful extra parameters can be passed to launch including:
+
+* ``--cpu_offload True``: specifying ``True`` will offload the components of the model to CPU during
+  inference in order to save memory, while seeing a slight increase in inference latency.
+  Model offloading will only move a model component onto the GPU when it needs to be executed,
+  while keeping the remaining components on the CPU.
+* ``--quantize_text_encoder <text encoder layer>``: We leveraged the ``bitsandbytes`` library
+  to load and quantize the T5-XXL text encoder to 8-bit precision.
+  This allows you to keep using all text encoders while only slightly impacting performance.
+* ``--text_encoder_3 None``, for sd3-medium, removing the memory-intensive 4.7B parameter
+  T5-XXL text encoder during inference can significantly decrease the memory requirements
+  with only a slight loss in performance.
+* ``--transformer_nf4 True``: use nf4 for transformer quantization.
+* ``--quantize``: Only work for MLX on Mac, Flux.1-dev and Flux.1-schnell will switch to
+  MLX engine on Mac, and ``quantize`` can be used to quantize the model.
+
+For WebUI, Just add additional parameters, e.g. add key ``cpu_offload`` and value ``True``
+to enable cpu offloading.
+
+Below list default options that used from v0.16.1.
+
++-------------------+-----------------------+----------------------+------------------+
+| Model             | quantize_text_encoder | quantize             | transformer_nf4  |
++===================+=======================+======================+==================+
+| FLUX.1-dev        | text_encoder_2        | True                 | False            |
++-------------------+-----------------------+----------------------+------------------+
+| FLUX.1-schnell    | text_encoder_2        | True                 | False            |
++-------------------+-----------------------+----------------------+------------------+
+| sd3-medium        | text_encoder_3        | N/A                  | False            |
++-------------------+-----------------------+----------------------+------------------+
+| sd3.5-medium      | text_encoder_3        | N/A                  | False            |
++-------------------+-----------------------+----------------------+------------------+
+| sd3.5-large       | text_encoder_3        | N/A                  | True             |
++-------------------+-----------------------+----------------------+------------------+
+| sd3.5-large-turbo | text_encoder_3        | N/A                  | True             |
++-------------------+-----------------------+----------------------+------------------+
+| Qwen-Image        | text_encoder          | N/A                  | False            |
++-------------------+-----------------------+----------------------+------------------+
+| Qwen-Image-Edit   | text_encoder          | N/A                  | False            |
++-------------------+-----------------------+----------------------+------------------+
+
+.. note::
+
+    If you want to disable some quantization, just set the corresponding option to False.
+    e.g. for Web UI, set key ``quantize_text_encoder`` and value ``False``
+    and for command line, specify ``--quantize_text_encoder False`` to disable quantization
+    for text encoder.
+
+For :ref:`CogView4 <models_builtin_cogview4>`, we found that quantization has a significant impact on the model.
+Therefore, when GPU memory is limited, we recommend enabling the CPU offload option in the Web UI,
+and specifying ``--cpu_offload True`` when loading the model via the command line.
+
+GGUF file format
+~~~~~~~~~~~~~~~~
+
+GGUF file format for transformer provides various quantization options.
+To use gguf file, you can specify additional option ``gguf_quantization`` for web UI,
+or ``--gguf_quantization`` for command line for those image models which support
+internally by Xinference. Below is the mode list.
+
++-----------------------+------------------------------------------------------------------------------------------+
+| Model                 | supported gguf quantization                                                              |
++=======================+==============================================+===========================================+
+| FLUX.1-dev            | F16, Q2_K, Q3_K_S, Q4_0, Q4_1, Q4_K_S, Q5_0, Q5_1, Q5_K_S, Q6_K, Q8_0                    |
++-----------------------+------------------------------------------------------------------------------------------+
+| FLUX.1-schnell        | F16, Q2_K, Q3_K_S, Q4_0, Q4_1, Q4_K_S, Q5_0, Q5_1, Q5_K_S, Q6_K, Q8_0                    |
++-----------------------+------------------------------------------------------------------------------------------+
+| sd3.5-medium          | F16, Q3_K_M, Q3_K_S, Q4_0, Q4_1, Q4_K_M, Q4_K_S, Q5_0, Q5_1, Q5_K_M, Q5_K_S, Q6_K, Q8_0  |
++-----------------------+------------------------------------------------------------------------------------------+
+| sd3.5-large           | F16, Q4_0, Q4_1, Q5_0, Q5_1, Q8_0                                                        |
++-----------------------+------------------------------------------------------------------------------------------+
+| sd3.5-large-turbo     | F16, Q4_0, Q4_1, Q5_0, Q5_1, Q8_0                                                        |
++-----------------------+------------------------------------------------------------------------------------------+
+| Qwen-Image            | F16, Q3_K_M, Q3_K_S, Q4_0, Q4_1, Q4_K_M, Q4_K_S, Q5_0, Q5_1, Q5_K_M, Q5_K_S, Q6_K, Q8_0  |
++-----------------------+------------------------------------------------------------------------------------------+
+| Qwen-Image-Edit       | Q2_K, Q3_K_M, Q3_K_S, Q4_0, Q4_1, Q4_K_M, Q4_K_S, Q5_0, Q5_1, Q5_K_M, Q5_K_S, Q6_K, Q8_0 |
++-----------------------+------------------------------------------------------------------------------------------+
+| Qwen-Image-Edit-2509  | Q2_K, Q3_K_M, Q3_K_S, Q4_0, Q4_1, Q4_K_M, Q4_K_S, Q5_0, Q5_1, Q5_K_M, Q5_K_S, Q6_K, Q8_0 |
++-----------------------+------------------------------------------------------------------------------------------+
+
+.. note::
+
+    We stronly recommend to enable additional option ``cpu_offload`` with value ``True`` for WebUI,
+    or specify ``--cpu_offload True`` for command line.
+
+Example:
+
+.. code-block::
+
+    xinference launch --model-name FLUX.1-dev --model-type image --gguf_quantization Q2_K --cpu_offload True
+
+With ``Q2_K`` quantization, you only need around 5 GiB GPU memory to run Flux.1-dev.
+
+For those models gguf options are not supported internally, or you want to download gguf files on you own,
+you can specify additional option ``gguf_model_path`` for web UI or spcecify
+``--gguf_model_path /path/to/model_quant.gguf`` for command line.
+
+Lightning LORA Support
+~~~~~~~~~~~~~~~~~~~~~~
+
+Lightning LORA performs distillation on models in the form of LoRA,
+reducing the number of inference steps while maintaining model performance,
+and significantly speeding up inference. The following models currently support this LoRA:
+
++------------------------+------------------------------------------------------------------------------------------+
+| Model                  | Supported lightning version                                                              |
++========================+==============================================+===========================================+
+| Qwen-Image             | 4steps-V1.0-bf16, 4steps-V1.0, 8steps-V1.0, 8steps-V1.1-bf16, 8steps-V1.1                |
++------------------------+------------------------------------------------------------------------------------------+
+| Qwen-Image-Edit        | 4steps-V1.0-bf16, 4steps-V1.0, 8steps-V1.0-bf16, 8steps-V1.0                             |
++------------------------+------------------------------------------------------------------------------------------+
+| Qwen-Image-Edit-2509   | 4steps-V1.0-bf16, 4steps-V1.0-fp32, 8steps-V1.0-bf16, 8steps-V1.0-fp32                   |
++------------------------+------------------------------------------------------------------------------------------+
+
+4 steps or 8 steps refer to the inference steps (``num_inference_steps``).
+When ``lightning_version`` is specified, Xinference will automatically set the number of inference steps.
+
+When using it, select the lightning version in the interface, or specify it via the command line.
+
+.. raw:: html
+
+    <img class="align-center" alt="actor" src="../../_static/qwen-image-lightning.png" style="background-color: transparent", width="95%">
+
+Use the command line with ``--lightning_version <version>``.
+
+For those who have downloaded the lightning LoRA files themselves, you can specify them via the Lightning
+Model Path in the interface or by using the command line option ``--lightning_model_path``.
+
+For example, using ``4steps-V1.0``, the inference time is reduced from the original 34s to 3s.
+
+OCR
+--------------------
+
+The OCR API accepts image or PDF bytes and returns the OCR text.
+
+We can try OCR API out either via cURL, or Xinference's python client:
+
+.. tabs::
+
+  .. code-tab:: bash cURL
+
+    curl -X 'POST' \
+      'http://<XINFERENCE_HOST>:<XINFERENCE_PORT>/v1/images/ocr' \
+      -F model=<MODEL_UID> \
+      -F 'kwargs={"model_size":"large"}' \
+      -F image=@xxx.jpg
+
+
+  .. code-tab:: python Xinference Python Client
+
+    from xinference.client import Client
+
+    client = Client("http://<XINFERENCE_HOST>:<XINFERENCE_PORT>")
+
+    model = client.get_model("<MODEL_UID>", model_size="large")
+    with open("xxx.jpg", "rb") as f:
+        model.ocr(f.read())
+
+
+  .. code-tab:: text output
+
+    <OCR result string>
+
+OvisOCR2 Usage
+~~~~~~~~~~~~~~
+
+:ref:`OvisOCR2 <models_builtin_ovisocr2>` is exposed through the image OCR API.
+Use the ``/v1/images/ocr`` endpoint above or Xinference's Python client instead
+of the OpenAI-compatible Chat Completions API:
+
+.. code-block:: python
+
+    from xinference.client import Client
+
+    client = Client("http://<XINFERENCE_HOST>:<XINFERENCE_PORT>")
+    model = client.get_model("<MODEL_UID>")
+    with open("document.jpg", "rb") as f:
+        markdown = model.ocr(f.read())
+
+OvisOCR2 uses deterministic decoding and allows up to 16384 new tokens by
+default. Its vLLM adapter also applies the recommended image pixel bounds.
+Visual-region ``<img src="images/bbox_*.jpg" />`` placeholders are removed
+because the OCR API does not create the referenced crops, and known repeated
+tails are cleaned. Pass ``filter_imgtags=False`` to ``model.ocr`` to retain the
+raw placeholders.
+
+PDF uploads are rasterized page by page (requires ``pypdfium2``, included in the
+``image`` extra), OCR runs on each page, and the results are merged:
+
+* When the model returns plain text, the page texts are joined with blank lines
+  and the response stays a single string, same as for an image.
+* When the model returns structured results (e.g. with ``return_dict`` style
+  options), the response is ``{"pages": [{"page": 1, "result": ...}, ...]}``.
+
+Two optional PDF-only ``kwargs`` fields are supported: ``pages`` (a 1-based page
+number or list of page numbers to OCR, defaults to all pages) and ``dpi`` (the
+rasterization resolution, defaults to 200, capped at 600). Pages are rasterized
+one at a time to keep memory usage flat; at most 200 pages can be OCRed per
+request (use ``pages`` to select a subset of larger documents), and a page whose
+raster would exceed 80 megapixels is rejected — lower ``dpi`` in that case:
+
+.. code-block:: bash
+
+    curl -X 'POST' \
+      'http://<XINFERENCE_HOST>:<XINFERENCE_PORT>/v1/images/ocr' \
+      -F model=<MODEL_UID> \
+      -F 'kwargs={"pages": [1, 2], "dpi": 300}' \
+      -F image=@xxx.pdf
+
+TeleOCR Usage
+~~~~~~~~~~~~~
+
+TeleOCR uses the image OCR API with Transformers or vLLM. Its Hugging Face
+weights are ``StarDoc-AI/TeleOCR``; the ModelScope mirror is
+``XingChen-AGI/TeleOCR``. Launch the regular weights with::
+
+    xinference launch --model-name TeleOCR --model-type image --model-engine transformers
+
+GGUF quantizations use the older NaviDC-OCR conversion with a separate vision
+projector. Select one with::
+
+    xinference launch --model-name TeleOCR --model-type image --model-engine llama.cpp --model-format ggufv2 --quantization Q4_K_M
+
+The GGUF publisher reports that these files require a patched llama.cpp build;
+stock llama.cpp fails with ``check_tensor_dims``. Use a compatible patched
+``xllamacpp`` build before launching. See the `GGUF patch instructions
+<https://huggingface.co/nandraj/NaviDC-OCR-GGUF/blob/main/PATCHES.md>`_.
+
+Whole-document parsing
+~~~~~~~~~~~~~~~~~~~~~~
+
+Some models expose a whole-document parsing task in addition to per-page OCR.
+``DeepDoc`` supports ``task="parse"``, which runs its full document pipeline —
+layout analysis, table structure recognition, paragraph merging and
+reading-order reconstruction — over an entire PDF and returns ordered document
+elements:
+
+.. code-block:: bash
+
+    curl -X 'POST' \
+      'http://<XINFERENCE_HOST>:<XINFERENCE_PORT>/v1/images/ocr' \
+      -F model=<MODEL_UID> \
+      -F 'kwargs={"task": "parse"}' \
+      -F image=@xxx.pdf
+
+.. code-block:: json
+
+    {"task": "parse",
+     "elements": [
+       {"type": "table",
+        "text": "<table><caption>...</caption><tr><th>...</th></tr></table>",
+        "image_base64": "...",
+        "metadata": {"page_number": 2, "x0": 20.0, "x1": 400.0, "top": 50.0,
+                     "bottom": 200.0, "layout_type": "table", "col_id": 0,
+                     "positions": [[2, 20, 400, 50, 200]]}}
+     ]}
+
+``type`` is the detected layout type (``text``, ``title``, ``table`` or
+``figure``), and ``text`` holds the element text — complete HTML in the case of
+tables. Coordinates in ``metadata`` accumulate across pages, so ``top`` and
+``bottom`` are document-wide rather than page-relative. ``col_id`` is only
+present on elements the pipeline assigned to a column.
+
+Unlike the per-page tasks, ``parse`` renders the PDF itself and needs the whole
+document to merge across pages, so it requires a PDF upload and does not accept
+``pages`` or ``dpi``. Two optional ``kwargs`` fields apply:
+
+* ``zoomin`` — the render scale, defaulting to ``3`` and capped at ``6``.
+* ``image_scope`` — which elements carry a base64-encoded PNG crop in
+  ``image_base64``: ``table_figure`` (the default, tables and figures only),
+  ``all``, or ``none``. Every element has a crop internally, but encoding all of
+  them inflates the response substantially, so prefer the default unless the
+  text crops are needed too. The field is omitted for elements without a crop.
+
+Parsing has its own size limits, and they are tighter than the per-page OCR
+path's. When a render finds no text *anywhere in the document*, DeepDoc
+re-renders the whole thing at three times the zoom, repeatedly, until the scale
+reaches 9 — so a request at ``zoomin=3`` may end up rendering at 9.
+
+With ``deepdoc-lib`` 0.2.2 that re-render is in practice unreachable for any
+document that renders at all — DeepDoc appends to its box list on every page,
+including an empty list for a page that yields nothing, so the
+``len(boxes) == 0`` condition it guards on only holds when there were no pages
+to render. The document is therefore budgeted at the scale you asked for, with
+a separate ceiling bounding what the re-render would cost should a later
+release make it reachable again. Three budgets apply:
+
+* **Per page**, enforced at the worst-case scale, since one page with an
+  outsized MediaBox must not be admitted on the strength of a retry that may
+  still fire: a page may not peak above 200 megapixels. An A3 page is fine at
+  ``zoomin=3`` but not at ``6``.
+* **Whole document**, at the requested scale: the pages together may not
+  exceed 1 gigapixel, roughly 221 A4 pages at the default zoom, with the
+  200-page ceiling capping it from the other side.
+* **Whole document, if the re-render happens**: the escalated peak may not
+  exceed 6 gigapixels, about 24 GB of page images. This is what limits long
+  documents in practice — roughly 130 A4 pages at the default zoom — and it is
+  deliberately not derived from the other two, whose product would permit some
+  160 GB.
+
+Note that the per-page budget is **not monotonic** in ``zoomin``, because the
+retry ladder is not: DeepDoc tests ``zoomin < 9`` before multiplying, so
+``zoomin=2`` and ``zoomin=6`` both escalate to 18x while ``zoomin=3`` stops at
+9x. Lowering ``zoomin`` can therefore make the per-page budget *larger*. For
+that reason a 400 from these limits names a ``zoomin`` that would actually fit
+whenever one exists, and otherwise says to split the document — follow what
+the message says rather than assuming a lower zoom will help.
+
+Both whole-document ceilings can be raised on deployments whose parse workers
+are sized for it, via ``XINFERENCE_MAX_PDF_PARSE_TOTAL_PIXELS`` and
+``XINFERENCE_MAX_PDF_PARSE_RETRY_TOTAL_PIXELS`` (both in pixels). A rendered
+page costs roughly 4 bytes per pixel, so the defaults correspond to about 4 GB
+and 24 GB of page images respectively.
