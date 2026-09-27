@@ -1,1 +1,0 @@
-export function ensureTuiServer(options: { base: string; root: string; workspace: string; explicit: boolean; storeId?: string; env?: NodeJS.ProcessEnv }): Promise<{ pid: number; log: string } | undefined>;
