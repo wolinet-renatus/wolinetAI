@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Wolinet AI CLI - Sovereign AI Coding Agent for Terminal
+# ==============================================================================
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+BIN_PATH="${ROOT_DIR}/apps/web-client/bin/litespeed.mjs"
+AGENT_PATH="${ROOT_DIR}/apps/agentic-coder/main.py"
+PYTHON_BIN="${ROOT_DIR}/.venv/bin/python"
+
+# Source root or web-client .env if present
+if [ -f "${ROOT_DIR}/apps/web-client/.env" ]; then
+    set -o allexport
+    source "${ROOT_DIR}/apps/web-client/.env"
+    set +o allexport
+elif [ -f "${ROOT_DIR}/.env" ]; then
+    set -o allexport
+    source "${ROOT_DIR}/.env"
+    set +o allexport
+fi
+
+# Pre-set default connection to Wolinet Gateway
+export LITELLM_BASE_URL="${LITELLM_BASE_URL:-http://127.0.0.1:4000/v1}"
+export LITELLM_API_KEY="${LITELLM_API_KEY:-sk-wolinet-admin-2026}"
+export LITESPEED_MODEL="${LITESPEED_MODEL:-wolinex-coder}"
+
+if [ ! -x "${PYTHON_BIN}" ]; then
+    PYTHON_BIN="$(which python3)"
+fi
+
+# Help handler
+if [ "${1:-}" = "help" ] || [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    echo "=================================================================="
+    echo " ⚡ Wolinet AI CLI - Sovereign AI Coding Assistant"
+    echo "=================================================================="
+    echo ""
+    echo "FAST AUTONOMOUS CODING AGENT (Recommended for local CPU):"
+    echo "  ./apps/cli/wolinet test           Run speed & latency benchmark against wolinex-coder"
+    echo "  ./apps/cli/wolinet agent \"prompt\" Autonomous coding agent with live progress & tools"
+    echo "  ./apps/cli/wolinet chat           Interactive terminal coding chat session"
+    echo ""
+    echo "FULL LITESPEED WORKSPACE CLIENT:"
+    echo "  ./apps/cli/wolinet run \"prompt\"   Run prompt through full workspace server"
+    echo "  ./apps/cli/wolinet models         List available models on gateway"
+    echo "  ./apps/cli/wolinet sessions       List recent sessions"
+    echo "  ./apps/cli/wolinet doctor         System diagnostics and health report"
+    echo "  ./apps/cli/wolinet serve          Start local web server (port 3210)"
+    echo "=================================================================="
+    exit 0
+fi
+
+# Route benchmark / speed test
+if [ "${1:-}" = "test" ] || [ "${1:-}" = "--test" ]; then
+    exec "${PYTHON_BIN}" "${AGENT_PATH}" --test
+fi
+
+# Route fast autonomous agent
+if [ "${1:-}" = "agent" ]; then
+    shift
+    exec "${PYTHON_BIN}" "${AGENT_PATH}" "$@"
+fi
+
+# Route interactive terminal chat
+if [ "${1:-}" = "chat" ]; then
+    shift
+    exec "${PYTHON_BIN}" "${AGENT_PATH}" "$@"
+fi
+
+if [ ! -f "${BIN_PATH}" ]; then
+    echo "Error: CLI runner not found at ${BIN_PATH}" >&2
+    exit 1
+fi
+
+exec node "${BIN_PATH}" "$@"

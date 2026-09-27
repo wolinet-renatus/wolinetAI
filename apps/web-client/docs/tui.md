@@ -1,0 +1,153 @@
+# Terminal interface
+
+Run `litespeed` in any project directory to open a full-screen client for the same local sessions, providers, Fusion runner, approvals, and history as the web app. There is one terminal implementation, in `tui/`, using OpenTUI and React with the bundled Bun runtime. The server runs on Node.
+
+## Start here
+
+On macOS with Node 26.4+ and npm, install the command once from a checkout. See the [quick start](../README.md#quick-start) for the full clone command.
+
+```sh
+npm ci &&
+npm run build &&
+npm link
+```
+
+Then open Litespeed from the project you want to work on:
+
+```sh
+cd /path/to/project
+litespeed
+```
+
+The current directory becomes the workspace. `litespeed tui` remains an alias. `litespeed serve` runs the web server separately; you do not need it to use the terminal. Without linking, use `node /path/to/litespeed/bin/litespeed.mjs` from your project instead.
+
+There is no separate login command for this coding agent; first-run setup asks for your gateway URL and API key inside the TUI. The [upgrade guide](upgrading.md) covers moving saved state from earlier versions.
+
+Use Node 26.4 or later for the current dependency set; npm installs Bun and the native terminal dependencies. Use a UTF-8 terminal, preferably at least 80 columns by 24 rows. To launch directly from the checkout without linking the command, use `npm run tui` after building.
+
+The launcher attaches to the default local server if it is already running. Otherwise it starts one and prints its PID and stop command. **Exiting the TUI leaves that server and its tasks running.** Stop a response before quitting if you want it cancelled. Server output goes to `.litespeed/tui-server.log` under the installation, or your `LITESPEED_DATA_DIR`.
+
+Explicit connections attach only and never start a replacement server:
+
+```sh
+litespeed --url http://localhost:3210
+```
+
+`LITESPEED_URL` and `LITESPEED_PORT` are also supported. Each normal launch creates a new session. Use **Sessions** or `litespeed --session SESSION_ID` to return to an existing conversation and restore its draft. Existing sessions keep their saved configuration; change it in Models or Settings. `--model`, `--provider`, `--plan`, `--build`, and `--auto` apply to new sessions.
+
+## Your first task
+
+1. On first launch, enter your LiteLLM gateway URL and API key, then choose your setup and models. Sidekick Fusion is recommended: a powerful driver plus an efficient coding workhorse. Single model is also available. Configured launches open chat directly, including in another project.
+2. Type a task and press Enter. Build asks before changes; Plan uses read-only tools. The header shows the model that will handle the next turn.
+3. Follow tool activity inline. Each worker has its own label, assignment, live transcript, and Stop control. Worker, expert, research, and Sidekick transcripts open inline in the conversation, with one shared scroll area. Their names remain visible above collapsed steps. Click the step row to expand or collapse an assignment; click a tool row to inspect its result. Consecutive tools stay open while working and collapse at the next text response. Click any tool row for its result, or use **Alt+O** to show tool details. **Changed files** and **File history** remain in Ctrl+P.
+
+Type `/` for inline command suggestions; use ↑/↓ to choose, Tab or Enter to complete, and Esc to dismiss. Built-in commands, workspace templates, and registered skill IDs appear together.
+
+Use `/models` to change models or add Sidekick, workers, experts, a separate planner, reasoning, or an output style. `/setup` opens the full guided configuration. **Settings → Providers** supports other APIs and ChatGPT device sign-in; keys stay masked.
+
+Your last chosen model setup is shared with the web app and used for new sessions in every workspace. Existing sessions keep their models; permission defaults remain per workspace. An editor opened before another client changes the session must be reopened before saving, so it cannot silently overwrite newer configuration.
+
+Team and Expert default to automatic parallel execution for independent assignments. **Workers at once** can cap concurrency at one to four; choosing **Automatic** removes the cap. The shared runner still enforces its turn budget.
+
+## Keyboard and focus
+
+Ctrl+P is the main navigation surface: search actions or project commands, use ↑/↓, press Enter, and use Escape to return. You can also enter built-in slash commands into an empty composer.
+
+| Action | Default shortcut or command |
+| --- | --- |
+| Send, or queue during work | Enter |
+| New line | Shift+Enter or Ctrl+J |
+| Steer a running response with the current draft | Alt+Enter, or Ctrl+P → Send draft as steering |
+| Interrupt the response and its workers, then send the next queued message | Escape |
+| Take queued messages back into the draft | Up on the first visual row of the input |
+| Quit while leaving the server available | Ctrl+C twice, or Ctrl+X then Q |
+| Models / sessions / new session | Ctrl+X then M / L / N |
+| Queue edit, pause, resume, or remove | Ctrl+X then P, or `/queue` |
+| External editor / workspace shell | Ctrl+X then E, or `/editor` / `/shell` |
+| Review edits / history / worker evidence | `/changes` / `/history` / `/workers` |
+| Follow the agent's task list / set a session goal | `/todos` / `/goal` |
+| Add workspace context | Type `@filename`, then Tab; or `/files` |
+| Attach a local text file or image | `/attach`, or `/attach path/to/file` |
+| Browse/select instruction skills / activate one | `/skills` (or `/skill`) / `/<skill-id>` |
+| Restore a previous submitted message | `/drafts` |
+| Read a long notice in full | `/notice` |
+| Scroll / return to latest output | Page Up / Page Down; Ctrl+G |
+| Load earlier conversation | Ctrl+Home, or Load earlier messages |
+| Copy selection or latest response | ⌘C, Ctrl+Shift+C, or `/copy` |
+| Suspend / return | Ctrl+Z, then `fg` in the invoking shell |
+
+Mouse selection, buttons, scrolling, and dialogs are supported. Selecting text copies it when you release the mouse. Local macOS sessions use the system clipboard; remote sessions use OSC 52 where supported. Hold Shift while selecting to use your terminal’s native selection instead. Escape closes the current dialog before it can act on the task. Approvals and questions temporarily own input, keeping your draft intact. Ctrl+D exits only when the composer is empty; with text it retains its editing function.
+
+Approvals show who is asking, the target file or command, and a readable preview. Choose **1 Allow once**, **2 Allow this tool** (or **Allow at this path**), **3 Deny**, or **4 Allow all tools** for the session. These choices share one row when the terminal has room. Ctrl+F opens the full arguments and a file-edit preview where available. A Fusion handoff and a worker's subsequent edit or command are separate decisions in Ask mode. Questions use numbered choices or **0 Custom reply**.
+
+## Conversation and review
+
+`/new`, `/clear`, and `/reset` are aliases: each starts a new session with empty conversation context in the same workspace. Project instructions, saved memory, and workspace preferences remain available. The previous conversation stays saved; use `/sessions` to reopen it. Use `/compact` to summarize context while continuing the current conversation.
+
+The current task list stays at the top right in terminals at least 112 columns wide, with separate Driver and worker progress. It shows the latest checklist for each agent, including a reused Sidekick, rather than repeating previous handoffs. Finished items collapse behind the completion count; click it to inspect them. Narrow terminals keep the current task and completion count below the header; `/todos` shows the full task lists.
+
+While a model is reasoning, one “Thinking…” indicator appears. Finished reasoning is available through a quiet **Thought** disclosure; `/thinking` shows it by default. The full worker transcript stays inline in chronological order, with one assignment title and a Driver label when control returns to it. Live tool calls appear directly in order and collapse into a work log at the next text response. Scrolling up pauses automatic following; **Ctrl+G** or **Latest** returns to the live output. The default theme uses neutral text for prose, headings, and completed activity, reserving accent colors for active work and actions.
+
+Consecutive tools share an expandable work log. A change of agent starts a separate labeled section, so Sidekick, numbered workers, and numbered experts remain distinguishable when collapsed. Driver is labeled again when it resumes. Tool arguments, output, reasoning, and intercepted-call provenance remain inspectable. Worker views are read-only and scoped to an individual assignment; revisiting an old Sidekick handoff does not append its later work. Sidekick reuses compatible context; Team and Expert use fresh assignment contexts. Final usage includes the task family and cache hit percentage, with a per-model breakdown when opened. Missing reports stay unavailable. Command failures appear on the command itself; Litespeed does not add a generic verification footer or mark a finished worker failed because it encountered a failing test.
+
+`/changes` shows recorded file changes, including worker edits. Wide terminals can show split diffs; narrower terminals use unified diffs. `/history` provides Undo, Redo, recovery details, and protected paths. The server checks external edits before restoring files. Undo/Redo never replay shell commands and do not reverse every external effect; see [history guarantees](local-data.md#undo-redo-and-recovery).
+
+Enter during a response queues a follow-up. Queued messages appear above the composer and run in order after the current response finishes. Press **Escape once** to interrupt the response and its workers; after cancellation and file-history cleanup finish, the oldest queued message starts automatically. An explicitly paused queue stays paused. `/stop` stops work and holds the queue until you resume it.
+
+Press **Up** from the first visual row of the input to take queued messages back for editing. Their text is placed one message per line ahead of your current draft, and attachments are preserved. Enter sends the edited draft, or queues it again if work is still running. `/queue` also lets you edit a single message, pause, resume, remove, or steer it. If the combined messages exceed one draft's limits, edit them individually through `/queue`.
+
+**Steer now** sends a queued message to the Driver during the current turn; **Alt+Enter** steers with the current draft. Steering can stop delegated work so the Driver can consider the new instruction, and the update appears in the conversation as a user message. Session goals have no turn limit by default, allow an optional limit, and begin when you send a message. Interrupting without queued work pauses their continuation.
+
+## Drafts and local context
+
+Text and attachments are saved separately for each server/session in `$XDG_STATE_HOME/litespeed/tui`, defaulting to `~/.local/state/litespeed/tui`. Drafts are flushed on clean exit, and submitted-input history retains the most recent 200 entries. This cache is private local state; it is separate from browser drafts and server conversation history. A rejected submission retains the draft. Mutations are not automatically replayed after a connection failure.
+
+Workspace references are read by the server when the message is accepted. Local attachments are read by the terminal client. Up to ten attachments are supported, with a 4.4 MB file limit and 200,000-character text limit, subject to the server's aggregate request limits. Use references for workspace files. Ctrl+V inserts a clipboard image at the cursor as an inline label such as `[Image-1]`. Backspace/Delete removes the whole label and its attachment; undo restores them together. Labels remain in saved drafts, and sending includes the actual image. Text and URLs still use the terminal's normal paste behavior. On Linux, image paste uses `wl-paste` or `xclip`; macOS uses the system clipboard directly. Bracketed multiline paste stays in the composer until you send it.
+
+`/editor` uses `$VISUAL`, then `$EDITOR`, then `vi`. Saving and leaving the editor returns the text to the composer without submitting it. If the editor fails, Litespeed preserves the temporary file and reports its path. `/shell` hands the terminal to an interactive shell in the workspace; type `exit` to return. These shell commands are your direct actions and are outside agent file-history tracking.
+
+Project templates in `.litespeed/commands` and `.claude/commands` appear in Ctrl+P. `/command arguments` expands `$ARGUMENTS` and `$1` through `$9` using the web composer's substitution rules. Built-in terminal commands take precedence on name conflicts; unrecognized slash text is sent literally.
+
+Use `/skills` (or `/skill`) to select, preview, and apply registered project skills, or `/<skill-id>` alone to activate one without sending a message. Built-ins and project templates win name conflicts. Skills stay pinned for the session; remove them through `/skills`. See [skill definitions and activation](profiles.md#slash-commands-terminal-and-web).
+
+## Settings and appearance
+
+Settings has consistent sections for Providers, General, Permissions, Project profiles, Integrations, and Usage. Profiles can be created, edited, previewed, and applied, including recommended models and skills. MCP configuration is reviewed before an explicit connect or refresh. Usage counts provider-reported tokens; memory is enabled by default unless you turn it off.
+
+Put terminal preferences in `~/.config/litespeed/litespeed-tui.jsonc`, or your project's `.litespeed/litespeed-tui.jsonc`. Configuration follows the selected session's workspace. `LITESPEED_TUI_CONFIG` selects an explicit configuration file; `LITESPEED_DISABLE_PROJECT_CONFIG=1` disables project discovery. The loader supports layered JSONC configuration and custom themes; see `tui/tuiConfig.ts` for precedence.
+
+```jsonc
+{
+  "theme": "litespeed",
+  "mouse": true,
+  "scroll_speed": 2,
+  "diff_style": "auto",
+  "prompt": { "max_width": "auto", "max_height": 40 },
+  "keybinds": { "leader": "ctrl+x", "model_list": "ctrl+x m" },
+  "attention": { "enabled": false }
+}
+```
+
+`/theme` changes the theme and system/light/dark appearance. Configured prompt dimensions, mouse use, scroll behavior, cursor, active application shortcuts, and editor bindings are wired. Attention currently uses the terminal bell; named sound packs and volume settings are not implemented. The historical keybinding catalog contains additional reserved actions; only the active actions in `tui/commands.ts` and supported editor bindings are registered. Native text paste remains terminal-managed; image paste is read from the system clipboard when Ctrl+V is used.
+
+## Verification and platform scope
+
+```sh
+npm run check
+npm run test:tui
+npm run test:tui:startup
+```
+
+The checked-in PTY suite runs the actual terminal against an isolated server and deterministic provider. It exercises all four architectures, Ask decisions, question replies, cancellation, queues, profiles, file context, stale configuration, Plan routing, history, editor/shell handoffs, Unicode paste, session drafts, restart, and 80/100/140-column layouts. Artifacts are written to `test-results-tui/`. The production smoke copies the built application into an isolated installation and checks automatic startup and backend ownership without making provider calls.
+
+This replacement has been exercised on macOS with Node 26 and Bun 1.4.2. Linux terminal-emulator coverage, Windows terminal support, and fresh paid-provider/sign-in smoke tests remain release-matrix follow-ups. The fixture suite tests the real orchestration and permission boundaries, not model quality or provider availability. The old Node renderer and `--legacy` path have been removed.
+
+### Activity and permissions
+
+The header identifies the active driver, Sidekick, or worker count. Handoffs appear where they happened in the conversation. Expand a handoff card to read that invocation’s full transcript and inspect its tool calls in place. Each Sidekick handoff keeps its own transcript even when the model reuses context. Worker transcripts stream live. Old responses do not reparse merely because you type a draft.
+
+Use `/permissions` or the footer to switch between **Ask first** and **Allow all tools**, even during a run. Approval prompts say whether a grant applies to a tool for the session or one external path; `4` selects Allow all tools. Explicit ask/deny rules still apply. `/queue` lets you promote a queued text message to **Steer driver now**.
+
+## Footer actions
+
+The footer groups message actions on the left and session controls on the right. Each item uses `Action [Shortcut]` and is clickable. **F3** opens Permissions, **F4** opens Settings, and **Ctrl+P** opens Commands. Permission mode is shown in its picker. Configure `permissions_open`, `settings_open`, or `command_list` in terminal keybindings to change these shortcuts; the footer follows those bindings. Narrow terminals omit the optional newline hint first and wrap whole action groups when necessary.
