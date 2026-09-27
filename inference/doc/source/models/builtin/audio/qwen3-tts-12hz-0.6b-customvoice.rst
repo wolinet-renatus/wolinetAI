@@ -1,0 +1,26 @@
+.. _models_builtin_qwen3-tts-12hz-0.6b-customvoice:
+
+===============================
+Qwen3-TTS-12Hz-0.6B-CustomVoice
+===============================
+
+- **Model Name:** Qwen3-TTS-12Hz-0.6B-CustomVoice
+- **Model Family:** qwen3_tts
+- **Abilities:** ['text2audio']
+- **Multilingual:** True
+
+Specifications
+^^^^^^^^^^^^^^
+
+- **PyTorch model ID:** Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice
+- **MLX model ID:** mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-8bit
+
+Execute the following command to launch the model::
+
+   xinference launch --model-name Qwen3-TTS-12Hz-0.6B-CustomVoice --model-type audio --model-engine PyTorch
+
+Available engines
+^^^^^^^^^^^^^^^^^
+
+* ``PyTorch``
+* ``MLX``

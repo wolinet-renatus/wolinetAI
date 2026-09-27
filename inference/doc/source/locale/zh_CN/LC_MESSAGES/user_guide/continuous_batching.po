@@ -1,0 +1,175 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2023, Xorbits Inc.
+# This file is distributed under the same license as the Xinference package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Xinference \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-05-27 19:02+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.11.0\n"
+
+#: ../../source/user_guide/continuous_batching.rst:5
+msgid "Continuous Batching"
+msgstr "连续批处理"
+
+#: ../../source/user_guide/continuous_batching.rst:7
+msgid ""
+"Continuous batching, as a means to improve throughput during model "
+"serving, has already been implemented in inference engines like ``VLLM``."
+" Xinference aims to provide this optimization capability when using the "
+"transformers engine as well."
+msgstr ""
+"连续批处理是诸如 ``VLLM`` 这样的推理引擎中提升吞吐的重要技术。Xinference "
+"旨在通过这项技术提升 ``transformers`` 推理引擎的吞吐。"
+
+#: ../../source/user_guide/continuous_batching.rst:11
+msgid "Usage"
+msgstr "使用方式"
+
+#: ../../source/user_guide/continuous_batching.rst:14
+msgid "LLM"
+msgstr "大语言模型"
+
+#: ../../source/user_guide/continuous_batching.rst:15
+msgid "Currently, this feature can be enabled under the following conditions:"
+msgstr "当前，此功能在满足以下条件时开启："
+
+#: ../../source/user_guide/continuous_batching.rst:17
+msgid ""
+"First, set the environment variable "
+"``XINFERENCE_TRANSFORMERS_ENABLE_BATCHING`` to ``1`` when starting "
+"xinference. For example:"
+msgstr ""
+"首先，启动 Xinference 时需要将环境变量 ``XINFERENCE_TRANSFORMERS_ENABLE_"
+"BATCHING`` 置为 ``1`` 。"
+
+#: ../../source/user_guide/continuous_batching.rst:25
+msgid ""
+"Since ``v0.16.0``, this feature is turned on by default and is no longer "
+"required to set the ``XINFERENCE_TRANSFORMERS_ENABLE_BATCHING`` "
+"environment variable. This environment variable has been removed."
+msgstr ""
+"自 ``v0.16.0`` 开始，此功能默认开启，不再需要设置 ``XINFERENCE_"
+"TRANSFORMERS_ENABLE_BATCHING`` 环境变量，且该环境变量已被移除。"
+
+#: ../../source/user_guide/continuous_batching.rst:30
+msgid ""
+"Then, ensure that the ``transformers`` engine is selected when launching "
+"the model. For example:"
+msgstr "然后，启动 LLM 模型时选择 ``transformers`` 推理引擎。例如："
+
+#: ../../source/user_guide/continuous_batching.rst:66
+msgid ""
+"Once this feature is enabled, all requests for LLMs will be managed by "
+"continuous batching, and the average throughput of requests made to a "
+"single model will increase. The usage of the LLM interface remains "
+"exactly the same as before, with no differences."
+msgstr ""
+"一旦此功能开启，LLM 模型的所有接口将被此功能接管。所有接口的使用方式没有"
+"任何变化。"
+
+#: ../../source/user_guide/continuous_batching.rst:71
+msgid "Image Model"
+msgstr "图像模型"
+
+#: ../../source/user_guide/continuous_batching.rst:86
+msgid "Abort your request"
+msgstr "中止请求"
+
+#: ../../source/user_guide/continuous_batching.rst:89
+msgid "First, add ``request_id`` option in ``generate_config``. For example:"
+msgstr "首先，在推理请求的 ``generate_config`` 中指定 ``request_id`` 选项。例如："
+
+#: ../../source/user_guide/continuous_batching.rst:98
+msgid ""
+"Then, abort the request using the ``request_id`` you have set. For "
+"example:"
+msgstr "接着，带着你指定的 ``request_id`` 去中止该请求。例如："
+
+#: ../../source/user_guide/continuous_batching.rst:110
+msgid "Note"
+msgstr "注意事项"
+
+#: ../../source/user_guide/continuous_batching.rst:112
+msgid ""
+"Currently, for ``LLM`` models, this feature only supports the "
+"``generate``, ``chat``, ``tool call`` and ``vision`` tasks."
+msgstr ""
+"当前，此功能仅支持 LLM 模型的 ``generate``, ``chat``, ``tool call`` （"
+"工具调用）和 ``vision`` （多模态） 功能。"
+
+#: ../../source/user_guide/continuous_batching.rst:116
+msgid ""
+"For ``vision`` tasks, currently only ``qwen2-vl-instruct``, ``qwen2.5-vl-"
+"instruct``, ``QvQ-72B-Preview``, ``glm-4v`` and ``MiniCPM-V-2.6`` (only "
+"for image tasks) models are supported. More models will be supported in "
+"the future. Please let us know your requirements."
+msgstr "对于多模态任务，当前支持 ``qwen2-vl-instruct``，``qwen2.5-vl-instruct``，``QvQ-72B-Preview``，``glm-4v`` "
+"和 ``MiniCPM-V-2.6``。未来将加入更多模型，敬请期待。"
+
+#: ../../source/user_guide/continuous_batching.rst:118
+msgid ""
+"If using GPU inference, this method will consume more GPU memory. Please "
+"be cautious when increasing the number of concurrent requests to the same"
+" model. The ``launch_model`` interface provides the ``max_num_seqs`` "
+"parameter to adjust the concurrency level, with a default value of "
+"``16``."
+msgstr ""
+"如果使用 GPU 推理，此功能对显存要求较高。因此请谨慎提高对同一个模型的并发"
+"请求量。``launch_model`` 接口提供可选参数 ``max_num_seqs`` 用于调整并发度"
+"，默认值为 ``16`` 。"
+
+
+#: ../../source/user_guide/continuous_batching.rst
+msgid "With vLLM >= 0.19.0, text embedding models use the native asynchronous pooling scheduler. Configure ``max_num_seqs`` and ``max_num_batched_tokens`` at model launch; Xinference ``batch_size`` and ``batch_interval`` do not control this path. Older vLLM versions, VACC, WeMM and Qwen3-VL embeddings retain the existing Xinference batching path."
+msgstr "使用 vLLM >= 0.19.0 时，文本嵌入模型使用原生异步 pooling 调度器。请在启动模型时配置 ``max_num_seqs`` 和 ``max_num_batched_tokens``；Xinference 的 ``batch_size`` 和 ``batch_interval`` 不控制此路径。较旧的 vLLM 版本、VACC、WeMM 和 Qwen3-VL 嵌入模型保留现有的 Xinference 批处理路径。"
+
+#: ../../source/user_guide/continuous_batching.rst
+msgid "Embedding"
+msgstr "Embedding"
+
+#: ../../source/user_guide/continuous_batching.rst
+msgid "Rerank"
+msgstr "Rerank"
+
+#: ../../source/user_guide/continuous_batching.rst
+msgid "With vLLM >= 0.19.0, text cross-encoder rerank models also use native asynchronous pooling. The same ``max_num_seqs`` and ``max_num_batched_tokens`` settings apply instead of Xinference batch settings. Older vLLM versions, VACC, Qwen3-VL rerankers and other scoring types retain the existing path. Ranking, ``top_n``, returned documents and token counts keep the same API behavior."
+msgstr "使用 vLLM >= 0.19.0 时，文本 cross-encoder 重排序模型也使用原生异步 pooling。同样通过 ``max_num_seqs`` 和 ``max_num_batched_tokens`` 配置，而不是 Xinference 的 batch 参数。较旧的 vLLM 版本、VACC、Qwen3-VL 重排序模型和其他打分类型保留现有路径。排序、``top_n``、返回文档和 token 统计的 API 行为保持不变。"
+
+#: doc/source/user_guide/continuous_batching.rst
+msgid ""
+"Note that if your request has already finished, aborting the request will be"
+" a no-op."
+msgstr "请注意，如果请求已经完成，取消请求不会产生任何影响。"
+
+msgid ""
+"For image-model batching, select the ``vLLM`` or ``SGLang`` engine with "
+"``--model-engine``. SGLang supports dynamic request batching via "
+"``batching_max_size`` and ``batching_delay_ms``; new requests wait while a "
+"batch is running. vLLM-Omni supports request batching via ``max_num_seqs`` "
+"and, on supported models, experimental step-level continuous batching with "
+"``step_execution=true`` and ``max_num_seqs>1``. Diffusers supports ordinary "
+"image generation and multiple images per request, but does not provide "
+"Xinference-managed continuous batching. See :ref:`image` for supported "
+"models, required versions, and launch instructions."
+msgstr ""
+"图像模型需要批处理时，请通过 ``--model-engine`` 选择 ``vLLM`` 或 ``SGLang`` 引擎。SGLang 通过 "
+"``batching_max_size`` 和 ``batching_delay_ms`` "
+"支持请求级动态批处理；批次运行期间，新请求需要等待。vLLM-Omni 通过 ``max_num_seqs`` 支持请求级批处理，并可在支持的模型上通过"
+" ``step_execution=true`` 和 ``max_num_seqs>1`` 启用实验性的逐步连续批处理。Diffusers "
+"支持普通图像生成和单请求生成多张图像，但不提供由 Xinference 管理的连续批处理。支持的模型、所需版本和启动方法请参阅 "
+":ref:`image`。"
+
+msgid ""
+"For LLMs using Xinference's continuous batching, you can abort requests that"
+" are in the process of inference."
+msgstr "对于使用 Xinference 连续批处理的 LLM，可以取消正在推理的请求。"

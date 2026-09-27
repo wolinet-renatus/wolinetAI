@@ -1,0 +1,2183 @@
+# Copyright 2022-2026 Xinference Holdings Pte. Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import asyncio
+import json
+import os.path
+import sys
+import time
+from unittest.mock import AsyncMock
+
+import openai
+import pytest
+import requests
+from fastapi import HTTPException
+from packaging import version
+
+from ...model.embedding import BUILTIN_EMBEDDING_MODELS
+
+
+class _DummyRequest:
+    def __init__(self, payload):
+        self._payload = payload
+
+    async def json(self):
+        return self._payload
+
+
+@pytest.mark.asyncio
+async def test_rerank_multimodal_inputs_pass_through(monkeypatch):
+    from ...api.restful_api import RESTfulAPI
+
+    monkeypatch.setenv("XINFERENCE_AUTH_ADVANCED", "false")
+    api = RESTfulAPI("localhost", "localhost", 9997)
+    supervisor = AsyncMock()
+    api._get_supervisor_ref = AsyncMock(return_value=supervisor)
+
+    model = AsyncMock()
+    model.uid = "test-reranker"
+    model.rerank = AsyncMock(return_value="{}")
+    supervisor.get_model = AsyncMock(return_value=model)
+
+    query = {"image": "https://example.com/query.png"}
+    documents = [
+        {"text": "caption"},
+        {"video": "https://example.com/document.mp4"},
+    ]
+    response = await api.rerank(
+        _DummyRequest(
+            {"model": "test-reranker", "query": query, "documents": documents}
+        )
+    )
+
+    assert response.status_code == 200
+    model.rerank.assert_awaited_once_with(
+        documents,
+        query,
+        top_n=None,
+        max_chunks_per_doc=None,
+        return_documents=False,
+        return_len=False,
+    )
+
+
+@pytest.mark.asyncio
+async def test_restful_api(setup):
+    endpoint, _ = setup
+    url = f"{endpoint}/v1/models"
+
+    # list
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 0
+
+    # launch
+    payload = {
+        "model_uid": "test_restful_api",
+        "model_engine": "llama.cpp",
+        "model_name": "qwen1.5-chat",
+        "model_size_in_billions": "0_5",
+        "quantization": "q4_0",
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_restful_api"
+
+    # launch n_gpu error
+    payload = {
+        "model_uid": "test_restful_api",
+        "model_name": "qwen1.5-chat",
+        "quantization": "q4_0",
+        "n_gpu": -1,
+    }
+    response = requests.post(url, json=payload)
+    assert response.status_code == 400
+
+    # same model uid
+    payload = {
+        "model_uid": "test_restful_api",
+        "model_name": "qwen1.5-chat",
+        "quantization": "q4_0",
+    }
+    response = requests.post(url, json=payload)
+    assert response.status_code == 400
+
+    # list
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 1
+
+    # describe
+    response = requests.get(f"{endpoint}/v1/models/test_restful_api")
+    response_data = response.json()
+    assert response_data["model_name"] == "qwen1.5-chat"
+    assert response_data["replica"] == 1
+    # the engine selected at launch is surfaced so the Web UI can display it
+    assert response_data["model_engine"] == "llama.cpp"
+
+    response = requests.delete(f"{endpoint}/v1/models/bogus")
+    assert response.status_code == 400
+
+    # generate
+    url = f"{endpoint}/v1/completions"
+    payload = {
+        "model": model_uid_res,
+        "prompt": "Once upon a time, there was a very old computer.",
+    }
+    response = requests.post(url, json=payload)
+    response.raise_for_status()
+    completion = response.json()
+    assert "text" in completion["choices"][0]
+
+    payload = {
+        "model": "bogus",
+        "prompt": "Once upon a time, there was a very old computer.",
+    }
+    response = requests.post(url, json=payload)
+    assert response.status_code == 404
+
+    payload = {
+        "prompt": "Once upon a time, there was a very old computer.",
+    }
+    response = requests.post(url, json=payload)
+    assert response.status_code == 500
+
+    # chat without user messages
+    url = f"{endpoint}/v1/chat/completions"
+    payload = {
+        "model": model_uid_res,
+        "messages": [
+            {
+                "role": "system",
+                "content": "<任务> 识别用户输入的技术术语。请用{XXX} -> {XXX}的格式展示翻译前后的技术术语对应关系。\n<输入文本>\n今天天气\n<示例>\nTransformer -> Transformer\nToken -> Token\nZero Shot -> 零样本\nFew Shot -> 少样本\n<专有名词>",
+            }
+        ],
+        "stop": ["\n"],
+    }
+    response = requests.post(url, json=payload)
+    completion = response.json()
+    assert "content" in completion["choices"][0]["message"]
+
+    # chat
+    url = f"{endpoint}/v1/chat/completions"
+    payload = {
+        "model": model_uid_res,
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Hello!"},
+            {"role": "assistant", "content": "Hi what can I help you?"},
+            {"role": "user", "content": "What is the capital of France?"},
+        ],
+        "stop": ["\n"],
+    }
+    response = requests.post(url, json=payload)
+    completion = response.json()
+    assert "content" in completion["choices"][0]["message"]
+
+    payload = {
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Hello!"},
+            {"role": "assistant", "content": "Hi what can I help you?"},
+            {"role": "user", "content": "What is the capital of France?"},
+        ],
+    }
+    response = requests.post(url, json=payload)
+    assert response.status_code == 500
+
+    payload = {
+        "model": "bogus",
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Hello!"},
+            {"role": "assistant", "content": "Hi what can I help you?"},
+            {"role": "user", "content": "What is the capital of France?"},
+        ],
+    }
+    response = requests.post(url, json=payload)
+    assert response.status_code == 404
+
+    # allow duplicate system messages
+    payload = {
+        "model": model_uid_res,
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "system", "content": "You are not a helpful assistant."},
+            {"role": "user", "content": "Hello!"},
+            {"role": "assistant", "content": "Hi what can I help you?"},
+            {"role": "user", "content": "What is the capital of France?"},
+        ],
+    }
+    response = requests.post(url, json=payload)
+    completion = response.json()
+    assert "content" in completion["choices"][0]["message"]
+
+    # allow the first message is not system message.
+    payload = {
+        "model": model_uid_res,
+        "messages": [
+            {"role": "user", "content": "Hello!"},
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "assistant", "content": "Hi what can I help you?"},
+            {"role": "user", "content": "What is the capital of France?"},
+        ],
+    }
+    response = requests.post(url, json=payload)
+    completion = response.json()
+    assert "content" in completion["choices"][0]["message"]
+
+    # delete
+    url = f"{endpoint}/v1/models/test_restful_api"
+    response = requests.delete(url)
+
+    # list
+    response = requests.get(f"{endpoint}/v1/models")
+    response_data = response.json()
+    assert len(response_data["data"]) == 0
+
+    # delete again
+    url = f"{endpoint}/v1/models/test_restful_api"
+    response = requests.delete(url)
+    assert response.status_code == 400
+
+    # list model registration
+
+    url = f"{endpoint}/v1/model_registrations/LLM"
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+    model_regs = response.json()
+    assert len(model_regs) > 0
+    for model_reg in model_regs:
+        assert model_reg["is_builtin"]
+
+    # register_model
+
+    model = """{
+  "version": 2,
+  "context_length":2048,
+  "model_name": "custom_model",
+  "model_lang": [
+    "en", "zh"
+  ],
+  "model_ability": [
+    "embed",
+    "chat"
+  ],
+  "model_family": "other",
+  "model_specs": [
+    {
+      "model_format": "pytorch",
+      "model_size_in_billions": 7,
+      "quantization": "none",
+      "model_id": "ziqingyang/chinese-alpaca-2-7b"
+    }
+  ],
+  "prompt_style": {
+    "style_name": "ADD_COLON_SINGLE",
+    "system_prompt": "Below is an instruction that describes a task. Write a response that appropriately completes the request.",
+    "roles": [
+      "Instruction",
+      "Response"
+    ],
+    "intra_message_sep": "\\n\\n### "
+  }
+}"""
+
+    url = f"{endpoint}/v1/model_registrations/LLM"
+
+    payload = {"model": model, "persist": False}
+
+    response = requests.post(url, json=payload)
+    assert response.status_code == 200
+
+    # check model version info after registration
+    url = f"{endpoint}/v1/models/LLM/custom_model/versions"
+    response = requests.get(url)
+    version_infos = response.json()
+    assert len(version_infos) == 1
+
+    url = f"{endpoint}/v1/model_registrations/LLM"
+
+    response = requests.get(url)
+
+    assert response.status_code == 200
+    new_model_regs = response.json()
+    assert len(new_model_regs) == len(model_regs) + 1
+
+    # get_model_registrations
+    url = f"{endpoint}/v1/model_registrations/LLM/custom_model"
+    response = requests.get(url, json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "custom_model" in data["model_name"]
+
+    # unregister_model
+    url = f"{endpoint}/v1/model_registrations/LLM/custom_model"
+
+    response = requests.delete(url, json=payload)
+    assert response.status_code == 200
+
+    # check model version info after unregister
+    url = f"{endpoint}/v1/models/LLM/custom_model/versions"
+    response = requests.get(url)
+    version_infos = response.json()
+    assert len(version_infos) == 0
+
+    url = f"{endpoint}/v1/model_registrations/LLM"
+
+    response = requests.get(url)
+    assert response.status_code == 200
+    new_model_regs = response.json()
+    assert len(new_model_regs) == len(model_regs)
+    custom_model_reg = None
+    for model_reg in new_model_regs:
+        if model_reg["model_name"] == "custom_model":
+            custom_model_reg = model_reg
+    assert custom_model_reg is None
+
+
+def test_restful_api_for_embedding(setup):
+    model_name = "gte-base"
+    # BUILTIN_EMBEDDING_MODELS stores a list of model families for each model name
+    model_spec_list = BUILTIN_EMBEDDING_MODELS[model_name]
+    # Use the first (latest) model family from the list
+    model_spec = model_spec_list[0] if model_spec_list else None
+
+    endpoint, _ = setup
+    url = f"{endpoint}/v1/models"
+
+    # list
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 0
+
+    # launch
+    payload = {
+        "model_uid": "test_embedding",
+        "model_name": model_name,
+        "model_type": "embedding",
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_embedding"
+
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 1
+
+    # describe: even without an explicitly selected engine, the default engine
+    # actually used at load time is surfaced (so the Web UI shows it, not a dash)
+    response = requests.get(f"{endpoint}/v1/models/test_embedding")
+    response_data = response.json()
+    assert response_data["model_engine"] == "sentence_transformers"
+
+    # test embedding
+    url = f"{endpoint}/v1/embeddings"
+    payload = {
+        "model": "test_embedding",
+        "input": "The food was delicious and the waiter...",
+    }
+    response = requests.post(url, json=payload)
+    embedding_res = response.json()
+
+    assert "embedding" in embedding_res["data"][0]
+    assert len(embedding_res["data"][0]["embedding"]) == model_spec.dimensions
+    assert "model_replica" in embedding_res
+    assert embedding_res["model_replica"] is not None
+    assert embedding_res["model"] == payload["model"]
+
+    # test multiple
+    payload = {
+        "model": "test_embedding",
+        "input": [
+            "The food was delicious and the waiter...",
+            "how to implement quick sort in python?",
+            "Beijing",
+            "sorting algorithms",
+        ],
+    }
+    response = requests.post(url, json=payload)
+    embedding_res = response.json()
+
+    assert len(embedding_res["data"]) == 4
+    for data in embedding_res["data"]:
+        assert len(data["embedding"]) == model_spec.dimensions
+
+    # delete model
+    url = f"{endpoint}/v1/models/test_embedding"
+    response = requests.delete(url)
+    assert response.status_code == 200
+
+    response = requests.get(f"{endpoint}/v1/models")
+    response_data = response.json()
+    assert len(response_data["data"]) == 0
+
+
+def _check_invalid_tool_calls(endpoint, model_uid_res):
+    import openai
+
+    client = openai.Client(api_key="not empty", base_url=f"{endpoint}/v1")
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_exchange_rate",
+                "description": "Get the exchange rate between two currencies",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "base_currency": {
+                            "type": "string",
+                            "description": "The currency to convert from",
+                        },
+                        "target_currency": {
+                            "type": "string",
+                            "description": "The currency to convert to",
+                        },
+                    },
+                    "required": ["base_currency", "target_currency"],
+                },
+            },
+        }
+    ]
+
+    completion = client.chat.completions.create(
+        model=model_uid_res,
+        messages=[
+            {
+                "content": "Can you book a flight for me from New York to London?",
+                "role": "user",
+            }
+        ],
+        tools=tools,
+        max_tokens=200,
+        temperature=0.1,
+    )
+    assert "stop" == completion.choices[0].finish_reason
+    assert completion.choices[0].message.content
+    assert len(completion.choices[0].message.tool_calls) == 0
+
+
+@pytest.mark.parametrize(
+    "model_format, quantization",
+    [("pytorch", None)],
+)
+@pytest.mark.skip(reason="Cost too many resources.")
+def test_restful_api_for_tool_calls(setup, model_format, quantization):
+    model_name = "glm4-chat"
+
+    endpoint, _ = setup
+    url = f"{endpoint}/v1/models"
+
+    # list
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 0
+
+    # launch
+    payload = {
+        "model_uid": "test_tool",
+        "model_engine": "transformers",
+        "model_name": model_name,
+        "model_size_in_billions": 9,
+        "model_format": model_format,
+        "quantization": quantization,
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    assert "model_uid" in response_data, response_data
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_tool"
+
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 1
+
+    # tool
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "track_a_long_function_name_to_test",
+                "description": "追踪指定股票的实时价格",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"symbol": {"description": "需要追踪的股票代码"}},
+                    "required": ["symbol"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "text-to-speech",
+                "description": "将文本转换为语音",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"description": "需要转换成语音的文本"},
+                        "voice": {"description": "要使用的语音类型（男声、女声等）"},
+                        "speed": {"description": "语音的速度（快、中等、慢等）"},
+                    },
+                    "required": ["text"],
+                },
+            },
+        },
+    ]
+    url = f"{endpoint}/v1/chat/completions"
+    payload = {
+        "model": model_uid_res,
+        "messages": [
+            {"role": "user", "content": "帮我查询股票10111的价格"},
+        ],
+        "tools": tools,
+        "stop": ["\n"],
+    }
+    response = requests.post(url, json=payload)
+    completion = response.json()
+
+    assert "content" in completion["choices"][0]["message"]
+    assert "tool_calls" == completion["choices"][0]["finish_reason"]
+    assert (
+        "track_a_long_function_name_to_test"
+        == completion["choices"][0]["message"]["tool_calls"][0]["function"]["name"]
+    )
+    arguments = completion["choices"][0]["message"]["tool_calls"][0]["function"][
+        "arguments"
+    ]
+    arg = json.loads(arguments)
+    assert arg == {"symbol": "10111"}
+
+    # Restful client
+    from ...client import RESTfulClient
+
+    client = RESTfulClient(endpoint)
+    model = client.get_model(model_uid_res)
+    messages = [{"role": "user", "content": "帮我查询股票10111的价格"}]
+    completion = model.chat(messages, tools=tools)
+    assert "content" in completion["choices"][0]["message"]
+    assert "tool_calls" == completion["choices"][0]["finish_reason"]
+    assert (
+        "track_a_long_function_name_to_test"
+        == completion["choices"][0]["message"]["tool_calls"][0]["function"]["name"]
+    )
+    arguments = completion["choices"][0]["message"]["tool_calls"][0]["function"][
+        "arguments"
+    ]
+    arg = json.loads(arguments)
+    assert arg == {"symbol": "10111"}
+
+    # openai client
+    import openai
+
+    async def test_stream():
+        async_client = openai.AsyncClient(
+            api_key="not empty", base_url=f"{endpoint}/v1"
+        )
+        chunks = []
+        async_completion = async_client.chat.completions.create(
+            model=model_uid_res,
+            messages=[{"role": "user", "content": "帮我查询股票10111的价格"}],
+            tools=tools,
+            stream=True,
+        )
+        async for chunk in await async_completion:
+            chunks.append(chunk)
+        assert len(chunks) == 2
+        assert (
+            chunks[1].choices[0].delta.tool_calls[0].function.name
+            == "track_a_long_function_name_to_test"
+        )
+        arguments = chunks[1].choices[0].delta.tool_calls[0].function.arguments
+        arg = json.loads(arguments)
+        assert arg == {"symbol": "10111"}
+
+    asyncio.run(test_stream())
+
+    client = openai.Client(api_key="not empty", base_url=f"{endpoint}/v1")
+    completion = client.chat.completions.create(
+        model=model_uid_res,
+        messages=[{"role": "user", "content": "帮我查询股票10111的价格"}],
+        tools=tools,
+    )
+    assert "tool_calls" == completion.choices[0].finish_reason
+    assert (
+        "track_a_long_function_name_to_test"
+        == completion.choices[0].message.tool_calls[0].function.name
+    )
+    arguments = completion.choices[0].message.tool_calls[0].function.arguments
+    arg = json.loads(arguments)
+    assert arg == {"symbol": "10111"}
+
+    assistant_message = completion.choices[0].message.model_dump()
+    messages = [
+        {"role": "user", "content": "帮我查询股票10111的价格"},
+        assistant_message,
+        {
+            "role": "tool",
+            "tool_call_id": assistant_message["tool_calls"][0]["id"],
+            "name": assistant_message["tool_calls"][0]["function"]["name"],
+            "content": str({"symbol": "10111", "price": 12345}),
+        },
+    ]
+
+    # When kwargs is {}, the glm4-chat does not observe the output tool calls,
+    # so the test will fail.
+    for kwargs in [{"tools": tools}, {}]:
+        completion = client.chat.completions.create(
+            model=model_uid_res, messages=messages, **kwargs
+        )
+        assert completion.choices
+        assert completion.choices[0].finish_reason == "stop"
+        if kwargs:
+            assert "10111" in completion.choices[0].message.content
+            assert "12345" in completion.choices[0].message.content
+
+    _check_invalid_tool_calls(endpoint, model_uid_res)
+
+
+@pytest.mark.parametrize(
+    "model_format, quantization",
+    [("pytorch", None)],
+)
+@pytest.mark.skip(reason="Cost too many resources.")
+def test_restful_api_for_llama3_tool_calls(setup, model_format, quantization):
+    model_name = "llama-3.1-instruct"
+
+    endpoint, _ = setup
+    url = f"{endpoint}/v1/models"
+
+    # list
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 0
+
+    # launch
+    payload = {
+        "model_uid": "test_tool",
+        "model_engine": "transformers",
+        "model_name": model_name,
+        "model_size_in_billions": 8,
+        "model_format": model_format,
+        "quantization": quantization,
+        "download_hub": "huggingface",
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    assert "model_uid" in response_data, response_data
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_tool"
+
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 1
+
+    # tool
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "track_a_long_function_name_to_test",
+                "description": "追踪指定股票的实时价格",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"symbol": {"description": "需要追踪的股票代码"}},
+                    "required": ["symbol"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "text-to-speech",
+                "description": "将文本转换为语音",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"description": "需要转换成语音的文本"},
+                        "voice": {"description": "要使用的语音类型（男声、女声等）"},
+                        "speed": {"description": "语音的速度（快、中等、慢等）"},
+                    },
+                    "required": ["text"],
+                },
+            },
+        },
+    ]
+    url = f"{endpoint}/v1/chat/completions"
+    payload = {
+        "model": model_uid_res,
+        "messages": [
+            {"role": "user", "content": "帮我查询股票10111的价格"},
+        ],
+        "tools": tools,
+    }
+    response = requests.post(url, json=payload)
+    completion = response.json()
+
+    assert "content" in completion["choices"][0]["message"]
+    assert "tool_calls" == completion["choices"][0]["finish_reason"]
+    assert (
+        "track_a_long_function_name_to_test"
+        == completion["choices"][0]["message"]["tool_calls"][0]["function"]["name"]
+    )
+    arguments = completion["choices"][0]["message"]["tool_calls"][0]["function"][
+        "arguments"
+    ]
+    arg = json.loads(arguments)
+    assert arg == {"symbol": "10111"}
+
+
+@pytest.mark.parametrize(
+    "model_format, quantization", [("ggufv2", "Q4_K_S"), ("pytorch", None)]
+)
+@pytest.mark.skip(reason="Cost too many resources.")
+def test_restful_api_for_gorilla_openfunctions_tool_calls(
+    setup, model_format, quantization
+):
+    model_name = "gorilla-openfunctions-v1"
+
+    endpoint, _ = setup
+    url = f"{endpoint}/v1/models"
+
+    # list
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 0
+
+    # launch
+    payload = {
+        "model_uid": "test_tool",
+        "model_name": model_name,
+        "model_size_in_billions": 7,
+        "model_format": model_format,
+        "quantization": quantization,
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_tool"
+
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 1
+
+    # tool
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "uber_ride",
+                "description": "Find suitable ride for customers given the location, "
+                "type of ride, and the amount of time the customer is "
+                "willing to wait as parameters",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "loc": {
+                            "type": "int",
+                            "description": "Location of the starting place of the Uber ride",
+                        },
+                        "type": {
+                            "type": "string",
+                            "enum": ["plus", "comfort", "black"],
+                            "description": "Types of Uber ride user is ordering",
+                        },
+                        "time": {
+                            "type": "int",
+                            "description": "The amount of time in minutes the customer is willing to wait",
+                        },
+                    },
+                },
+            },
+        }
+    ]
+    url = f"{endpoint}/v1/chat/completions"
+    payload = {
+        "model": model_uid_res,
+        "messages": [
+            {
+                "role": "user",
+                "content": 'Call me an Uber ride type "Plus" in Berkeley at zipcode 94704 in 10 minutes',
+            },
+        ],
+        "tools": tools,
+        "stop": ["\n"],
+        "max_tokens": 200,
+        "temperature": 0,
+    }
+    response = requests.post(url, json=payload)
+    completion = response.json()
+
+    assert "content" in completion["choices"][0]["message"]
+    assert "tool_calls" == completion["choices"][0]["finish_reason"]
+    assert (
+        "uber_ride"
+        == completion["choices"][0]["message"]["tool_calls"][0]["function"]["name"]
+    )
+    arguments = completion["choices"][0]["message"]["tool_calls"][0]["function"][
+        "arguments"
+    ]
+    arg = json.loads(arguments)
+    assert arg == {"loc": 94704, "time": 10, "type": "plus"}
+
+    _check_invalid_tool_calls(endpoint, model_uid_res)
+
+
+@pytest.mark.parametrize(
+    "model_format, quantization",
+    [
+        ("pytorch", None),
+        ("ggufv2", "Q4_K_M"),
+    ],
+)
+@pytest.mark.skip(reason="Cost too many resources.")
+def test_restful_api_for_qwen_tool_calls(setup, model_format, quantization):
+    model_name = "qwen1.5-chat"
+
+    endpoint, _ = setup
+    url = f"{endpoint}/v1/models"
+
+    # list
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 0
+
+    # launch
+    payload = {
+        "model_uid": "test_tool",
+        "model_name": model_name,
+        "model_engine": "transformers",
+        "model_size_in_billions": 7,
+        "model_format": model_format,
+        "quantization": quantization,
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_tool"
+
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 1
+
+    url = f"{endpoint}/v1/chat/completions"
+    payload = {
+        "model": model_uid_res,
+        "messages": [
+            {
+                "role": "user",
+                "content": "谁是周杰伦？",
+            },
+        ],
+        "tools": [],
+        "max_tokens": 2048,
+        "temperature": 0,
+    }
+    response = requests.post(url, json=payload)
+    completion = response.json()
+    assert "stop" == completion["choices"][0]["finish_reason"]
+
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "google_search",
+                "description": "谷歌搜索是一个通用搜索引擎，搜索周杰伦。",
+                "parameters": {},
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "image_gen",
+                "description": "文生图是一个AI绘画（图像生成）服务，画个周杰伦。",
+            },
+        },
+    ]
+
+    url = f"{endpoint}/v1/chat/completions"
+    payload = {
+        "model": model_uid_res,
+        "messages": [
+            {
+                "role": "user",
+                "content": "谁是周杰伦？",
+            },
+        ],
+        "tools": tools,
+        "max_tokens": 2048,
+        "temperature": 0,
+    }
+    response = requests.post(url, json=payload)
+    completion = response.json()
+    assert "content" in completion["choices"][0]["message"]
+    assert "tool_calls" == completion["choices"][0]["finish_reason"]
+    assert (
+        "google_search"
+        == completion["choices"][0]["message"]["tool_calls"][0]["function"]["name"]
+    )
+    arguments = completion["choices"][0]["message"]["tool_calls"][0]["function"][
+        "arguments"
+    ]
+    assert json.loads(arguments)
+    assert completion["usage"]
+    assert completion["usage"]["prompt_tokens"] != -1
+
+    # tool
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "google_search",
+                "description": "谷歌搜索是一个通用搜索引擎，可用于访问互联网、查询百科知识、了解时事新闻等。",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "search_query": {
+                            "type": "string",
+                            "description": "搜索关键词或短语",
+                        },
+                    },
+                    "required": ["search_query"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "image_gen",
+                "description": "文生图是一个AI绘画（图像生成）服务，输入文本描述，返回根据文本作画得到的图片的URL。",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": "英文关键词，描述了希望图像具有什么内容",
+                        },
+                    },
+                    "required": ["prompt"],
+                },
+            },
+        },
+    ]
+    url = f"{endpoint}/v1/chat/completions"
+    payload = {
+        "model": model_uid_res,
+        "messages": [
+            {
+                "role": "user",
+                "content": "谁是周杰伦？",
+            },
+        ],
+        "tools": tools,
+        "max_tokens": 2048,
+        "temperature": 0,
+    }
+    response = requests.post(url, json=payload)
+    completion = response.json()
+
+    assert "content" in completion["choices"][0]["message"]
+    assert "tool_calls" == completion["choices"][0]["finish_reason"]
+    assert (
+        "google_search"
+        == completion["choices"][0]["message"]["tool_calls"][0]["function"]["name"]
+    )
+    arguments = completion["choices"][0]["message"]["tool_calls"][0]["function"][
+        "arguments"
+    ]
+    arg = json.loads(arguments)
+    assert arg == {"search_query": "周杰伦"}
+
+    # Check tool message.
+    payload = {
+        "model": model_uid_res,
+        "messages": [
+            {
+                "role": "user",
+                "content": "谁是周杰伦？",
+            },
+            completion["choices"][0]["message"],
+            {
+                "role": "tool",
+                "content": "Jay Chou is a Taiwanese singer, songwriter, record producer, rapper, actor, television personality, and businessman.",
+            },
+        ],
+        "tools": tools,
+        "max_tokens": 2048,
+        "temperature": 0,
+    }
+    response = requests.post(url, json=payload)
+    completion2 = response.json()
+    assert "stop" == completion2["choices"][0]["finish_reason"]
+    assert "周杰伦" in completion2["choices"][0]["message"]["content"]
+    # The content varies between gguf and torch model.
+    # assert "歌" in completion2["choices"][0]["message"]["content"]
+
+    # Check continue tool call.
+    payload = {
+        "model": model_uid_res,
+        "messages": [
+            {
+                "role": "user",
+                "content": "谁是周杰伦？",
+            },
+            completion["choices"][0]["message"],
+            {
+                "role": "tool",
+                "content": "Jay Chou is a Taiwanese singer, songwriter, record producer, rapper, actor, television personality, and businessman.",
+            },
+            completion2["choices"][0]["message"],
+            {"role": "user", "content": "画一个他的卡通形象出来"},
+        ],
+        "tools": tools,
+        "max_tokens": 2048,
+        "temperature": 0,
+    }
+    response = requests.post(url, json=payload)
+    completion3 = response.json()
+    assert "tool_calls" == completion3["choices"][0]["finish_reason"]
+    assert (
+        "image_gen"
+        == completion3["choices"][0]["message"]["tool_calls"][0]["function"]["name"]
+    )
+    arguments = completion3["choices"][0]["message"]["tool_calls"][0]["function"][
+        "arguments"
+    ]
+    arg = json.loads(arguments)
+    assert "Jay Chou" in arg["prompt"]
+
+    # Qwen 1.5 4B can't pass the false tool call check.
+    # _check_invalid_tool_calls(endpoint, model_uid_res)
+
+
+def test_restful_api_with_request_limits(setup):
+    model_name = "gte-base"
+
+    endpoint, _ = setup
+    url = f"{endpoint}/v1/models"
+
+    # test embedding
+    # launch
+    payload = {
+        "model_uid": "test_embedding",
+        "model_name": model_name,
+        "model_type": "embedding",
+        "request_limits": 0,
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_embedding"
+
+    # test embedding
+    url = f"{endpoint}/v1/embeddings"
+    payload = {
+        "model": "test_embedding",
+        "input": "The food was delicious and the waiter...",
+    }
+    response = requests.post(url, json=payload)
+    assert response.status_code == 429
+    assert "Rate limit reached" in response.json()["detail"]
+
+    # delete model
+    url = f"{endpoint}/v1/models/test_embedding"
+    response = requests.delete(url)
+    assert response.status_code == 200
+
+    # test llm
+    url = f"{endpoint}/v1/models"
+    payload = {
+        "model_uid": "test_restful_api",
+        "model_engine": "llama.cpp",
+        "model_name": "qwen1.5-chat",
+        "model_size_in_billions": "0_5",
+        "quantization": "q4_0",
+        "request_limits": 0,
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_restful_api"
+
+    # generate
+    url = f"{endpoint}/v1/completions"
+    payload = {
+        "model": model_uid_res,
+        "prompt": "Once upon a time, there was a very old computer.",
+    }
+    response = requests.post(url, json=payload)
+    assert response.status_code == 429
+    assert "Rate limit reached" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="Window CI hangs after run this case."
+)
+async def test_openai(setup):
+    endpoint, _ = setup
+    url = f"{endpoint}/v1/models"
+
+    # list
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 0
+
+    # launch
+    payload = {
+        "model_uid": "test_restful_api",
+        "model_engine": "llama.cpp",
+        "model_name": "qwen1.5-chat",
+        "model_size_in_billions": "0_5",
+        "quantization": "q4_0",
+        "n_ctx": 128,
+        "n_parallel": 1,
+        "use_mmap": True,
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_restful_api"
+
+    # chat
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"},
+        {"role": "assistant", "content": "Hi what can I help you?"},
+        {"role": "user", "content": "What is the capital of France?"},
+    ]
+
+    result = []
+    if version.parse(openai.__version__) < version.parse("1.0"):
+        openai.api_key = ""
+        openai.api_base = f"{endpoint}/v1"
+        openai_chat_completion = openai.ChatCompletion.acreate
+        stream_chunk_type_name = "OpenAIObject"
+        response_type_name = "OpenAIObject"
+    else:
+        client = openai.AsyncClient(api_key="not empty", base_url=f"{endpoint}/v1")
+        openai_chat_completion = client.chat.completions.create
+        stream_chunk_type_name = "ChatCompletionChunk"
+        response_type_name = "ChatCompletion"
+    async for chunk in await openai_chat_completion(
+        messages=messages, stream=True, model=model_uid_res, max_tokens=None
+    ):
+        if not hasattr(chunk, "choices") or len(chunk.choices) == 0:
+            continue
+        result.append(chunk)
+    assert result
+    assert type(result[0]).__name__ == stream_chunk_type_name
+
+    result = await openai_chat_completion(
+        messages=messages, stream=False, model=model_uid_res
+    )
+
+    assert result
+    assert type(result).__name__ == response_type_name
+
+
+def test_lang_chain(setup):
+    endpoint, _ = setup
+    url = f"{endpoint}/v1/models"
+
+    # list
+    response = requests.get(url)
+    response_data = response.json()
+    assert len(response_data["data"]) == 0
+
+    # launch
+    payload = {
+        "model_uid": "test_restful_api",
+        "model_engine": "llama.cpp",
+        "model_name": "qwen1.5-chat",
+        "model_size_in_billions": "0_5",
+        "quantization": "q4_0",
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_restful_api"
+
+    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+    from langchain_core.prompts import (
+        ChatPromptTemplate,
+        HumanMessagePromptTemplate,
+        SystemMessagePromptTemplate,
+    )
+    from langchain_openai import ChatOpenAI
+
+    inference_server_url = f"{endpoint}/v1"
+
+    chat = ChatOpenAI(
+        model=model_uid_res,
+        openai_api_key="EMPTY",
+        openai_api_base=inference_server_url,
+        max_tokens=5,
+        temperature=0,
+    )
+
+    messages = [
+        SystemMessage(
+            content="You are a helpful assistant that translates English to Italian."
+        ),
+        HumanMessage(
+            content="Translate the following sentence from English to Italian: I love programming."
+        ),
+    ]
+    r = chat.invoke(messages)
+    assert type(r) == AIMessage
+    assert r.content
+
+    template = "You are a helpful assistant that translates {input_language} to {output_language}."
+    system_message_prompt = SystemMessagePromptTemplate.from_template(template)
+    human_template = "{text}"
+    human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
+
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [system_message_prompt, human_message_prompt]
+    )
+
+    # get a chat completion from the formatted messages
+    r = chat.invoke(
+        chat_prompt.format_prompt(
+            input_language="English",
+            output_language="Italian",
+            text="I love programming.",
+        ).to_messages()
+    )
+    assert type(r) == AIMessage
+    assert r.content
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "payload, expected",
+    [
+        (
+            {
+                "model": "test",
+                "messages": [{"role": "user", "content": "hi"}],
+                "enable_thinking": False,
+            },
+            False,
+        ),
+        (
+            {
+                "model": "test",
+                "messages": [{"role": "user", "content": "hi"}],
+                "extra_body": {"enable_thinking": True},
+            },
+            True,
+        ),
+    ],
+)
+async def test_chat_completion_enable_thinking_injected(monkeypatch, payload, expected):
+    from ...api.restful_api import RESTfulAPI
+
+    # This test exercises request-body handling, not auth; advanced auth
+    # defaults to on, so disable it to keep the dummy request unauthenticated.
+    monkeypatch.setenv("XINFERENCE_AUTH_ADVANCED", "false")
+
+    api = RESTfulAPI("localhost", "localhost", 9997)
+    mock_supervisor = AsyncMock()
+    api._get_supervisor_ref = AsyncMock(return_value=mock_supervisor)
+
+    model = AsyncMock()
+    model.uid = "test-model"
+    model.chat = AsyncMock(return_value="{}")
+    mock_supervisor.get_model = AsyncMock(return_value=model)
+    mock_supervisor.describe_model = AsyncMock(return_value={"model_family": "qwen3"})
+    mock_supervisor.resolve_token_router_runtime = AsyncMock(return_value=None)
+
+    response = await api.create_chat_completion(_DummyRequest(payload))
+    assert response.status_code == 200
+
+    called_args, called_kwargs = model.chat.call_args
+    chat_kwargs = called_args[1]["chat_template_kwargs"]
+    assert chat_kwargs["enable_thinking"] is expected
+    assert chat_kwargs["thinking"] is expected
+
+    raw_chat_kwargs = called_kwargs["raw_params"]["chat_template_kwargs"]
+    assert raw_chat_kwargs["enable_thinking"] is expected
+    assert raw_chat_kwargs["thinking"] is expected
+
+
+def _build_mock_chat_api(monkeypatch, desc):
+    from ...api.restful_api import RESTfulAPI
+
+    monkeypatch.setenv("XINFERENCE_AUTH_ADVANCED", "false")
+
+    api = RESTfulAPI("localhost", "localhost", 9997)
+    mock_supervisor = AsyncMock()
+    api._get_supervisor_ref = AsyncMock(return_value=mock_supervisor)
+
+    model = AsyncMock()
+    model.uid = "test-model"
+    model.chat = AsyncMock(return_value="{}")
+    mock_supervisor.get_model = AsyncMock(return_value=model)
+    mock_supervisor.describe_model = AsyncMock(return_value=desc)
+    mock_supervisor.resolve_token_router_runtime = AsyncMock(return_value=None)
+    return api, model
+
+
+async def _create_chat_completion_with_mock_model(monkeypatch, payload, desc):
+    api, model = _build_mock_chat_api(monkeypatch, desc)
+    response = await api.create_chat_completion(_DummyRequest(payload))
+    return model, response
+
+
+@pytest.mark.asyncio
+async def test_qwen38_without_reasoning_effort_does_not_add_template_kwargs(
+    monkeypatch,
+):
+    model, response = await _create_chat_completion_with_mock_model(
+        monkeypatch,
+        {"model": "test", "messages": [{"role": "user", "content": "hi"}]},
+        {"model_name": "qwen3.8", "model_family": "qwen3.8"},
+    )
+
+    assert response.status_code == 200
+    called_args, called_kwargs = model.chat.call_args
+    assert "chat_template_kwargs" not in called_args[1]
+    assert "chat_template_kwargs" not in called_kwargs["raw_params"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model_name", ["qwen3.8", "qwen3.8-max"])
+async def test_qwen38_top_level_reasoning_effort_injected(monkeypatch, model_name):
+    payload = {
+        "model": "test",
+        "messages": [{"role": "user", "content": "hi"}],
+        "reasoning_effort": "low",
+    }
+
+    model, response = await _create_chat_completion_with_mock_model(
+        monkeypatch, payload, {"model_name": model_name, "model_family": model_name}
+    )
+
+    assert response.status_code == 200
+    called_args, called_kwargs = model.chat.call_args
+    chat_kwargs = called_args[1]["chat_template_kwargs"]
+    assert chat_kwargs["reasoning_effort"] == "low"
+    raw_params = called_kwargs["raw_params"]
+    assert "reasoning_effort" not in raw_params
+    assert raw_params["chat_template_kwargs"]["reasoning_effort"] == "low"
+
+
+@pytest.mark.asyncio
+async def test_qwen38_reasoning_effort_preserves_enable_thinking(monkeypatch):
+    payload = {
+        "model": "test",
+        "messages": [{"role": "user", "content": "hi"}],
+        "enable_thinking": False,
+        "reasoning_effort": "medium",
+    }
+
+    model, response = await _create_chat_completion_with_mock_model(
+        monkeypatch, payload, {"model_name": "qwen3.8", "model_family": "qwen3.8"}
+    )
+
+    assert response.status_code == 200
+    called_args, called_kwargs = model.chat.call_args
+    chat_kwargs = called_args[1]["chat_template_kwargs"]
+    assert chat_kwargs == {
+        "enable_thinking": False,
+        "thinking": False,
+        "reasoning_effort": "medium",
+    }
+    assert called_kwargs["raw_params"]["chat_template_kwargs"] == chat_kwargs
+
+
+@pytest.mark.asyncio
+async def test_non_qwen38_top_level_reasoning_effort_unchanged(monkeypatch):
+    payload = {
+        "model": "test",
+        "messages": [{"role": "user", "content": "hi"}],
+        "reasoning_effort": "high",
+    }
+
+    model, response = await _create_chat_completion_with_mock_model(
+        monkeypatch, payload, {"model_name": "qwen3", "model_family": "qwen3"}
+    )
+
+    assert response.status_code == 200
+    called_args, called_kwargs = model.chat.call_args
+    assert "chat_template_kwargs" not in called_args[1]
+    assert called_kwargs["raw_params"]["reasoning_effort"] == "high"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model_name", ["qwen3.8", "qwen3.8-max"])
+@pytest.mark.parametrize("effort", ["off", "high", "banana", None])
+async def test_qwen38_invalid_top_level_reasoning_effort_raises_400(
+    monkeypatch, model_name, effort
+):
+    payload = {
+        "model": "test",
+        "messages": [{"role": "user", "content": "hi"}],
+        "reasoning_effort": effort,
+    }
+    api, model = _build_mock_chat_api(
+        monkeypatch, {"model_name": model_name, "model_family": model_name}
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await api.create_chat_completion(_DummyRequest(payload))
+
+    assert exc.value.status_code == 400
+    model.chat.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model_name", ["qwen3.8", "qwen3.8-max"])
+@pytest.mark.parametrize("effort", ["banana", None])
+async def test_qwen38_invalid_template_reasoning_effort_raises_400(
+    monkeypatch, model_name, effort
+):
+    payload = {
+        "model": "test",
+        "messages": [{"role": "user", "content": "hi"}],
+        "chat_template_kwargs": {"reasoning_effort": effort},
+    }
+    api, model = _build_mock_chat_api(
+        monkeypatch, {"model_name": model_name, "model_family": model_name}
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await api.create_chat_completion(_DummyRequest(payload))
+
+    assert exc.value.status_code == 400
+    assert "chat_template_kwargs.reasoning_effort" in exc.value.detail
+    model.chat.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model_name", ["qwen3.8", "qwen3.8-max"])
+async def test_qwen38_conflicting_reasoning_effort_raises_400(monkeypatch, model_name):
+    payload = {
+        "model": "test",
+        "messages": [{"role": "user", "content": "hi"}],
+        "reasoning_effort": "xhigh",
+        "chat_template_kwargs": {"reasoning_effort": "low"},
+    }
+    api, model = _build_mock_chat_api(
+        monkeypatch, {"model_name": model_name, "model_family": model_name}
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await api.create_chat_completion(_DummyRequest(payload))
+
+    assert exc.value.status_code == 400
+    assert "Conflicting reasoning_effort" in exc.value.detail
+    model.chat.assert_not_called()
+
+
+def test_launch_model_async(setup):
+    endpoint, _ = setup
+    url = f"{endpoint}/v1/models?wait_ready=false"
+
+    payload = {
+        "model_uid": "test_qwen_15",
+        "model_engine": "llama.cpp",
+        "model_name": "qwen1.5-chat",
+        "model_size_in_billions": "0_5",
+        "quantization": "q4_0",
+        "n_ctx": 128,
+        "n_parallel": 1,
+        "use_mmap": True,
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_qwen_15"
+
+    status_url = f"{endpoint}/v1/models/instances?model_uid=test_qwen_15"
+    progress_url = f"{endpoint}/v1/models/test_qwen_15/progress"
+    while True:
+        response = requests.get(status_url)
+        response_data = response.json()
+        assert len(response_data) == 1
+        res = response_data[0]
+        progress = requests.get(progress_url).json()
+        assert progress["progress"] is not None
+        if res["status"] == "READY":
+            assert progress["progress"] == 1.0
+            break
+        time.sleep(2)
+
+    # delete again
+    url = f"{endpoint}/v1/models/test_qwen_15"
+    requests.delete(url)
+
+    response = requests.get(status_url)
+    assert len(response.json()) == 0
+
+
+def test_cancel_launch_model(setup):
+    endpoint, _ = setup
+    url = f"{endpoint}/v1/models?wait_ready=false"
+
+    payload = {
+        "model_uid": "test_qwen_25",
+        "model_engine": "llama.cpp",
+        "model_name": "qwen2.5-instruct",
+        "model_size_in_billions": "0_5",
+        "quantization": "q4_0",
+        "n_ctx": 128,
+        "n_parallel": 1,
+        "use_mmap": True,
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_qwen_25"
+
+    status_url = f"{endpoint}/v1/models/instances?model_uid=test_qwen_25"
+    cancel_url = f"{endpoint}/v1/models/test_qwen_25/cancel"
+
+    cancel_called = False
+
+    while True:
+        response = requests.get(status_url)
+        response_data = response.json()[0]
+
+        if response_data["status"] == "CREATING":
+            if not cancel_called:
+                requests.post(cancel_url)
+                cancel_called = True
+            continue
+        else:
+            assert response_data["status"] == "ERROR"
+            break
+
+
+def test_events(setup):
+    endpoint, _ = setup
+    url = f"{endpoint}/v1/models"
+
+    payload = {
+        "model_uid": "test_qwen_25",
+        "model_engine": "llama.cpp",
+        "model_name": "qwen2.5-instruct",
+        "model_size_in_billions": "0_5",
+        "quantization": "q4_0",
+        "n_ctx": 128,
+        "n_parallel": 1,
+        "use_mmap": True,
+    }
+
+    response = requests.post(url, json=payload)
+    response_data = response.json()
+    model_uid_res = response_data["model_uid"]
+    assert model_uid_res == "test_qwen_25"
+
+    events_url = f"{endpoint}/v1/models/test_qwen_25/events"
+    response = requests.get(events_url)
+    response_data = response.json()
+    # [{'event_type': 'INFO', 'event_ts': 1705896156, 'event_content': 'Launch model'}]
+    assert len(response_data) == 1
+    assert "Launch" in response_data[0]["event_content"]
+
+    # delete again
+    url = f"{endpoint}/v1/models/test_qwen_25"
+    response = requests.delete(url)
+    response.raise_for_status()
+
+    response = requests.get(events_url)
+    response_data = response.json()
+    # [{'event_type': 'INFO', 'event_ts': 1705896215, 'event_content': 'Launch model'},
+    #  {'event_type': 'INFO', 'event_ts': 1705896215, 'event_content': 'Terminate model'}]
+    assert len(response_data) == 2
+    assert "Terminate" in response_data[1]["event_content"]
+
+
+def test_launch_model_by_version(setup):
+    endpoint, supervisor_addr = setup
+    url = f"{endpoint}/v1/models/instance"
+
+    model_version = "qwen1.5-chat--0_5B--ggufv2--q4_0"
+
+    payload = {
+        "model_uid": "test_qwen15",
+        "model_engine": "llama.cpp",
+        "model_type": "LLM",
+        "model_version": model_version,
+    }
+    response = requests.post(url, json=payload)
+    assert response.json()["model_uid"] == "test_qwen15"
+
+    url_version = f"{endpoint}/v1/models/LLM/qwen1.5-chat/versions"
+    response = requests.get(url_version)
+    versions = response.json()
+
+    has_version = False
+    for info in versions:
+        if info["model_version"] == model_version:
+            has_version = True
+            assert info["cache_status"] is True
+            assert info["model_file_location"] is not None
+            assert isinstance(info["model_file_location"], dict)
+            assert supervisor_addr in info["model_file_location"]
+            assert os.path.exists(info["model_file_location"][supervisor_addr])
+            break
+    assert has_version is True
+
+    # delete again
+    url = f"{endpoint}/v1/models/test_qwen15"
+    requests.delete(url)
+
+
+def test_builtin_families(setup):
+    endpoint, supervisor_addr = setup
+    url = f"{endpoint}/v1/models/families"
+
+    response = requests.get(url)
+    families = response.json()
+    test_abilities = [
+        "generate",
+        "chat",
+        "vision",
+        "reasoning",
+        "tools",
+        "audio",
+        "omni",
+        "hybrid",
+    ]
+    assert all(ability in families for ability in test_abilities)
+    assert "qwen3" in families["hybrid"]
+
+
+@pytest.fixture
+def anthropic_setup():
+    """Setup for Anthropic format conversion tests"""
+
+    # Create a mock handler with the conversion method
+    class MockHandler:
+        def _convert_openai_to_anthropic(
+            self, openai_response: dict, model: str
+        ) -> dict:
+            from ...api.restful_api import RESTfulAPI
+
+            # Create a temporary RESTfulAPI instance to access the method
+            app = RESTfulAPI("test_supervisor_address", "test_host", 12345)
+            return app._convert_openai_to_anthropic(openai_response, model)
+
+    # Sample OpenAI responses for testing
+    sample_openai_response_with_tools = {
+        "choices": [
+            {
+                "message": {
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "call_123",
+                            "type": "function",
+                            "function": {
+                                "name": "get_weather",
+                                "arguments": '{"city": "Beijing"}',
+                            },
+                        }
+                    ],
+                },
+                "finish_reason": "tool_calls",
+                "index": 0,
+            }
+        ],
+        "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70},
+    }
+
+    sample_openai_response_without_tools = {
+        "choices": [
+            {
+                "message": {
+                    "content": "Hello, how can I help you?",
+                    "tool_calls": [],
+                },
+                "finish_reason": "stop",
+                "index": 0,
+            }
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20},
+    }
+
+    return (
+        MockHandler(),
+        sample_openai_response_with_tools,
+        sample_openai_response_without_tools,
+    )
+
+
+def test_normalize_anthropic_messages_top_level_string():
+    """Top-level `system` string becomes a leading system message."""
+    from ...api.restful_api import RESTfulAPI
+
+    result = RESTfulAPI._normalize_anthropic_messages(
+        "Be concise.", [{"role": "user", "content": "Hi"}]
+    )
+    assert result == [
+        {"role": "system", "content": "Be concise."},
+        {"role": "user", "content": "Hi"},
+    ]
+
+
+def test_normalize_anthropic_messages_strips_billing_header():
+    """Claude Code's per-request billing header block is dropped."""
+    from ...api.restful_api import RESTfulAPI
+
+    result = RESTfulAPI._normalize_anthropic_messages(
+        [
+            {"type": "text", "text": "x-anthropic-billing-header: cc_version=2.1.160"},
+            {"type": "text", "text": "You are Claude Code."},
+        ],
+        [{"role": "user", "content": "Hi"}],
+    )
+    assert result[0] == {"role": "system", "content": "You are Claude Code."}
+    assert result[1] == {"role": "user", "content": "Hi"}
+
+
+def test_normalize_anthropic_messages_inline_system_merged():
+    """Inline `role: system` messages are merged with the top-level prompt and
+    removed from the message list (Claude Code >= 2.1.154 compatibility)."""
+    from ...api.restful_api import RESTfulAPI
+
+    result = RESTfulAPI._normalize_anthropic_messages(
+        "Top.",
+        [
+            {"role": "user", "content": "Hi"},
+            {"role": "system", "content": "Inline."},
+            {
+                "role": "system",
+                "content": [
+                    {"type": "text", "text": "A."},
+                    {"type": "text", "text": "B."},
+                ],
+            },
+        ],
+    )
+    assert result == [
+        {"role": "system", "content": "Top.\nInline.\nA.\nB."},
+        {"role": "user", "content": "Hi"},
+    ]
+
+
+def test_normalize_anthropic_messages_no_system_unchanged():
+    """Requests without any system content are passed through unchanged."""
+    from ...api.restful_api import RESTfulAPI
+
+    messages = [
+        {"role": "user", "content": "Hi"},
+        {"role": "assistant", "content": "Yo"},
+    ]
+    assert RESTfulAPI._normalize_anthropic_messages(None, messages) == messages
+
+
+def test_convert_openai_to_anthropic_with_tools(anthropic_setup):
+    """Test conversion of OpenAI response with tool calls to Anthropic format"""
+    handler, sample_openai_response_with_tools, _ = anthropic_setup
+    result = handler._convert_openai_to_anthropic(
+        sample_openai_response_with_tools, "test-model"
+    )
+
+    # Verify basic structure
+    assert result["type"] == "message"
+    assert result["role"] == "assistant"
+    assert result["model"] == "test-model"
+    assert result["stop_reason"] == "tool_use"
+
+    # Verify content blocks
+    assert len(result["content"]) == 1
+    content_block = result["content"][0]
+    assert content_block["type"] == "tool_use"
+    assert content_block["name"] == "get_weather"
+    assert content_block["input"] == {"city": "Beijing"}
+    assert "id" in content_block
+    assert content_block["cache_control"] == {"type": "ephemeral"}
+
+    # Verify usage stats
+    assert result["usage"]["input_tokens"] == 50
+    assert result["usage"]["output_tokens"] == 20
+
+
+def test_convert_openai_to_anthropic_without_tools(anthropic_setup):
+    """Test conversion of OpenAI response without tool calls to Anthropic format"""
+    handler, _, sample_openai_response_without_tools = anthropic_setup
+    result = handler._convert_openai_to_anthropic(
+        sample_openai_response_without_tools, "test-model"
+    )
+
+    # Verify basic structure
+    assert result["type"] == "message"
+    assert result["role"] == "assistant"
+    assert result["model"] == "test-model"
+    assert result["stop_reason"] == "stop"
+
+    # Verify content blocks
+    assert len(result["content"]) == 1
+    content_block = result["content"][0]
+    assert content_block["type"] == "text"
+    assert content_block["text"] == "Hello, how can I help you?"
+
+    # Verify usage stats
+    assert result["usage"]["input_tokens"] == 10
+    assert result["usage"]["output_tokens"] == 10
+
+
+def test_convert_openai_to_anthropic_mixed_content(anthropic_setup):
+    """Test conversion of OpenAI response with both text and tool calls"""
+    handler, _, _ = anthropic_setup
+    openai_response = {
+        "choices": [
+            {
+                "message": {
+                    "content": "I'll help you check the weather.",
+                    "tool_calls": [
+                        {
+                            "id": "call_456",
+                            "type": "function",
+                            "function": {
+                                "name": "get_weather",
+                                "arguments": '{"city": "Shanghai"}',
+                            },
+                        }
+                    ],
+                },
+                "finish_reason": "tool_calls",
+                "index": 0,
+            }
+        ],
+        "usage": {"prompt_tokens": 60, "completion_tokens": 30, "total_tokens": 90},
+    }
+
+    result = handler._convert_openai_to_anthropic(openai_response, "test-model")
+
+    # Verify basic structure
+    assert result["type"] == "message"
+    assert result["role"] == "assistant"
+    assert result["model"] == "test-model"
+    assert result["stop_reason"] == "tool_use"
+
+    # Verify content blocks (should have both text and tool_use)
+    assert len(result["content"]) == 2
+
+    # First block should be text
+    text_block = result["content"][0]
+    assert text_block["type"] == "text"
+    assert text_block["text"] == "I'll help you check the weather."
+
+    # Second block should be tool_use
+    tool_block = result["content"][1]
+    assert tool_block["type"] == "tool_use"
+    assert tool_block["name"] == "get_weather"
+    assert tool_block["input"] == {"city": "Shanghai"}
+
+
+def test_convert_openai_to_anthropic_multiple_tools(anthropic_setup):
+    """Test conversion of OpenAI response with multiple tool calls"""
+    handler, _, _ = anthropic_setup
+    openai_response = {
+        "choices": [
+            {
+                "message": {
+                    "content": "I'll help you with both tasks.",
+                    "tool_calls": [
+                        {
+                            "id": "call_789",
+                            "type": "function",
+                            "function": {
+                                "name": "get_weather",
+                                "arguments": '{"city": "Beijing"}',
+                            },
+                        },
+                        {
+                            "id": "call_790",
+                            "type": "function",
+                            "function": {
+                                "name": "get_time",
+                                "arguments": '{"timezone": "UTC"}',
+                            },
+                        },
+                    ],
+                },
+                "finish_reason": "tool_calls",
+                "index": 0,
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 80,
+            "completion_tokens": 40,
+            "total_tokens": 120,
+        },
+    }
+
+    result = handler._convert_openai_to_anthropic(openai_response, "test-model")
+
+    # Verify content blocks
+    assert len(result["content"]) == 3  # 1 text + 2 tool_use blocks
+
+    # Check tool blocks
+    tool_blocks = [block for block in result["content"] if block["type"] == "tool_use"]
+    assert len(tool_blocks) == 2
+
+    # Verify first tool
+    assert tool_blocks[0]["name"] == "get_weather"
+    assert tool_blocks[0]["input"] == {"city": "Beijing"}
+
+    # Verify second tool
+    assert tool_blocks[1]["name"] == "get_time"
+    assert tool_blocks[1]["input"] == {"timezone": "UTC"}
+
+
+def test_convert_openai_to_anthropic_empty_response(anthropic_setup):
+    """Test conversion of empty OpenAI response"""
+    handler, _, _ = anthropic_setup
+    empty_response = {"choices": []}
+    result = handler._convert_openai_to_anthropic(empty_response, "test-model")
+
+    # Should still have basic structure
+    assert result["type"] == "message"
+    assert result["role"] == "assistant"
+    assert result["model"] == "test-model"
+    assert result["stop_reason"] == "stop"
+    assert result["content"] == []
+
+
+def test_convert_openai_to_anthropic_invalid_tool_arguments(anthropic_setup):
+    """Test handling of invalid tool arguments JSON"""
+    handler, _, _ = anthropic_setup
+    openai_response = {
+        "choices": [
+            {
+                "message": {
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "call_invalid",
+                            "type": "function",
+                            "function": {
+                                "name": "test_tool",
+                                "arguments": "invalid json {",
+                            },
+                        }
+                    ],
+                },
+                "finish_reason": "tool_calls",
+                "index": 0,
+            }
+        ],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20},
+    }
+
+    # Should not raise exception, should handle gracefully
+    result = handler._convert_openai_to_anthropic(openai_response, "test-model")
+
+    # Verify structure is maintained even with invalid JSON
+    assert result["type"] == "message"
+    assert len(result["content"]) == 1
+    tool_block = result["content"][0]
+    assert tool_block["type"] == "tool_use"
+    assert tool_block["name"] == "test_tool"
+    # Invalid JSON should result in empty dict
+    assert tool_block["input"] == {}
+
+
+def test_anthropic_tools_response_format(anthropic_setup):
+    """Test that the response format matches Anthropic API specification"""
+    handler, sample_openai_response_with_tools, _ = anthropic_setup
+    result = handler._convert_openai_to_anthropic(
+        sample_openai_response_with_tools, "test-model"
+    )
+
+    # Verify required fields according to Anthropic API spec
+    required_fields = [
+        "id",
+        "type",
+        "role",
+        "content",
+        "model",
+        "stop_reason",
+        "usage",
+    ]
+    for field in required_fields:
+        assert field in result
+
+    # Verify field types
+    assert isinstance(result["id"], str)
+    assert result["type"] == "message"
+    assert result["role"] == "assistant"
+    assert isinstance(result["content"], list)
+    assert isinstance(result["model"], str)
+    assert result["stop_reason"] in ["stop", "tool_use"]
+    assert isinstance(result["usage"], dict)
+
+    # Verify usage structure
+    usage_fields = [
+        "input_tokens",
+        "output_tokens",
+        "cache_creation_input_tokens",
+        "cache_read_input_tokens",
+    ]
+    for field in usage_fields:
+        assert field in result["usage"]
+
+
+@pytest.fixture
+def anthropic_api():
+    """Create RESTfulAPI instance for testing"""
+    from ...api.restful_api import RESTfulAPI
+
+    return RESTfulAPI("localhost", "localhost", 9997)
+
+
+@pytest.fixture
+def mock_supervisor():
+    """Mock supervisor reference"""
+    supervisor = AsyncMock()
+    return supervisor
+
+
+@pytest.fixture
+def sample_models():
+    """Sample models data for testing"""
+    return {
+        "model1": {
+            "model_name": "claude-3-sonnet",
+            "model_type": "LLM",
+            "context_length": 8192,
+            "model_format": "pytorch",
+            "model_size_in_billions": 7,
+            "quantization": "none",
+        },
+        "model2": {
+            "model_name": "claude-3-haiku",
+            "model_type": "LLM",
+            "context_length": 4096,
+            "model_format": "pytorch",
+            "model_size_in_billions": 3,
+            "quantization": "none",
+        },
+    }
+
+
+@pytest.mark.asyncio
+async def test_anthropic_list_models(anthropic_api, mock_supervisor, sample_models):
+    """Test anthropic_list_models endpoint"""
+    # Mock the supervisor
+    anthropic_api._get_supervisor_ref = AsyncMock(return_value=mock_supervisor)
+    mock_supervisor.list_models = AsyncMock(return_value=sample_models)
+
+    # Call the method
+    response = await anthropic_api.anthropic_list_models()
+
+    # Verify response
+    assert response.status_code == 200
+    data = json.loads(response.body.decode())
+
+    assert len(data) == 2
+    assert data[0]["id"] == "model1"
+    assert data[0]["object"] == "model"
+    assert data[0]["display_name"] == "claude-3-sonnet"
+    assert data[0]["type"] == "LLM"
+    assert data[0]["max_tokens"] == 8192
+
+
+@pytest.mark.asyncio
+async def test_anthropic_get_model_found(anthropic_api, mock_supervisor, sample_models):
+    """Test anthropic_get_model endpoint when model exists"""
+    # Mock the supervisor
+    anthropic_api._get_supervisor_ref = AsyncMock(return_value=mock_supervisor)
+    mock_supervisor.list_models = AsyncMock(return_value=sample_models)
+
+    # Call the method
+    response = await anthropic_api.anthropic_get_model("model1")
+
+    # Verify response
+    assert response.status_code == 200
+    data = json.loads(response.body.decode())
+
+    assert data["id"] == "model1"
+    assert data["object"] == "model"
+    assert data["display_name"] == "claude-3-sonnet"
+    assert data["type"] == "LLM"
+    assert data["max_tokens"] == 8192
+    assert data["model_name"] == "claude-3-sonnet"
+
+
+@pytest.mark.asyncio
+async def test_anthropic_models_format_compatibility(
+    anthropic_api, mock_supervisor, sample_models
+):
+    """Test that Anthropic models endpoint format is compatible with Anthropic API"""
+    # Mock the supervisor
+    anthropic_api._get_supervisor_ref = AsyncMock(return_value=mock_supervisor)
+    mock_supervisor.list_models = AsyncMock(return_value=sample_models)
+
+    # Test list models
+    response = await anthropic_api.anthropic_list_models()
+    data = json.loads(response.body.decode())
+
+    # Verify Anthropic format
+    for model in data:
+        # Required fields for Anthropic models API
+        assert "id" in model
+        assert "object" in model
+        assert model["object"] == "model"
+        assert "created" in model
+        assert "display_name" in model
+        assert "type" in model
+        assert "max_tokens" in model
+
+        # Verify types
+        assert isinstance(model["id"], str)
+        assert isinstance(model["created"], int)
+        assert isinstance(model["display_name"], str)
+        assert isinstance(model["type"], str)
+        assert isinstance(model["max_tokens"], int)
+
+
+@pytest.mark.asyncio
+async def test_anthropic_models_include_original_fields(
+    anthropic_api, mock_supervisor, sample_models
+):
+    """Test that original model fields are preserved in Anthropic response"""
+    # Mock the supervisor
+    anthropic_api._get_supervisor_ref = AsyncMock(return_value=mock_supervisor)
+    mock_supervisor.list_models = AsyncMock(return_value=sample_models)
+
+    # Test get model
+    response = await anthropic_api.anthropic_get_model("model1")
+    data = json.loads(response.body.decode())
+
+    # Verify original fields are preserved
+    assert data["model_name"] == "claude-3-sonnet"
+    assert data["model_type"] == "LLM"
+    assert data["context_length"] == 8192
+    assert data["model_format"] == "pytorch"
+    assert data["model_size_in_billions"] == 7
+    assert data["quantization"] == "none"

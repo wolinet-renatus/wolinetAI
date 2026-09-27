@@ -1,0 +1,19 @@
+.. _models_builtin_{{ model_name|lower }}:
+
+{{ "=" * model_name|length }}
+{{ model_name }}
+{{ "=" * model_name|length }}
+
+- **Model Name:** {{ model_name }}
+- **Model Family:** {{ model_family }}
+- **Abilities:** {{ model_ability }}
+- **Multilingual:** {{ multilingual }}
+
+Specifications
+^^^^^^^^^^^^^^
+
+{{ specifications }}
+
+Execute the following command to launch the model::
+
+   xinference launch --model-name {{ model_name }} --model-type audio{% if launch_engine %} --model-engine {{ launch_engine }}{% endif %}{{ available_engines_section }}

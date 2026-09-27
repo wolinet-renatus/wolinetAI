@@ -1,0 +1,59 @@
+[
+  {
+    "version": 2,
+    "model_name": "Qwen-Image-2.1",
+    "model_family": "stable_diffusion",
+    "model_ability": [
+      "text2image",
+      "image2image"
+    ],
+    "model_src": {
+      "huggingface": {
+        "model_id": "Qwen/Qwen-Image-2.1",
+        "model_revision": "main"
+      },
+      "modelscope": {
+        "model_id": "Qwen/Qwen-Image-2.1",
+        "model_revision": "master"
+      }
+    },
+    "default_model_config": {
+      "torch_dtype": "bfloat16"
+    },
+    "default_generate_config": {
+      "num_inference_steps": 40
+    },
+    "cache_config": {
+      "ignore_patterns": [
+        "transformer/*.safetensors",
+        "*.safetensors.index.json"
+      ]
+    },
+    "gguf_model_id": "0xSojalSec/Qwen-Image-2.1-Uncensored-GGUF",
+    "gguf_quantizations": [
+      "Q8_0",
+      "q8_0",
+      "Q4_K_M",
+      "q4_k_m",
+      "Q4_0",
+      "q4_0",
+      "Q5_K_M",
+      "q5_k_m",
+      "Q6_K",
+      "q6_k"
+    ],
+    "gguf_model_file_name_template": "qwen-image-2.1-{quantization}.gguf",
+    "virtualenv": {
+      "packages": [
+        "git+https://github.com/huggingface/diffusers ; #engine# == \"diffusers\"",
+        "transformers>=5.17.0,<6",
+        "accelerate>=1.0.0",
+        "peft>=0.17.0",
+        "#system_torch#",
+        "#system_torchvision#",
+        "#system_numpy#"
+      ],
+      "no_build_isolation": true
+    }
+  }
+]
