@@ -1,0 +1,171 @@
+general_settings:
+  database_url: os.environ/DATABASE_URL
+  forward_client_headers_to_llm_api: true
+  forward_llm_provider_auth_headers: true
+  master_key: os.environ/WOLINET_GATEWAY_MASTER_KEY
+  pass_through_endpoints:
+  - path: /v1/images/*
+    target: os.environ/WOLINET_INFERENCE_URL
+  - path: /v1/audio/*
+    target: os.environ/WOLINET_INFERENCE_URL
+  - path: /v1/rerank
+    target: os.environ/WOLINET_INFERENCE_URL
+  - path: /rerank
+    target: os.environ/WOLINET_INFERENCE_URL
+  - path: /v1/ocr
+    target: os.environ/WOLINET_INFERENCE_URL
+  - path: /v1/doc_analyze
+    target: os.environ/WOLINET_INFERENCE_URL
+  - path: /v1/videos/*
+    target: os.environ/WOLINET_INFERENCE_URL
+  store_model_in_db: true
+  disable_env_credential_login: true
+  user_header_mappings:
+    - header_name: X-OpenWebUI-User-Id
+      litellm_user_role: internal_user
+    - header_name: X-OpenWebUI-User-Email
+      litellm_user_role: customer
+    - header_name: X-OpenWebUI-User-Name
+      litellm_user_role: internal_user
+litellm_settings:
+  drop_params: true
+  request_timeout: 600
+  enable_anthropic_prompt_caching: false
+  openai_system_messages_first: true
+  websearch_interception_params:
+    enabled: true
+    enabled_providers:
+      - bedrock
+      - vertex_ai
+      - openai
+      - aiohttp_openai
+    search_tool_name: "duckduckgo-search"
+    max_agentic_loops: 3
+search_tools:
+  - search_tool_name: "duckduckgo-search"
+    litellm_params:
+      search_provider: "duckduckgo"
+    search_tool_info:
+      description: "Default web search provider via DuckDuckGo"
+model_list:
+- litellm_params:
+    api_base: os.environ/WOLINET_API_BASE
+    api_key: os.environ/WOLINET_API_KEY
+    model: wolinet/wolinex-coder
+    timeout: 600
+  model_name: wolinex-coder
+  model_info:
+    mode: chat
+    provider: "Wolinet AI"
+    litellm_provider: "wolinet_ai"
+    description: "Wolinex Coder 3B - Sovereign AI Coding Engine by Wolinet Tech"
+    max_tokens: 8192
+    max_input_tokens: 32768
+- litellm_params:
+    api_base: os.environ/WOLINET_API_BASE
+    api_key: os.environ/WOLINET_API_KEY
+    max_tokens: 2048
+    model: wolinet/qwen2.5-omni-3b-local
+    timeout: 600
+  model_name: wolinex-omni
+  model_info:
+    mode: chat
+    provider: "Wolinet AI"
+    litellm_provider: "wolinet_ai"
+    description: "Wolinex Omni 3B - Sovereign Multimodal Voice & Vision Intelligence"
+    max_tokens: 2048
+    max_input_tokens: 32768
+- litellm_params:
+    api_base: os.environ/WOLINET_API_BASE
+    api_key: os.environ/WOLINET_API_KEY
+    model: wolinet/wolinex-coder
+    timeout: 600
+  model_name: wolinex-coder-pro
+  model_info:
+    mode: chat
+    provider: "Wolinet AI"
+    litellm_provider: "wolinet_ai"
+    description: "Wolinex Coder Pro - Advanced Sovereign Coding & Tool Calling Engine"
+    max_tokens: 8192
+    max_input_tokens: 32768
+- litellm_params:
+    api_base: os.environ/WOLINET_API_BASE
+    api_key: os.environ/WOLINET_API_KEY
+    model: wolinet/bge-small-en-v1.5
+    timeout: 600
+  model_name: wolinex-embed
+  model_info:
+    mode: embedding
+    provider: "Wolinet AI"
+    litellm_provider: "wolinet_ai"
+    description: "Wolinex Embed - Sovereign High-Efficiency Semantic Vector Engine (384-dim)"
+    max_input_tokens: 512
+- litellm_params:
+    api_base: os.environ/WOLINET_API_BASE
+    api_key: os.environ/WOLINET_API_KEY
+    model: wolinet/harrier-oss-v1-0.6b
+    timeout: 600
+  model_name: wolinex-retriever
+  model_info:
+    mode: embedding
+    provider: "Wolinet AI"
+    litellm_provider: "wolinet_ai"
+    description: "Wolinex Retriever - Sovereign Dense Semantic Search & RAG Engine (1024-dim)"
+    max_input_tokens: 2048
+- litellm_params:
+    api_base: os.environ/WOLINET_API_BASE
+    api_key: os.environ/WOLINET_API_KEY
+    model: wolinet/deepseek-coder-1.3b
+    timeout: 600
+  model_name: wolinex-coder-lite
+  model_info:
+    mode: chat
+    provider: "Wolinet AI"
+    litellm_provider: "wolinet_ai"
+    description: "Wolinex Coder Lite - Sovereign Ultra-Fast Lightweight Coding Model"
+    max_tokens: 4096
+    max_input_tokens: 16384
+- litellm_params:
+    api_base: os.environ/WOLINET_API_BASE
+    api_key: os.environ/WOLINET_API_KEY
+    model: wolinet/bge-reranker-v2-m3
+    timeout: 600
+  model_name: wolinex-rerank
+  model_info:
+    mode: rerank
+    provider: "Wolinet AI"
+    litellm_provider: "wolinet_ai"
+    description: "Wolinex Rerank - Sovereign Multilingual Cross-Encoder Reranker"
+- litellm_params:
+    api_key: os.environ/DEEPSEEK_API_KEY
+    model: deepseek/deepseek-reasoner
+    merge_reasoning_content_in_choices: true
+  model_name: deepseek-r1
+- litellm_params:
+    api_key: os.environ/DEEPSEEK_API_KEY
+    model: deepseek/deepseek-chat
+  model_name: deepseek-v3
+- litellm_params:
+    api_key: os.environ/ANTHROPIC_API_KEY
+    model: anthropic/claude-3-5-sonnet-20241022
+  model_name: claude-3-5-sonnet
+- litellm_params:
+    api_key: os.environ/OPENAI_API_KEY
+    model: openai/gpt-4o
+  model_name: gpt-4o
+- litellm_params:
+    api_key: os.environ/OPENAI_API_KEY
+    model: openai/gpt-4o-mini
+  model_name: gpt-4o-mini
+router_settings:
+  num_retries: 2
+  redis_host: os.environ/REDIS_HOST
+  redis_port: os.environ/REDIS_PORT
+  routing_strategy: latency-based-routing
+  timeout: 600
+  model_group_alias:
+    "qwen2.5-coder-3b": "wolinex-coder-pro"
+    "deepseek-coder-1.3b": "wolinex-coder-lite"
+    "bge-small-en-v1.5": "wolinex-embed"
+    "harrier-oss-v1-0.6b": "wolinex-retriever"
+    "bge-reranker-v2-m3": "wolinex-rerank"
