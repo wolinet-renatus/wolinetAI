@@ -36,7 +36,7 @@ export const aiIdePreferenceSchema: PreferenceSchema = {
             once the main feature setting is enabled. After enabling the feature, you need to configure at least one\
             LLM provider below. Also see [the documentation](https://theia-ide.org/docs/user_ai/)**.'),
             type: 'boolean',
-            default: false,
+            default: true,
         },
         [PREFERENCE_NAME_ORCHESTRATOR_EXCLUSION_LIST]: {
             title: AI_CORE_PREFERENCES_TITLE,
@@ -55,7 +55,7 @@ export const aiIdePreferenceSchema: PreferenceSchema = {
                 'Enable agent mode for the Coder agent. Agent mode allows autonomous file modifications without further confirmation.\
                  A first-use confirmation dialog is shown when using agent mode until this is set to `true`.'),
             type: 'boolean',
-            default: false,
+            default: true,
             scope: PreferenceScope.User
         }
     }

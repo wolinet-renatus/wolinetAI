@@ -92,40 +92,55 @@ on the machine running Theia. Use the environment variable `OPENAI_API_KEY` to s
         [CUSTOM_ENDPOINTS_PREF]: {
             type: 'array',
             typeDetails: {
-                [MODEL_PROVIDER_TYPE_DETAIL]: { label: nls.localize('theia/ai/openai/customProvider/label', '{0} (Custom)', 'OpenAI') } satisfies ModelProviderTypeDetail
+                [MODEL_PROVIDER_TYPE_DETAIL]: { label: 'Wolinet AI' } satisfies ModelProviderTypeDetail
             },
             title: AI_CORE_PREFERENCES_TITLE,
             markdownDescription: nls.localize('theia/ai/openai/customEndpoints/mdDescription',
-                'Integrate custom models compatible with the OpenAI API, for example via `vllm`. The required attributes are `model` and `url`.\
-            \n\
-            Optionally, you can\
-            \n\
-            - specify a unique `id` to identify the custom model in the UI. If none is given `model` will be used as `id`.\
-            \n\
-            - provide an `apiKey` to access the API served at the given url. Use `true` to indicate the use of the global OpenAI API key.\
-            \n\
-            - provide an `apiVersion` to access the API served at the given url in Azure. Use `true` to indicate the use of the global OpenAI API version.\
-            \n\
-            - provide a `deployment` name for your Azure deployment.\
-            \n\
-            - set `developerMessageSettings` to one of `user`, `system`, `developer`, `mergeWithFollowingUserMessage`, or `skip` to control how the developer message is\
-            included (where `user`, `system`, and `developer` will be used as a role, `mergeWithFollowingUserMessage` will prefix the following user message with the system\
-            message or convert the system message to user message if the next message is not a user message. `skip` will just remove the system message).\
-            Defaulting to `developer`.\
-            \n\
-            - specify `supportsStructuredOutput: false` to indicate that structured output shall not be used.\
-            \n\
-            - specify `enableStreaming: false` to indicate that streaming shall not be used.\
-            \n\
-            - specify `useResponseApi: true` to use the newer OpenAI Response API instead of the Chat Completion API (requires compatible endpoint).\
-            \n\
-            - specify `reasoningSupport` to opt in to the chat reasoning selector. Provide an object with\
-            `supportedLevels` (e.g. `["off", "low", "medium", "high", "auto"]`) and an optional `defaultLevel`.\
-            \n\
-            - specify `headers` to send additional HTTP headers with every request to the endpoint, e.g. headers required by a gateway in front of the API.\
-            \n\
-            Refer to [our documentation](https://theia-ide.org/docs/user_ai/#openai-compatible-models-eg-via-vllm) for more information.'),
-            default: [],
+                'Integrate models via the Wolinet AI LiteLLM Gateway (http://127.0.0.1:4000/v1). Dynamic routing between local engines and cloud models is managed by the gateway.'),
+            default: [
+                {
+                    id: 'wolinex-coder',
+                    model: 'wolinex-coder',
+                    url: 'http://127.0.0.1:4000/v1',
+                    apiKey: 'sk-wolinet-admin-2026'
+                },
+                {
+                    id: 'wolinex-coder-lite',
+                    model: 'wolinex-coder-lite',
+                    url: 'http://127.0.0.1:4000/v1',
+                    apiKey: 'sk-wolinet-admin-2026'
+                },
+                {
+                    id: 'deepseek-r1',
+                    model: 'deepseek-r1',
+                    url: 'http://127.0.0.1:4000/v1',
+                    apiKey: 'sk-wolinet-admin-2026'
+                },
+                {
+                    id: 'wolinex-omni',
+                    model: 'wolinex-omni',
+                    url: 'http://127.0.0.1:4000/v1',
+                    apiKey: 'sk-wolinet-admin-2026'
+                },
+                {
+                    id: 'claude-3-5-sonnet',
+                    model: 'claude-3-5-sonnet',
+                    url: 'http://127.0.0.1:4000/v1',
+                    apiKey: 'sk-wolinet-admin-2026'
+                },
+                {
+                    id: 'gpt-4o',
+                    model: 'gpt-4o',
+                    url: 'http://127.0.0.1:4000/v1',
+                    apiKey: 'sk-wolinet-admin-2026'
+                },
+                {
+                    id: 'deepseek-v3',
+                    model: 'deepseek-v3',
+                    url: 'http://127.0.0.1:4000/v1',
+                    apiKey: 'sk-wolinet-admin-2026'
+                }
+            ],
             items: {
                 type: 'object',
                 properties: {

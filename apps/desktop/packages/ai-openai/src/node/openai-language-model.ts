@@ -96,11 +96,12 @@ export function createOpenAiClient(options: OpenAiClientOptions): OpenAI {
     // The SDK refuses to be constructed without a key, so an endpoint that needs none still gets one.
     const apiKey = options.apiKey ?? 'no-key';
     const proxyFetch = createProxyFetch(options.proxyUrl);
+    const baseURL = options.baseURL ?? process.env.OPENAI_BASE_URL ?? process.env.OPENAI_API_BASE_URL;
     return options.apiVersion
         ? new AzureOpenAI({
-            apiKey, baseURL: options.baseURL, apiVersion: options.apiVersion, deployment: options.deployment, fetch: proxyFetch, defaultHeaders: options.headers
+            apiKey, baseURL, apiVersion: options.apiVersion, deployment: options.deployment, fetch: proxyFetch, defaultHeaders: options.headers
         })
-        : new MistralFixedOpenAI({ apiKey, baseURL: options.baseURL, fetch: proxyFetch, defaultHeaders: options.headers });
+        : new MistralFixedOpenAI({ apiKey, baseURL, fetch: proxyFetch, defaultHeaders: options.headers });
 }
 
 export class OpenAiModel implements LanguageModel {

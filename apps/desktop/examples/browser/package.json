@@ -11,7 +11,18 @@
           "files.enableTrash": false,
           "security.workspace.trust.enabled": false,
           "workbench.colorTheme": "dark",
+          "ai-features.AiEnable.enableAI": true,
+          "ai-features.agentMode.enabled": true,
+          "ai-features.chat.defaultChatAgent": "Coder",
+          "ai-features.chat.bypassModelRequirement": true,
           "ai-features.openAiOfficial.allowEnvironmentApiKey": true,
+          "ai-features.languageModelAliases": {
+            "default/code": { "selectedModel": "wolinex-coder" },
+            "default/universal": { "selectedModel": "wolinex-coder" },
+            "default/code-completion": { "selectedModel": "wolinex-coder-lite" },
+            "default/summarize": { "selectedModel": "wolinex-coder" },
+            "default/fast": { "selectedModel": "wolinex-coder-lite" }
+          },
           "ai-features.openAiCustom.customOpenAiModels": [
             {
               "id": "wolinex-coder",
@@ -28,6 +39,30 @@
             {
               "id": "deepseek-r1",
               "model": "deepseek-r1",
+              "url": "http://127.0.0.1:4000/v1",
+              "apiKey": "sk-wolinet-admin-2026"
+            },
+            {
+              "id": "wolinex-omni",
+              "model": "wolinex-omni",
+              "url": "http://127.0.0.1:4000/v1",
+              "apiKey": "sk-wolinet-admin-2026"
+            },
+            {
+              "id": "claude-3-5-sonnet",
+              "model": "claude-3-5-sonnet",
+              "url": "http://127.0.0.1:4000/v1",
+              "apiKey": "sk-wolinet-admin-2026"
+            },
+            {
+              "id": "gpt-4o",
+              "model": "gpt-4o",
+              "url": "http://127.0.0.1:4000/v1",
+              "apiKey": "sk-wolinet-admin-2026"
+            },
+            {
+              "id": "deepseek-v3",
+              "model": "deepseek-v3",
               "url": "http://127.0.0.1:4000/v1",
               "apiKey": "sk-wolinet-admin-2026"
             }

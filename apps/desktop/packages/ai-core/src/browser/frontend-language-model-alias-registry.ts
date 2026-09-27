@@ -29,6 +29,8 @@ export class DefaultLanguageModelAliasRegistry implements LanguageModelAliasRegi
         {
             id: 'default/code',
             defaultModelIds: [
+                'wolinex-coder',
+                'deepseek-r1',
                 'anthropic/claude-opus-5',
                 'openai/gpt-5.6-sol',
                 'google/gemini-3.1-pro-preview'
@@ -38,6 +40,9 @@ export class DefaultLanguageModelAliasRegistry implements LanguageModelAliasRegi
         {
             id: 'default/universal',
             defaultModelIds: [
+                'wolinex-coder',
+                'deepseek-r1',
+                'wolinex-omni',
                 'anthropic/claude-opus-5',
                 'openai/gpt-5.6-sol',
                 'google/gemini-3.1-pro-preview'
@@ -47,6 +52,8 @@ export class DefaultLanguageModelAliasRegistry implements LanguageModelAliasRegi
         {
             id: 'default/code-completion',
             defaultModelIds: [
+                'wolinex-coder-lite',
+                'wolinex-coder',
                 'anthropic/claude-sonnet-5',
                 'openai/gpt-5.6-sol',
                 'google/gemini-3.1-pro-preview'
@@ -56,6 +63,8 @@ export class DefaultLanguageModelAliasRegistry implements LanguageModelAliasRegi
         {
             id: 'default/summarize',
             defaultModelIds: [
+                'wolinex-coder',
+                'deepseek-r1',
                 'anthropic/claude-opus-5',
                 'openai/gpt-5.6-sol',
                 'google/gemini-3.1-pro-preview'
@@ -65,6 +74,7 @@ export class DefaultLanguageModelAliasRegistry implements LanguageModelAliasRegi
         {
             id: 'default/fast',
             defaultModelIds: [
+                'wolinex-coder-lite',
                 'anthropic/claude-haiku-4-5',
                 'openai/gpt-5.6-luna',
                 'google/gemini-3.8-flash'

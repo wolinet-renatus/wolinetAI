@@ -92,11 +92,12 @@ export class OpenAiLanguageModelsManagerImpl implements OpenAiLanguageModelsMana
         if (!apiKey) {
             return { models: [], fromCache: false };
         }
-        const proxyUrl = getProxyUrl('https://api.openai.com', this._proxyUrl);
+        const defaultBaseUrl = process.env.OPENAI_BASE_URL ?? process.env.OPENAI_API_BASE_URL ?? 'https://api.openai.com';
+        const proxyUrl = getProxyUrl(defaultBaseUrl, this._proxyUrl);
         return this.discoveryFetcher.fetch({
             snapshotFile: OPENAI_SNAPSHOT_FILE,
             providerLabel: 'OpenAI',
-            listModels: async () => this.toDiscoveredModels(await this.listModels(apiKey, proxyUrl)),
+            listModels: async () => this.toDiscoveredModels(await this.listModels(apiKey, proxyUrl, defaultBaseUrl)),
             // Retry only transient connection errors; auth/HTTP errors fail fast.
             isRetryable: error => error instanceof APIConnectionError
         });
@@ -132,15 +133,16 @@ export class OpenAiLanguageModelsManagerImpl implements OpenAiLanguageModelsMana
      * misses can still be configured as a custom endpoint.
      */
     protected isChatModelId(id: string): boolean {
-        if (!/^(gpt|chatgpt|o\d)/.test(id)) {
-            return false;
+        // When routed through Wolinet Gateway or OpenAI-compatible gateway, accept wolinex, deepseek, qwen, gpt, chatgpt, claude
+        if (/^(wolinex|deepseek|qwen|claude|gpt|chatgpt|o\d)/i.test(id)) {
+            return !/(embedding|moderation|tts)/i.test(id);
         }
-        return !/(audio|realtime|-live|transcribe|tts|image|embedding|moderation|search|computer-use|-instruct)/.test(id);
+        return false;
     }
 
     /** Iterates the (auto-paginated) `/v1/models` endpoint. Overridable for testing. */
-    protected async listModels(apiKey: string, proxyUrl: string | undefined): Promise<ListedOpenAiModel[]> {
-        const openai = createOpenAiClient({ apiKey, proxyUrl });
+    protected async listModels(apiKey: string, proxyUrl: string | undefined, baseURL?: string): Promise<ListedOpenAiModel[]> {
+        const openai = createOpenAiClient({ apiKey, proxyUrl, baseURL: baseURL ?? process.env.OPENAI_BASE_URL ?? process.env.OPENAI_API_BASE_URL });
         const models: ListedOpenAiModel[] = [];
         for await (const model of openai.models.list()) {
             models.push(model);

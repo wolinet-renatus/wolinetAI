@@ -241,8 +241,18 @@ export class ModelsConfigurationCategory extends CollectionCategoryRenderer impl
             title: this.getProviderLabel(provider, preferenceIds),
             preferenceIds
         } satisfies ModelsSection));
-        // Order provider nodes by the label the user actually sees, not by the raw preference segment.
-        providerSections.sort((left, right) => left.title.localeCompare(right.title));
+        // Order provider nodes by label, prioritizing Wolinet AI at the top.
+        providerSections.sort((left, right) => {
+            const isWolinetLeft = left.title.toLowerCase().includes('wolinet');
+            const isWolinetRight = right.title.toLowerCase().includes('wolinet');
+            if (isWolinetLeft && !isWolinetRight) {
+                return -1;
+            }
+            if (!isWolinetLeft && isWolinetRight) {
+                return 1;
+            }
+            return left.title.localeCompare(right.title);
+        });
         sections.push(...providerSections);
         return sections;
     }
