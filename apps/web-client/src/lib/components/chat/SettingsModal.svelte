@@ -79,8 +79,11 @@
 				'system settings',
 				'theme',
 				'translate',
-				'webuisettings',
-				'webui settings'
+				'wolinet',
+				'wolinet ai',
+				'wolinet settings',
+				'wolinet ai settings',
+				'system settings'
 			]
 		},
 		{
@@ -553,6 +556,14 @@
 
 	let selectedTab = 'general';
 
+	$: getTabClass = (tabId: string) => {
+		const isSelected = selectedTab === tabId;
+		if (isSelected) {
+			return 'px-2.5 py-1.5 min-w-fit rounded-xl flex-1 md:flex-none flex items-center text-left text-xs md:text-sm font-semibold bg-gray-200/90 dark:bg-gray-800 text-gray-950 dark:text-white shadow-2xs border border-gray-300/40 dark:border-gray-700/60 transition cursor-pointer';
+		}
+		return 'px-2.5 py-1.5 min-w-fit rounded-xl flex-1 md:flex-none flex items-center text-left text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-950 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-gray-850/60 transition cursor-pointer';
+	};
+
 	// Function to handle sideways scrolling
 	const scrollHandler = (event) => {
 		const settingsTabsContainer = document.getElementById('settings-tabs-container');
@@ -611,10 +622,10 @@
 				class="tabs flex flex-row overflow-x-auto gap-2.5 mx-3 md:pr-4 md:gap-1 md:flex-col flex-1 md:flex-none md:w-50 md:min-h-[min(42rem,calc(100dvh-10rem))] md:max-h-[min(42rem,calc(100dvh-10rem))] dark:text-gray-200 text-sm text-left mb-1 md:mb-0 -translate-y-1"
 			>
 				<div
-					class="hidden md:flex w-full rounded-full px-2.5 gap-2 bg-gray-100/80 dark:bg-gray-850/80 backdrop-blur-2xl my-1 mb-1.5"
+					class="hidden md:flex w-full rounded-xl px-2.5 py-1.5 gap-2 bg-gray-100/90 dark:bg-gray-850/90 border border-gray-200/70 dark:border-gray-800 text-xs my-1 mb-2 focus-within:border-gray-400 dark:focus-within:border-gray-600 transition shadow-2xs"
 					id="settings-search"
 				>
-					<div class="self-center rounded-l-xl bg-transparent">
+					<div class="self-center bg-transparent text-gray-500">
 						<Search
 							className="size-3.5"
 							strokeWidth={($settings?.highContrastMode ?? false) ? '3' : '1.5'}
@@ -622,12 +633,11 @@
 					</div>
 					<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
 					<input
-						class={`w-full py-1 text-sm bg-transparent dark:text-gray-300 outline-hidden
-								${($settings?.highContrastMode ?? false) ? 'placeholder-gray-800' : ''}`}
+						class="w-full text-xs bg-transparent dark:text-gray-300 outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
 						bind:value={search}
 						id="search-input-settings-modal"
 						on:input={searchDebounceHandler}
-						placeholder={$i18n.t('Search')}
+						placeholder={$i18n.t('Search settings...')}
 					/>
 				</div>
 				{#if filteredSettings.length > 0}
@@ -637,16 +647,7 @@
 								role="tab"
 								aria-controls="tab-general"
 								aria-selected={selectedTab === 'general'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'general'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
+								class={getTabClass('general')}
 								on:click={() => {
 									selectedTab = 'general';
 								}}
@@ -661,16 +662,7 @@
 								role="tab"
 								aria-controls="tab-interface"
 								aria-selected={selectedTab === 'interface'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'interface'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
+								class={getTabClass('interface')}
 								on:click={() => {
 									selectedTab = 'interface';
 								}}
@@ -686,16 +678,7 @@
 									role="tab"
 									aria-controls="tab-connections"
 									aria-selected={selectedTab === 'connections'}
-									class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'connections'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
+									class={getTabClass('connections')}
 									on:click={() => {
 										selectedTab = 'connections';
 									}}
@@ -712,16 +695,7 @@
 									role="tab"
 									aria-controls="tab-tools"
 									aria-selected={selectedTab === 'tools'}
-									class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'tools'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
+									class={getTabClass('tools')}
 									on:click={() => {
 										selectedTab = 'tools';
 									}}
@@ -737,16 +711,7 @@
 								role="tab"
 								aria-controls="tab-personalization"
 								aria-selected={selectedTab === 'personalization'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'personalization'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
+								class={getTabClass('personalization')}
 								on:click={() => {
 									selectedTab = 'personalization';
 								}}
@@ -761,16 +726,7 @@
 								role="tab"
 								aria-controls="tab-audio"
 								aria-selected={selectedTab === 'audio'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'audio'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
+								class={getTabClass('audio')}
 								on:click={() => {
 									selectedTab = 'audio';
 								}}
@@ -785,16 +741,7 @@
 								role="tab"
 								aria-controls="tab-data-controls"
 								aria-selected={selectedTab === 'data_controls'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'data_controls'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
+								class={getTabClass('data_controls')}
 								on:click={() => {
 									selectedTab = 'data_controls';
 								}}
@@ -809,16 +756,7 @@
 								role="tab"
 								aria-controls="tab-account"
 								aria-selected={selectedTab === 'account'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'account'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
+								class={getTabClass('account')}
 								on:click={() => {
 									selectedTab = 'account';
 								}}
@@ -833,16 +771,7 @@
 								role="tab"
 								aria-controls="tab-about"
 								aria-selected={selectedTab === 'about'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'about'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
+								class={getTabClass('about')}
 								on:click={() => {
 									selectedTab = 'about';
 								}}
@@ -863,9 +792,7 @@
 					<a
 						href="/admin/settings"
 						draggable="false"
-						class="px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none md:mt-auto flex select-none text-left transition {$settings?.highContrastMode
-							? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+						class="px-2.5 py-1.5 min-w-fit rounded-xl flex-1 md:flex-none md:mt-auto flex select-none text-left text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-950 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-gray-850/60 transition cursor-pointer"
 						on:click={async (e) => {
 							e.preventDefault();
 							await goto('/admin/settings');

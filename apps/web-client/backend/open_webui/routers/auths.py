@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import asyncio
 import datetime
 import logging
@@ -130,6 +131,33 @@ async def create_session_response(
 
     user_permissions = await get_permissions(user.id, request.app.state.config.USER_PERMISSIONS, db=db)
 
+    credits_data = None
+    try:
+        from open_webui.utils.litellm_user import get_litellm_user_info
+        info = await get_litellm_user_info(user.id)
+        if info:
+            u_info = info.get('user_info', {})
+            max_budget = float(u_info.get('max_budget') or 25.0)
+            spend = float(u_info.get('spend') or 0.0)
+            credits_data = {
+                'allocated': max_budget,
+                'spent': spend,
+                'remaining': max(0.0, round(max_budget - spend, 4)),
+                'currency': 'USD',
+                'default_model': os.getenv('DEFAULT_MODELS', 'wolinex-coder'),
+            }
+    except Exception:
+        pass
+
+    if credits_data is None:
+        credits_data = {
+            'allocated': 25.0,
+            'spent': 0.0,
+            'remaining': 25.0,
+            'currency': 'USD',
+            'default_model': os.getenv('DEFAULT_MODELS', 'wolinex-coder'),
+        }
+
     return {
         'token': token,
         'token_type': 'Bearer',
@@ -140,6 +168,7 @@ async def create_session_response(
         'role': user.role,
         'profile_image_url': f'/api/v1/users/{user.id}/profile/image',
         'permissions': user_permissions,
+        'credits': credits_data,
     }
 
 
@@ -151,12 +180,14 @@ async def create_session_response(
 class SessionUserResponse(Token, UserProfileImageResponse):
     expires_at: int | None = None
     permissions: dict | None = None
+    credits: dict | None = None
 
 
 class SessionUserInfoResponse(SessionUserResponse, UserStatus):
     bio: str | None = None
     gender: str | None = None
     date_of_birth: datetime.date | None = None
+    credits: dict | None = None
 
 
 @router.get('/', response_model=SessionUserInfoResponse)
@@ -203,6 +234,33 @@ async def get_session_user(
 
     user_permissions = await get_permissions(user.id, request.app.state.config.USER_PERMISSIONS, db=db)
 
+    credits_data = None
+    try:
+        from open_webui.utils.litellm_user import get_litellm_user_info
+        info = await get_litellm_user_info(user.id)
+        if info:
+            u_info = info.get('user_info', {})
+            max_budget = float(u_info.get('max_budget') or 25.0)
+            spend = float(u_info.get('spend') or 0.0)
+            credits_data = {
+                'allocated': max_budget,
+                'spent': spend,
+                'remaining': max(0.0, round(max_budget - spend, 4)),
+                'currency': 'USD',
+                'default_model': os.getenv('DEFAULT_MODELS', 'wolinex-coder'),
+            }
+    except Exception:
+        pass
+
+    if credits_data is None:
+        credits_data = {
+            'allocated': 25.0,
+            'spent': 0.0,
+            'remaining': 25.0,
+            'currency': 'USD',
+            'default_model': os.getenv('DEFAULT_MODELS', 'wolinex-coder'),
+        }
+
     response_data = {
         'token': token,
         'token_type': 'Bearer',
@@ -219,6 +277,7 @@ async def get_session_user(
         'status_message': user.status_message,
         'status_expires_at': user.status_expires_at,
         'permissions': user_permissions,
+        'credits': credits_data,
     }
 
     return response_data
@@ -667,6 +726,11 @@ async def signin(
         )
 
     if user:
+        try:
+            from open_webui.utils.litellm_user import ensure_litellm_user_exists
+            await ensure_litellm_user_exists(user)
+        except Exception as e:
+            log.warning(f'Failed to ensure LiteLLM user on signin: {e}')
         return await create_session_response(request, user, db, response, set_cookie=True)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -714,7 +778,20 @@ async def signup_handler(
     if await Users.get_num_users(db=db) == 1:
         await Users.update_user_role_by_id(user.id, 'admin', db=db)
         user = await Users.get_user_by_id(user.id, db=db)
-        request.app.state.config.ENABLE_SIGNUP = False
+        if os.getenv('ENABLE_SIGNUP', 'True').lower() != 'true':
+            request.app.state.config.ENABLE_SIGNUP = False
+
+    # Auto-provision user on sovereign LiteLLM Gateway
+    try:
+        from open_webui.utils.litellm_user import provision_litellm_user
+        await provision_litellm_user(
+            user_id=user.id,
+            email=user.email,
+            name=user.name,
+            role=user.role,
+        )
+    except Exception as e:
+        log.warning(f'Failed to auto-provision user {user.id} on LiteLLM: {e}')
 
     if request.app.state.config.WEBHOOK_URL:
         await post_webhook(

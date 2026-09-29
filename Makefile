@@ -15,7 +15,7 @@ help:
 	@echo "  make start        - Start both Inference Engine and Gateway"
 	@echo "  make gateway      - Start only the LiteLLM Gateway"
 	@echo "  make mock         - Run zero-GPU Mock Gateway (:4010) for UI & CI testing"
-	@echo "  make web          - Open Wolinet AI Studio in web browser (:8080)"
+	@echo "  make web          - Start Wolinet AI Web Portal (Open WebUI on :3080)"
 	@echo "  make register     - Register all GGUF models into Xinference"
 	@echo "  make list         - List active models running on Xinference"
 	@echo "  make health       - Run full platform health check"
@@ -48,7 +48,7 @@ agent:
 	@$(PYTHON) apps/agentic-coder/main.py
 
 web:
-	@open http://localhost:8080 || xdg-open http://localhost:8080 || echo "Open http://localhost:8080 in your browser"
+	@./apps/web-client/run_webui.sh
 
 docker-up:
 	@docker compose up -d

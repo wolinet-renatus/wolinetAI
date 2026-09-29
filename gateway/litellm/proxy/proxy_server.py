@@ -1012,14 +1012,14 @@ status_link: Final = f"{_base_path}/wolinet/status"
 model_hub_link: Final = f"{_base_path}/ui/model_hub_table"
 
 wolinet_description = (
-    "### Wolinet AI — Sovereign Gateway & Unified Inference API\n\n"
-    "Enterprise-grade, sovereign AI gateway featuring intelligent hybrid routing:\n\n"
-    "• **$0 Local Execution**: Zero-cost, privacy-first inference via quantized local models (`wolinex-coder`, `qwen2.5-omni`, `FLUX.1-Kontext-dev`).\n"
-    "• **Cloud Frontier Routing**: Dynamic failover to Claude 3.7 / Sonnet, GPT-4o, and DeepSeek-V3 / R1.\n"
-    "• **Tanzania Mobile Money**: Native billing, token quotas, and top-up for M-Pesa, TigoPesa, Airtel Money, and HaloPesa.\n\n"
+    "### Wolinet AI — Sovereign Intelligence & High-Performance Inference Platform\n\n"
+    "Enterprise-grade sovereign artificial intelligence infrastructure engineered by **Wolinet Technology**.\n\n"
+    "• **Data Sovereignty & Enterprise Confidentiality**: Strict enterprise data isolation, complete data ownership, and zero third-party telemetry.\n"
+    "• **Universal High-Throughput Inference**: Low-latency, ultra-scalable execution across frontier intelligence, custom specialized architectures, and multi-modal pipelines.\n"
+    "• **Intelligent Dynamic Routing & Resilience**: Automated workload balancing, failover fault tolerance, and real-time per-user token metering with budget attribution.\n"
+    "• **Unified Standard API**: Full compatibility with standard OpenAI client libraries, native REST endpoints, function calling, and streaming agentic workflows.\n\n"
     f"👉 [**Wolinet AI Studio**]({ui_link}) — Browser console, active API keys, and workspace.\n\n"
-    f"🔎 [**Sovereign Model Hub**]({model_hub_link}) — Explore active local GGUF models and cluster nodes.\n\n"
-    f"⚡ [**Live System Telemetry**]({status_link}) — Real-time health, spend, and engine diagnostics.\n\n"
+    f"⚡ [**Live System Telemetry**]({status_link}) — Real-time health, performance metrics, and engine diagnostics.\n\n"
     f"📚 [**Scalar API Reference**]({docs_link}) — Interactive OpenAPI documentation and request builder."
 )
 
@@ -1800,10 +1800,11 @@ def get_openapi_schema():
     openapi_schema = ensure_unique_openapi_operation_ids(openapi_schema)
 
     # Configure multi-target servers for Wolinet AI (Gateway vs Inference Engine)
-    gw_url = "/" + server_root_path.strip("/") if server_root_path else "http://localhost:4000"
+    gw_url = "/" + server_root_path.strip("/") if server_root_path else "/"
+    inference_url = os.getenv("WOLINET_INFERENCE_URL", "http://localhost:9997")
     openapi_schema["servers"] = [
-        {"url": gw_url, "description": "Wolinet AI Gateway (Hybrid: Local GGUF + Cloud Failover)"},
-        {"url": "http://localhost:9997", "description": "Direct Sovereign Inference Engine (Xinference)"},
+        {"url": gw_url, "description": "Wolinet AI Gateway (Current Host)"},
+        {"url": inference_url, "description": "Direct Sovereign Inference Engine (Xinference)"},
     ]
 
     # Ensure security schemes include standard bearerAuth for Scalar API Client
@@ -2501,8 +2502,17 @@ async def _resolve_session_api_key(request: Request, raw_token: Optional[str] = 
             except Exception:
                 pass
 
-    # 5. Fallback: sovereign local development key
-    return "sk-wolinet-local-dev"
+        # 5. Check Wolinet Sovereign Portal DB
+        try:
+            from .wolinet_portal import portal_db
+            u = portal_db.get_session_user(candidate)
+            if u and u.get("api_key"):
+                return u["api_key"]
+        except Exception:
+            pass
+
+    # 6. Fallback: unauthenticated guest
+    return ""
 
 
 def mount_scalar_ui() -> None:
@@ -2530,247 +2540,14 @@ def mount_scalar_ui() -> None:
     _openapi_url: Final = _get_openapi_url() or "/openapi.json"
 
     def _build_scalar_html(title: str, auth_token: str = "") -> str:
-        _effective_token = auth_token if (auth_token and auth_token.startswith("sk-")) else "sk-wolinet-local-dev"
-        _safe_token = _effective_token.replace('"', '\\"')
-        return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{title}</title>
-  <link rel="icon" type="image/png" href="{_scalar_favicon_url}" />
-  <style>
-    /* ── Wolinet AI brand tokens ──────────────────────────────────────── */
-    :root {{
-      --scalar-color-accent: #7c6dfa;
-      --scalar-color-accent-hover: #9b8ffb;
-      --scalar-background-1: #0d0d12;
-      --scalar-background-2: #13131c;
-      --scalar-background-3: #1a1a28;
-      --scalar-border-color: rgba(124, 109, 250, 0.18);
-      --scalar-color-1: #e8e8f0;
-      --scalar-color-2: #b0aec8;
-      --scalar-color-3: #7b79a0;
-      --scalar-color-green: #50fa7b;
-      --scalar-color-red: #ff5555;
-      --scalar-color-yellow: #f1fa8c;
-      --scalar-color-blue: #8be9fd;
-      --scalar-font: 'Inter', system-ui, -apple-system, sans-serif;
-      --scalar-font-code: 'JetBrains Mono', 'Fira Code', monospace;
-    }}
-    html, body {{
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background: var(--scalar-background-1);
-    }}
-    /* Top auth status banner */
-    #wolinet-auth-banner {{
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 7px 16px;
-      font-size: 11px;
-      font-family: var(--scalar-font);
-      background: #13131c;
-      border-bottom: 1px solid rgba(124, 109, 250, 0.2);
-      color: #b0aec8;
-      position: sticky;
-      top: 0;
-      z-index: 10000;
-    }}
-    #wolinet-auth-banner a {{
-      color: #8be9fd;
-      text-decoration: underline;
-      font-weight: 500;
-    }}
-    /* Override sidebar branding strip */
-    .scalar-app .sidebar-header {{
-      background: linear-gradient(135deg, #0d0d12 0%, #1a1228 100%) !important;
-    }}
-  </style>
-</head>
-<body>
-  <div id="wolinet-auth-banner">
-    <div id="wolinet-auth-text">
-      <span>🔒 Connecting to Wolinet AI Gateway...</span>
-    </div>
-    <div style="display:flex; align-items:center; gap:12px;">
-      <span style="display:inline-flex; align-items:center; gap:5px;">
-        <span style="width:7px; height:7px; border-radius:50%; background:#50fa7b; box-shadow:0 0 8px #50fa7b;"></span>
-        <span style="color:#50fa7b; font-weight:600;">Sovereign Gateway Active</span>
-      </span>
-      <a href="/ui" target="_blank" style="padding:3px 8px; border-radius:4px; background:rgba(124,109,250,0.15); border:1px solid rgba(124,109,250,0.3); text-decoration:none; color:#e8e8f0;">Studio Dashboard ↗</a>
-    </div>
-  </div>
-
-  <script id="api-reference"
-    data-url="{_openapi_url}"
-    data-proxy-url=""
-    ></script>
-  <script>
-    (async function() {{
-      const params = new URLSearchParams(window.location.search);
-      const serverToken = "{_safe_token}";
-      const urlToken = params.get('token') || params.get('api_key') || params.get('key');
-
-      // 1. Auto-detect client-side session key
-      let clientToken = '';
-      try {{
-        const raw = localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
-        if (raw && raw.startsWith('sk-')) {{
-          clientToken = raw;
-        }} else if (raw && raw.includes('.')) {{
-          const parts = raw.split('.');
-          if (parts.length === 3) {{
-            const p = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-            if (p.key && p.key.startsWith('sk-')) clientToken = p.key;
-          }}
-        }}
-      }} catch (e) {{}}
-
-      // 2. Purge stale 61be... token hashes from localStorage or Scalar client cache
-      try {{
-        for (let i = 0; i < localStorage.length; i++) {{
-          const k = localStorage.key(i);
-          if (k && (k.includes('scalar') || k.includes('token') || k.includes('auth'))) {{
-            const val = localStorage.getItem(k);
-            if (val && (val.includes('61be3987') || (val.length === 64 && /^[0-9a-f]{{64}}$/i.test(val)))) {{
-              localStorage.removeItem(k);
-            }}
-          }}
-        }}
-      }} catch (e) {{}}
-
-      // 3. Resolve active key (priority: URL -> client session -> server auto-detected -> default)
-      let activeKey = (urlToken && urlToken.startsWith('sk-') ? urlToken : '') ||
-                      clientToken ||
-                      (serverToken && serverToken.startsWith('sk-') ? serverToken : '');
-
-      if (!activeKey) {{
-        try {{
-          const res = await fetch('/wolinet/key', {{ credentials: 'include' }});
-          if (res.ok) {{
-            const data = await res.json();
-            if (data.key && data.key.startsWith('sk-')) {{
-              activeKey = data.key;
-            }}
-          }}
-        }} catch (e) {{}}
-      }}
-      if (!activeKey) activeKey = 'sk-wolinet-local-dev';
-
-      // 4. Update banner status
-      const bannerText = document.getElementById('wolinet-auth-text');
-      if (bannerText) {{
-        bannerText.innerHTML = '⚡ <b>Authenticated Session:</b> <span style="font-family:monospace; color:#8be9fd; background:rgba(124,109,250,0.15); padding:2px 6px; border-radius:4px;">' + activeKey + '</span> • <span style="color:#50fa7b;">Auto-detected & Pre-authorized</span>';
-      }}
-
-      // 5. Configure Scalar with pre-authorized bearerAuth
-      document.getElementById('api-reference').dataset.configuration = JSON.stringify({{
-        theme: 'deepSpace',
-        darkMode: true,
-        layout: 'sidebar',
-        showSidebar: true,
-        hideModels: false,
-        hideDownloadButton: false,
-        hideTestRequestButton: false,
-        defaultHttpClient: {{
-          targetKey: 'python',
-          clientKey: 'requests',
-        }},
-        customCss: `
-          :root {{
-            --scalar-color-accent: #7c6dfa;
-            --scalar-color-accent-hover: #9b8ffb;
-            --scalar-background-1: #0d0d12;
-            --scalar-background-2: #13131c;
-            --scalar-background-3: #1a1a28;
-            --scalar-border-color: rgba(124,109,250,0.18);
-            --scalar-color-1: #e8e8f0;
-            --scalar-color-2: #b0aec8;
-            --scalar-color-3: #7b79a0;
-            --scalar-color-green: #50fa7b;
-            --scalar-color-red: #ff5555;
-            --scalar-color-yellow: #f1fa8c;
-            --scalar-color-blue: #8be9fd;
-          }}
-          .sidebar {{ background: var(--scalar-background-2) !important; border-right: 1px solid var(--scalar-border-color) !important; }}
-          .section-header {{ font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif !important; }}
-          a[href*="scalar.com"],
-          .scalar-version-number,
-          .gitbook-show,
-          .upgradeButton,
-          .agent-upgrade-modal {{
-            display: none !important;
-          }}
-          .scalar-app .sidebar-footer {{
-            border-top: 1px solid var(--scalar-border-color) !important;
-          }}
-        `,
-        externalUrls: {{
-          dashboardUrl: window.location.origin + '/ui',
-          registryUrl: window.location.origin,
-          proxyUrl: '',
-          apiBaseUrl: window.location.origin,
-        }},
-        agent: {{
-          key: 'wolinet-sovereign-agent-key',
-        }},
-        servers: [
-          {{
-            url: window.location.origin,
-            description: 'Wolinet AI Gateway (Hybrid: Local GGUF + Cloud Failover)',
-          }},
-          {{
-            url: 'http://localhost:9997',
-            description: 'Direct Sovereign Inference Engine (Xinference)',
-          }},
-        ],
-        searchHotKey: 'k',
-        metaData: {{
-          title: '{title}',
-          description: 'Wolinet AI Sovereign Gateway — Unified Local GGUF & Frontier Cloud LLM APIs with Tanzanian Mobile Money Billing',
-          ogDescription: 'Wolinet AI Sovereign API Gateway',
-          ogTitle: '{title}',
-        }},
-        authentication: {{
-          preferredSecurityScheme: 'bearerAuth',
-          securitySchemes: {{
-            bearerAuth: {{
-              token: activeKey,
-            }},
-          }},
-          apiKey: {{
-            token: activeKey,
-          }},
-          http: {{
-            bearer: {{
-              token: activeKey,
-            }},
-          }},
-        }},
-      }});
-
-      // 6. Continuous guard to replace any stale hash displayed in the input field
-      function enforceTokenInDOM() {{
-        const inputs = document.querySelectorAll('input');
-        inputs.forEach(input => {{
-          const val = input.value || '';
-          if (val.includes('61be3987') || (val.length === 64 && /^[0-9a-f]{{64}}$/i.test(val))) {{
-            input.value = activeKey;
-            input.dispatchEvent(new Event('input', {{ bubbles: true }}));
-            input.dispatchEvent(new Event('change', {{ bubbles: true }}));
-          }}
-        }});
-      }}
-      setInterval(enforceTokenInDOM, 600);
-    }})();
-  </script>
-  <script src="{_scalar_js_url}"></script>
-</body>
-</html>"""
+        from .wolinet_portal import build_developer_portal_html, get_default_model
+        return build_developer_portal_html(
+            title=title,
+            openapi_url=_openapi_url,
+            scalar_js_url=_scalar_js_url,
+            favicon_url=_scalar_favicon_url,
+            default_model=get_default_model(),
+        )
 
     _scalar_title: Final = os.getenv("DOCS_TITLE", "Wolinet AI — API Reference")
 
@@ -2796,6 +2573,248 @@ def mount_scalar_ui() -> None:
         return HTMLResponse(content=_build_scalar_html(_scalar_title, auth_token=auth_token))
 
     # ── OpenAPI spec aliases for Scalar document loader ───────────────────────
+    @app.get("/wolinet/key", include_in_schema=False)
+    async def wolinet_key_endpoint(request: Request):
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else (auth_header.strip() if auth_header else None)
+        active_key = await _resolve_session_api_key(request, raw_token=token)
+        if active_key and active_key.startswith("sk-") and active_key != "sk-wolinet-local-dev":
+            return JSONResponse({"key": active_key, "status": "active"})
+        return JSONResponse(
+            status_code=401,
+            content={"key": None, "authenticated": False, "error": "Not authenticated. Sign in or register to obtain an API key."},
+        )
+
+    # ── Sovereign Native Authentication, Key Governance & AI Assistant ─────────
+    @app.get("/api/wolinet/auth/session", include_in_schema=False)
+    async def wolinet_auth_session(request: Request):
+        from .wolinet_portal import portal_db
+        session_token = request.cookies.get("token") or request.cookies.get("session_token")
+        user = portal_db.get_session_user(session_token) if session_token else None
+
+        if not user:
+            auth_h = request.headers.get("Authorization", "")
+            if auth_h.startswith("Bearer "):
+                raw_token = auth_h[7:].strip()
+                user = portal_db.get_session_user(raw_token)
+
+        if user:
+            return JSONResponse({
+                "authenticated": True,
+                "user": user,
+                "api_key": user["api_key"],
+                "token": user.get("token"),
+                "credits": user.get("credits"),
+            })
+        return JSONResponse({
+            "authenticated": False,
+            "user": None,
+            "api_key": None,
+            "credits": None,
+        })
+
+    @app.post("/api/wolinet/auth/login", include_in_schema=False)
+    async def wolinet_auth_login(request: Request):
+        from .wolinet_portal import portal_db
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse(status_code=400, content={"authenticated": False, "error": "Invalid JSON body."})
+
+        email = (body.get("email") or "").strip()
+        password = body.get("password") or ""
+        if not email or not password:
+            return JSONResponse(status_code=400, content={"authenticated": False, "error": "Email and password are required."})
+
+        user, err = portal_db.authenticate_user(email, password)
+        if err or not user:
+            return JSONResponse(status_code=401, content={"authenticated": False, "error": err or "Invalid credentials."})
+
+        response = JSONResponse(content={
+            "authenticated": True,
+            "user": user,
+            "api_key": user["api_key"],
+            "token": user["token"],
+            "credits": user["credits"],
+        })
+        response.set_cookie(key="token", value=user["token"], httponly=True, max_age=30 * 86400, samesite="lax", path="/")
+        return response
+
+    @app.post("/api/wolinet/auth/register", include_in_schema=False)
+    async def wolinet_auth_register(request: Request):
+        from .wolinet_portal import portal_db
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse(status_code=400, content={"authenticated": False, "error": "Invalid JSON body."})
+
+        name = (body.get("name") or "").strip()
+        email = (body.get("email") or "").strip()
+        password = body.get("password") or ""
+        if not name or not email or not password:
+            return JSONResponse(status_code=400, content={"authenticated": False, "error": "Name, email, and password are required."})
+
+        user, err = portal_db.register_user(name, email, password)
+        if err or not user:
+            return JSONResponse(status_code=400, content={"authenticated": False, "error": err or "Registration failed."})
+
+        response = JSONResponse(content={
+            "authenticated": True,
+            "user": user,
+            "api_key": user["api_key"],
+            "token": user["token"],
+            "credits": user["credits"],
+        })
+        response.set_cookie(key="token", value=user["token"], httponly=True, max_age=30 * 86400, samesite="lax", path="/")
+        return response
+
+    @app.post("/api/wolinet/auth/regenerate-key", include_in_schema=False)
+    async def wolinet_auth_regenerate_key(request: Request):
+        from .wolinet_portal import portal_db
+        auth_h = request.headers.get("Authorization", "")
+        token = auth_h[7:].strip() if auth_h.startswith("Bearer ") else request.cookies.get("token")
+        user = portal_db.get_session_user(token) if token else None
+        if not user:
+            return JSONResponse(status_code=401, content={"error": "Unauthorized."})
+
+        new_key = portal_db.regenerate_key(user["id"])
+        if not new_key:
+            return JSONResponse(status_code=500, content={"error": "Failed to regenerate key."})
+        return JSONResponse({"api_key": new_key, "status": "active"})
+
+    @app.post("/api/wolinet/auth/logout", include_in_schema=False)
+    async def wolinet_auth_logout(request: Request):
+        from .wolinet_portal import portal_db
+        token = request.cookies.get("token")
+        if not token:
+            auth_h = request.headers.get("Authorization", "")
+            if auth_h.startswith("Bearer "):
+                token = auth_h[7:].strip()
+        if token:
+            portal_db.logout_session(token)
+        response = JSONResponse({"status": "logged_out"})
+        response.delete_cookie(key="token", path="/")
+        return response
+
+    @app.get("/api/wolinet/keys", include_in_schema=False)
+    async def wolinet_list_keys(request: Request):
+        from .wolinet_portal import portal_db
+        auth_h = request.headers.get("Authorization", "")
+        token = auth_h[7:].strip() if auth_h.startswith("Bearer ") else request.cookies.get("token")
+        user = portal_db.get_session_user(token) if token else None
+        if not user:
+            return JSONResponse({"keys": []})
+        keys = portal_db.list_keys(user["id"])
+        return JSONResponse({"keys": keys})
+
+    @app.post("/api/wolinet/keys", include_in_schema=False)
+    async def wolinet_create_key(request: Request):
+        from .wolinet_portal import portal_db
+        auth_h = request.headers.get("Authorization", "")
+        token = auth_h[7:].strip() if auth_h.startswith("Bearer ") else request.cookies.get("token")
+        user = portal_db.get_session_user(token) if token else None
+        if not user:
+            return JSONResponse(status_code=401, content={"error": "Authentication required to generate API keys."})
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+
+        alias = (body.get("key_alias") or body.get("alias") or "").strip()
+        budget = float(body.get("max_budget") or 25.0)
+        duration = str(body.get("duration") or "30d")
+        new_key = portal_db.create_key(user["id"], alias=alias, max_budget=budget, duration=duration)
+        return JSONResponse(new_key)
+
+    @app.post("/api/wolinet/chat", include_in_schema=False)
+    async def wolinet_chat_assistant(request: Request):
+        from .wolinet_portal import get_default_model
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse(status_code=400, content={"error": "Invalid JSON body."})
+
+        model = body.get("model") or get_default_model()
+        messages = body.get("messages") or []
+        max_tokens = int(body.get("max_tokens") or 700)
+        temperature = float(body.get("temperature") or 0.2)
+
+        global llm_router
+        try:
+            if llm_router is not None:
+                resp = await llm_router.acompletion(
+                    model=model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+            else:
+                resp = await litellm.acompletion(
+                    model=model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+
+            if hasattr(resp, "model_dump"):
+                return JSONResponse(content=resp.model_dump())
+            elif isinstance(resp, dict):
+                return JSONResponse(content=resp)
+            else:
+                return JSONResponse(content={"choices": [{"message": {"role": "assistant", "content": str(resp)}}]})
+        except Exception as exc:
+            verbose_proxy_logger.warning(f"Wolinet assistant chat fallback: {exc}")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "choices": [
+                        {
+                            "message": {
+                                "role": "assistant",
+                                "content": (
+                                    f"I am your Sovereign Wolinet AI Assistant running model `{model}`.\n\n"
+                                    f"The cluster received your query, but the underlying inference backend reported: `{exc}`.\n\n"
+                                    "**Quick Checks:**\n"
+                                    "- Verify model health at `/wolinet/status`\n"
+                                    "- Ensure inference engine at `WOLINET_INFERENCE_URL` or port 9997 is listening\n"
+                                    "- You can test directly: `curl /v1/chat/completions`"
+                                )
+                            }
+                        }
+                    ]
+                }
+            )
+
+    @app.api_route("/api/wolinet/{path:path}", methods=["GET", "POST", "PUT", "DELETE"], include_in_schema=False)
+    async def proxy_wolinet_api_fallback(request: Request, path: str):
+        webui_url = os.getenv("WEBUI_URL")
+        if not webui_url:
+            return JSONResponse(status_code=404, content={"error": f"API route /api/wolinet/{path} not found."})
+
+        target_url = f"{webui_url.rstrip('/')}/api/wolinet/{path}"
+        if request.url.query:
+            target_url += f"?{request.url.query}"
+
+        import aiohttp
+        headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length")}
+        body = await request.body()
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session:
+                async with session.request(
+                    method=request.method,
+                    url=target_url,
+                    headers=headers,
+                    data=body if body else None,
+                ) as resp:
+                    resp_data = await resp.read()
+                    response = Response(content=resp_data, status_code=resp.status, media_type=resp.content_type)
+                    if "set-cookie" in resp.headers:
+                        response.headers["set-cookie"] = resp.headers["set-cookie"]
+                    return response
+        except Exception as e:
+            return JSONResponse(status_code=502, content={"error": f"Failed to reach Sovereign WebUI service at {webui_url}: {str(e)}"})
+
     @app.get("/@{namespace}/apis/{slug}/latest", include_in_schema=False)
     @app.get("/apis/{namespace}/{slug}", include_in_schema=False)
     async def scalar_spec_alias(namespace: str, slug: str):
@@ -20129,9 +20148,9 @@ async def wolinet_key_endpoint(request: Request) -> JSONResponse:
             "key_alias": "default-local-dev" if active_key == "sk-wolinet-local-dev" else "active-session-key",
             "status": "active",
             "models": ["wolinex-coder", "wolinex-omni", "deepseek-r1", "deepseek-v3", "gpt-4o", "claude-3-5-sonnet"],
-            "gateway_url": "http://localhost:4000",
+            "gateway_url": str(request.base_url).rstrip("/"),
             "auth_header": f"Bearer {active_key}",
-            "curl_example": f"curl http://localhost:4000/v1/chat/completions \\\n  -H 'Authorization: Bearer {active_key}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{{\"model\": \"wolinex-coder\", \"messages\": [{{\"role\": \"user\", \"content\": \"hellow\"}}]}}'",
+            "curl_example": f"curl {str(request.base_url).rstrip('/')}/v1/chat/completions \\\n  -H 'Authorization: Bearer {active_key}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{{\"model\": \"wolinex-coder\", \"messages\": [{{\"role\": \"user\", \"content\": \"hellow\"}}]}}'",
         }
     )
 
@@ -20282,6 +20301,10 @@ async def scalar_agent_chat_endpoint(request: Request):
     if not user_prompt:
         user_prompt = "Hello"
 
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "http"
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:4000"
+    base_url = f"{proto}://{host}"
+
     async def event_generator():
         msg_id = f"msg_{int(_time.time() * 1000)}"
         yield f'data: {{"type":"text-start","id":"{msg_id}"}}\n\n'
@@ -20289,18 +20312,17 @@ async def scalar_agent_chat_endpoint(request: Request):
         lower = user_prompt.lower().strip()
         if "who are you" in lower or "what are you" in lower:
             response_text = (
-                "I'm **Wolinet AI Agent**, your Sovereign OpenAPI Assistant running 100% self-hosted on your machine.\n\n"
-                "**My purpose:**\n"
-                "• Help you find Wolinet AI API endpoints that match what you need\n"
-                "• Guide you through sovereign local GGUF models (`wolinex-coder`, `qwen2.5-omni`, `FLUX.1-Kontext-dev`)\n"
-                "• Explain intelligent hybrid routing ($0 local compute + frontier cloud failover)\n"
-                "• Generate copy-pasteable code examples in Python, TypeScript, and cURL\n"
-                "• Assist with Tanzanian Mobile Money billing (M-Pesa, TigoPesa, Airtel)\n\n"
-                "**What I can do:**\n"
-                "• Search through available APIs using your natural-language questions\n"
-                "• Show you relevant endpoints, parameters, and schemas\n"
-                "• Execute and test API requests against your sovereign cluster\n\n"
-                "All inference is processed locally with **zero external limits**, no cloud subscriptions, and absolute data privacy."
+                "I am **Wolinet AI Agent**, the sovereign developer intelligence assistant for **Wolinet AI**.\n\n"
+                "### Wolinet AI Sovereign Capabilities\n"
+                "• **Enterprise Data Sovereignty**: Air-gapped readiness, strict enterprise data isolation, complete model control, and zero third-party telemetry.\n"
+                "• **Unified High-Throughput Inference**: Low-latency, distributed execution across frontier LLMs, code intelligence engines, reasoning models, and multimodal pipelines.\n"
+                "• **Intelligent Dynamic Routing & Elastic Resilience**: Automatic workload distribution, failover fault tolerance, and per-user token metering with real-time budget attribution.\n"
+                "• **Universal OpenAI & REST Compatibility**: 100% drop-in compatibility with standard OpenAI SDKs, IDE extensions, command-line agents, and microservices.\n"
+                "• **Enterprise Governance**: Role-based API keys, workspace token quotas, and customizable rate limiting for teams worldwide.\n\n"
+                "**How I can assist you:**\n"
+                "• Explore and test live API endpoints, query schemas, and streaming responses\n"
+                "• Provide production-grade client code in Python, TypeScript, cURL, and Go\n"
+                "• Guide deployment of private knowledge bases and high-performance inference clusters"
             )
             for word in response_text.split(" "):
                 payload = _json.dumps({"type": "text-delta", "id": msg_id, "delta": word + " "})
@@ -20310,45 +20332,39 @@ async def scalar_agent_chat_endpoint(request: Request):
             response_text = ""
             if "status" in lower or "health" in lower:
                 response_text = (
-                    "To check live platform telemetry, query `GET /wolinet/status` or `GET /health/readiness`:\n\n"
-                    "```bash\ncurl http://localhost:4000/wolinet/status\n```\n\n"
-                    "This returns active models, inference cluster node health, and gateway metrics."
+                    f"To inspect live platform telemetry and system health, query `GET /wolinet/status` or `GET /health/readiness`:\n\n"
+                    f"```bash\ncurl {base_url}/wolinet/status\n```\n\n"
+                    "This returns real-time engine telemetry, active model routing states, and gateway operational metrics."
                 )
             elif "model" in lower:
                 response_text = (
-                    "To list active sovereign models, query `GET /v1/models`:\n\n"
-                    "```bash\ncurl http://localhost:4000/v1/models \\\n"
-                    "  -H 'Authorization: Bearer sk-wolinet-local-dev'\n```\n\n"
-                    "Default local models include `wolinex-coder` (14B coding engine) and `qwen2.5-omni`."
+                    f"To inspect all currently deployed models on Wolinet AI, query `GET /v1/models`:\n\n"
+                    f"```bash\ncurl {base_url}/v1/models \\\n"
+                    f"  -H 'Authorization: Bearer <your_api_key>'\n```\n\n"
+                    "Wolinet AI dynamically serves your configured sovereign LLMs, reasoning models, embeddings, and vision pipelines."
                 )
             elif "stream" in lower or "chat" in lower or "python" in lower:
                 response_text = (
-                    "Here is how to stream completions from `wolinex-coder` using the Python SDK:\n\n"
-                    "```python\nimport openai\n\nclient = openai.OpenAI(\n"
-                    "    api_key='sk-wolinet-local-dev',\n"
-                    "    base_url='http://localhost:4000'\n)\n\n"
-                    "stream = client.chat.completions.create(\n"
-                    "    model='wolinex-coder',\n"
-                    "    messages=[{'role': 'user', 'content': 'Hello Wolinet AI!'}],\n"
-                    "    stream=True\n)\n\nfor chunk in stream:\n"
-                    "    print(chunk.choices[0].delta.content or '', end='', flush=True)\n```"
+                    f"Here is how to stream completions from Wolinet AI using the standard OpenAI Python client library:\n\n"
+                    f"```python\nimport openai\n\nclient = openai.OpenAI(\n"
+                    f"    api_key='your-wolinet-api-key',\n"
+                    f"    base_url='{base_url}/v1'\n)\n\n"
+                    f"stream = client.chat.completions.create(\n"
+                    f"    model='wolinex-coder',\n"
+                    f"    messages=[{{'role': 'user', 'content': 'Hello Wolinet AI!'}}],\n"
+                    f"    stream=True\n)\n\nfor chunk in stream:\n"
+                    f"    print(chunk.choices[0].delta.content or '', end='', flush=True)\n```"
                 )
-            elif "mpesa" in lower or "tigo" in lower or "payment" in lower:
+            elif "billing" in lower or "quota" in lower or "token" in lower or "credit" in lower or "payment" in lower:
                 response_text = (
-                    "To initiate a Tanzanian Mobile Money top-up, call `POST /v1/payments/tanzania/topup`:\n\n"
-                    "```bash\ncurl -X POST http://localhost:4000/v1/payments/tanzania/topup \\\n"
-                    "  -H 'Content-Type: application/json' \\\n"
-                    "  -d '{\n"
-                    "    \"provider\": \"mpesa\",\n"
-                    "    \"phone_number\": \"255754123456\",\n"
-                    "    \"amount_tzs\": 10000\n"
-                    "  }'\n```"
+                    f"Wolinet AI provides real-time per-user token metering and automated budget attribution.\n\n"
+                    f"You can inspect active token balances, workspace quotas, and user limits via `GET /user/info` or through the Wolinet AI Studio workspace console."
                 )
             else:
                 response_text = (
-                    f"To perform '{user_prompt}' on Wolinet AI, use the OpenAI-compatible `/v1/chat/completions` endpoint:\n\n"
-                    f"```bash\ncurl http://localhost:4000/v1/chat/completions \\\n"
-                    f"  -H 'Authorization: Bearer sk-wolinet-local-dev' \\\n"
+                    f"To execute requests on Wolinet AI, use the universal OpenAI-compatible endpoint `{base_url}/v1/chat/completions`:\n\n"
+                    f"```bash\ncurl {base_url}/v1/chat/completions \\\n"
+                    f"  -H 'Authorization: Bearer <your_api_key>' \\\n"
                     f"  -H 'Content-Type: application/json' \\\n"
                     f"  -d '{{\"model\": \"wolinex-coder\", \"messages\": [{{\"role\": \"user\", \"content\": \"{user_prompt}\"}}]}}'\n```"
                 )
@@ -20365,10 +20381,12 @@ async def scalar_agent_chat_endpoint(request: Request):
 
 
 @app.post("/core/share/upload/apis", include_in_schema=False)
-async def scalar_share_upload_apis():
+async def scalar_share_upload_apis(request: Request):
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "http"
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:4000"
     return JSONResponse(
         content={
-            "url": "http://localhost:4000/openapi.json",
+            "url": f"{proto}://{host}/openapi.json",
             "namespace": "wolinet",
             "slug": "gateway",
         }
@@ -20392,7 +20410,7 @@ async def scalar_registry_documents():
                 "name": "Wolinet AI Sovereign Gateway API",
                 "description": "Live OpenAPI 3.1.0 specification for Wolinet AI Sovereign Gateway",
                 "version": "1.0.0",
-                "url": "http://localhost:4000/openapi.json",
+                "url": "/openapi.json",
                 "active": True,
             }
         ]
@@ -20409,7 +20427,7 @@ async def scalar_registry_search(query: str = ""):
                 "slug": "gateway",
                 "name": "Wolinet AI Sovereign Gateway API",
                 "description": "Live OpenAPI 3.1.0 specification for Wolinet AI Sovereign Gateway",
-                "url": "http://localhost:4000/openapi.json",
+                "url": "/openapi.json",
             }
         ]
     )

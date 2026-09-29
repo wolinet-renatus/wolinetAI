@@ -1,0 +1,121 @@
+# ==============================================================================
+# Wolinet AI — Local Development / Smoke-Test Compose
+# Reuses existing postgres (wolinex-postgres:5433) and redis (:6379)
+# Spins up: LiteLLM Gateway (lango:4000) + Open WebUI (wolinex:3080)
+# ==============================================================================
+
+version: "3.9"
+
+networks:
+  wolinet_dev:
+    driver: bridge
+
+volumes:
+  webui_dev_data:
+
+services:
+
+  # ── 1. LiteLLM Gateway (lango) ─────────────────────────────────────────────
+  # Connects to host postgres:5433 and redis:6379 via host.docker.internal
+  lango:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: wolinet-dev-lango
+    restart: unless-stopped
+    networks:
+      - wolinet_dev
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "4000:4000"
+    environment:
+      LITELLM_MASTER_KEY: sk-wolinet-dev-master-key
+      WOLINET_GATEWAY_MASTER_KEY: sk-wolinet-dev-master-key
+      LITELLM_CONFIG_PATH: /app/config.yaml
+      STORE_MODEL_IN_DB: "true"
+      # Reuse existing wolinex-postgres on host port 5433
+      DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:5433/litellm
+      # Reuse existing wolinet-gateway-cache Redis on port 6379 (no password)
+      REDIS_HOST: host.docker.internal
+      REDIS_PORT: "6379"
+      REDIS_URL: redis://host.docker.internal:6379
+      LITELLM_DISABLE_NO_REDIS_WARNING: "true"
+      # No Xinference in dev smoke-test
+      WOLINET_API_BASE: http://host.docker.internal:9997/v1
+      WOLINET_INFERENCE_URL: http://host.docker.internal:9997
+      WOLINET_API_KEY: not-needed
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEFAULT_MODEL: wolinex-coder
+      DEFAULT_MODELS: wolinex-coder
+    volumes:
+      - ./gateway/config.yaml:/app/config.yaml:ro
+    command: >
+      --config /app/config.yaml --port 4000 --host 0.0.0.0
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request,sys; r=urllib.request.Request('http://localhost:4000/health',headers={'Authorization':'Bearer sk-wolinet-dev-master-key'}); urllib.request.urlopen(r,timeout=5); sys.exit(0)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # ── 2. Open WebUI (wolinex) ────────────────────────────────────────────────
+  wolinex:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: wolinet-dev-wolinex
+    restart: unless-stopped
+    networks:
+      - wolinet_dev
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3080:8080"
+    environment:
+      PORT: "8080"
+      HOST: "0.0.0.0"
+      WEBUI_NAME: "Wolinet AI (Dev)"
+      WEBUI_URL: "http://localhost:3080"
+      WEBUI_SECRET_KEY: wolinet-dev-secret-2026
+      # Connect to lango via internal bridge network
+      OPENAI_API_BASE_URL: "http://lango:4000/v1"
+      OPENAI_API_KEY: sk-wolinet-dev-master-key
+      LITELLM_BASE_URL: "http://lango:4000"
+      LITELLM_MASTER_KEY: sk-wolinet-dev-master-key
+      ENABLE_FORWARD_USER_INFO_HEADERS: "True"
+      # PostgreSQL — use existing wolinex-postgres (webui DB already present)
+      DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:5433/webui
+      WEBUI_DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:5433/webui
+      DATABASE_POOL_SIZE: "5"
+      DATABASE_POOL_MAX_OVERFLOW: "10"
+      DATABASE_POOL_TIMEOUT: "30"
+      DATABASE_POOL_RECYCLE: "3600"
+      DATABASE_ENABLE_SESSION_SHARING: "True"
+      # Redis (existing, no password)
+      REDIS_URL: redis://host.docker.internal:6379
+      # Models
+      ENABLE_OLLAMA_API: "False"
+      ENABLE_OPENAI_API: "True"
+      RAG_EMBEDDING_ENGINE: openai
+      RAG_EMBEDDING_MODEL: wolinex-embed
+      RAG_OPENAI_API_BASE_URL: "http://lango:4000/v1"
+      RAG_OPENAI_API_KEY: sk-wolinet-dev-master-key
+      ENABLE_RAG_HYBRID_SEARCH: "False"
+      VECTOR_DB: chroma
+      # Telemetry
+      SCARF_NO_ANALYTICS: "true"
+      DO_NOT_TRACK: "true"
+      ANONYMIZED_TELEMETRY: "false"
+      CORS_ALLOW_ORIGIN: "*"
+      FORWARDED_ALLOW_IPS: "*"
+      DEFAULT_USER_BUDGET: "25.0"
+    volumes:
+      - webui_dev_data:/app/backend/data
+    depends_on:
+      lango:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ > /dev/null 2>&1 || python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/', timeout=5)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s

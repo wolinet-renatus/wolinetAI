@@ -88,8 +88,10 @@ wolinetai/
 │       └── qwen-image-2.1.json  # Local diffusion transformer
 │
 ├── apps/                        # 🤖 Client Applications
-│   ├── web-client/              # 🌐 Wolinet AI Studio (Hybrid Web Console on Port 8080)
-│   │   └── index.html           # Full interactive studio, real-time metrics, & M-Pesa checkout
+│   ├── web-client/              # 🌐 Wolinet AI Web Portal (Open WebUI on Port 3080)
+│   │   ├── backend/             # Python (FastAPI/uvicorn) backend with Wolinet customizations
+│   │   │   └── open_webui/routers/wolinet_docs.py  # Developer portal + auth + docs on /docs
+│   │   └── run_webui.sh         # Launcher script (PORT=3080, connects to gateway :4000)
 │   └── agentic-coder/           # Reference Autonomous Coding Agent (CLI + Tools)
 │       ├── main.py              # Interactive terminal agent loop
 │       └── src/
@@ -292,8 +294,9 @@ The gateway codebase located in `gateway/` is 100% open source and fully customi
   * `GET /get_image` $\rightarrow$ Serves branded logo
   * `GET /get_favicon` $\rightarrow$ Serves branded favicon
 * **Wolinet AI Studio Web Client**:
-  * Located at `apps/web-client/index.html` (served on port `8080`).
-  * Features real-time token telemetry, model switching, API key configuration, and integrated Tanzania Mobile Money checkout modal.
+  * Located at `apps/web-client/` (served on port `3080` via `make web`).
+  * Features: chat interface, real-time model switching, integrated developer portal at `/docs`
+    with Tanzania Mobile Money checkout, API key management, and AI assistant.
 
 ---
 

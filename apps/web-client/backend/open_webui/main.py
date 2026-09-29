@@ -28,12 +28,10 @@ from fastapi import (
     HTTPException,
     Request,
     UploadFile,
-    applications,
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from redis import Redis
@@ -508,6 +506,7 @@ from open_webui.routers import (
     tools,
     users,
     utils,
+    wolinet_docs,
 )
 from open_webui.routers.retrieval import (
     get_ef,
@@ -650,8 +649,9 @@ async def lifespan(app: FastAPI):
     # Create admin account from env vars if specified and no users exist
     if WEBUI_ADMIN_EMAIL and WEBUI_ADMIN_PASSWORD:
         if await create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
-            # Disable signup since we now have an admin
-            app.state.config.ENABLE_SIGNUP = False
+            # Disable signup since we now have an admin (unless ENABLE_SIGNUP is explicitly configured)
+            if os.getenv('ENABLE_SIGNUP', 'True').lower() != 'true':
+                app.state.config.ENABLE_SIGNUP = False
 
     if SAFE_MODE:
         await Functions.deactivate_all_functions()
@@ -747,12 +747,80 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title='Open WebUI',
-    docs_url='/docs' if ENV == 'dev' else None,
-    openapi_url='/openapi.json' if ENV == 'dev' else None,
+    title='Wolinet AI',
+    docs_url=None,
+    openapi_url='/openapi.json',
     redoc_url=None,
     lifespan=lifespan,
 )
+
+# Mount Wolinet AI Gateway OpenAPI bridge and modern Scalar API Reference
+@app.get('/gateway/openapi.json', include_in_schema=False)
+async def gateway_openapi(request: Request):
+    """Proxy the Wolinet AI Sovereign Gateway OpenAPI spec with dynamic server resolution and universal enterprise metadata."""
+    gateway_url = os.getenv('LITELLM_BASE_URL') or os.getenv('OPENAI_API_BASE_URL') or 'http://127.0.0.1:4000'
+    gateway_url = gateway_url.rstrip('/')
+    if gateway_url.endswith('/v1'):
+        gateway_url = gateway_url[:-3]
+
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+            async with session.get(f'{gateway_url}/openapi.json') as resp:
+                if resp.status == 200:
+                    spec = await resp.json()
+                    
+                    # Ensure metadata speaks Wolinet AI's extraordinary universal sovereign capabilities
+                    spec.setdefault('info', {})
+                    spec['info']['title'] = 'Wolinet AI — Sovereign Intelligence & High-Performance Inference API'
+                    spec['info']['description'] = (
+                        "### Wolinet AI — Sovereign Intelligence & High-Performance Inference Platform\n\n"
+                        "Enterprise-grade sovereign artificial intelligence infrastructure engineered by **Wolinet Technology**.\n\n"
+                        "• **Data Sovereignty & Enterprise Confidentiality**: Strict data isolation, complete customer data ownership, and zero third-party telemetry.\n"
+                        "• **Universal High-Throughput Inference**: Low-latency, scalable execution across frontier foundation models, custom specialized architectures, and multi-modal pipelines.\n"
+                        "• **Intelligent Dynamic Routing & Resilience**: Automated workload balancing, failover fault tolerance, and real-time per-user token metering with budget attribution.\n"
+                        "• **Unified Standard API**: Full compatibility with standard OpenAI client libraries, native REST endpoints, function calling, and streaming agentic workflows.\n\n"
+                        "👉 Engineered for mission-critical enterprise applications and sovereign cloud deployments worldwide."
+                    )
+
+                    # Dynamic server resolution: automatically adapts whether local, IP, or public domain
+                    servers = []
+                    public_gateway = os.getenv('GATEWAY_PUBLIC_URL') or os.getenv('WOLINET_BASE_URL')
+                    if public_gateway:
+                        servers.append({'url': public_gateway.rstrip('/'), 'description': 'Wolinet AI Sovereign Gateway (Configured Endpoint)'})
+
+                    host_header = request.headers.get('x-forwarded-host') or request.headers.get('host', '')
+                    if host_header:
+                        scheme = request.headers.get('x-forwarded-proto') or request.url.scheme or 'http'
+                        # Active origin of the request (preserves custom ports if in URL, e.g. dev, or clean domain in prod)
+                        servers.append({'url': f'{scheme}://{host_header}', 'description': f'Wolinet AI Platform ({host_header})'})
+
+                        # Only offer local dev gateway port if running on localhost / 127.0.0.1
+                        hostname = host_header.split(':')[0]
+                        if hostname in ('localhost', '127.0.0.1', '0.0.0.0'):
+                            gateway_port = os.getenv('GATEWAY_PORT', '4000')
+                            servers.append({'url': f'{scheme}://{hostname}:{gateway_port}', 'description': f'Wolinet AI Gateway Local Port ({gateway_port})'})
+
+                    servers.append({'url': '/', 'description': 'Wolinet AI Platform (Current Origin)'})
+
+                    seen = set()
+                    unique_servers = []
+                    for s in servers:
+                        if s['url'] not in seen:
+                            seen.add(s['url'])
+                            unique_servers.append(s)
+                    spec['servers'] = unique_servers
+                    return JSONResponse(content=spec)
+    except Exception as e:
+        log.warning(f'Failed to fetch gateway openapi spec from {gateway_url}: {e}')
+
+    return JSONResponse(content=app.openapi())
+
+
+# ── Wolinet AI Sovereign API Reference & Developer Authentication ─────────────
+# Comprehensive docs, session inspection, and auth architecture are mounted via
+# open_webui.routers.wolinet_docs.router
+from open_webui.routers.wolinet_docs import build_sovereign_docs_html as _build_sovereign_docs_html
+
 
 # Used by readiness checks to gate traffic until startup work is done.
 app.state.startup_complete = False
@@ -774,7 +842,19 @@ app.state.config = AppConfig(
 app.state.redis = None
 
 app.state.WEBUI_NAME = WEBUI_NAME
-app.state.LICENSE_METADATA = None
+app.state.LICENSE_METADATA = {
+    'type': 'Enterprise Sovereign',
+    'organization_name': 'Wolinet Technology',
+    'login_footer': os.getenv(
+        'WEBUI_LOGIN_FOOTER',
+        '© 2026 **Wolinet Technology** • Sovereign LLM & Inference Cloud • [API Documentation](/docs)',
+    ),
+    'input_footer': os.getenv(
+        'WEBUI_INPUT_FOOTER',
+        'Powered by **Wolinet AI** • Sovereign model execution & spend metering',
+    ),
+    'auth_logo_position': 'top',
+}
 
 
 ########################################
@@ -1450,6 +1530,7 @@ app.include_router(utils.router, prefix='/api/v1/utils', tags=['utils'])
 app.include_router(terminals.router, prefix='/api/v1/terminals', tags=['terminals'])
 app.include_router(automations.router, prefix='/api/v1/automations', tags=['automations'])
 app.include_router(calendar.router, prefix='/api/v1/calendars', tags=['calendars'])
+app.include_router(wolinet_docs.router)
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
@@ -3005,18 +3086,6 @@ async def serve_cache_file(
         headers['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}"'
     return FileResponse(file_path, headers=headers)
 
-
-def swagger_ui_html(*args, **kwargs):
-    return get_swagger_ui_html(
-        *args,
-        **kwargs,
-        swagger_js_url='/static/swagger-ui/swagger-ui-bundle.js',
-        swagger_css_url='/static/swagger-ui/swagger-ui.css',
-        swagger_favicon_url='/static/swagger-ui/favicon.png',
-    )
-
-
-applications.get_swagger_ui_html = swagger_ui_html
 
 if os.path.exists(FRONTEND_BUILD_DIR):
     mimetypes.add_type('text/javascript', '.js')

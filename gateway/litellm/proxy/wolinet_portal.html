@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>__TITLE__</title>
+  <link rel="icon" type="image/png" href="__FAVICON_URL__" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-0: #07070d;
+      --bg-1: #0d0d17;
+      --bg-2: #121221;
+      --bg-3: #18182d;
+      --border: rgba(124, 109, 250, 0.18);
+      --border-light: rgba(255, 255, 255, 0.08);
+      --accent: #7c6dfa;
+      --accent-h: #9b8ffb;
+      --accent-glow: rgba(124, 109, 250, 0.35);
+      --text-1: #f1f1fa;
+      --text-2: #a5a3c6;
+      --text-3: #6b6990;
+      --green: #50fa7b;
+      --red: #ff5555;
+      --yellow: #f1fa8c;
+      --cyan: #8be9fd;
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      --header-h: 52px;
+      --sidebar-w: 230px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; background: var(--bg-0); font-family: var(--font);
+      color: var(--text-1); overflow-x: hidden;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    #header {
+      position: fixed; top: 0; left: 0; right: 0; height: var(--header-h); z-index: 10000;
+      display: flex; align-items: center; justify-content: space-between; padding: 0 18px;
+      background: rgba(10, 10, 19, 0.96); border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(16px); gap: 14px;
+    }
+    .hdr-brand {
+      display: flex; align-items: center; gap: 10px; text-decoration: none;
+    }
+    .hdr-brand img { height: 26px; width: auto; border-radius: 6px; }
+    .hdr-brand-name {
+      font-size: 14.5px; font-weight: 800; letter-spacing: -0.01em;
+      background: linear-gradient(135deg, #c4b5fd 0%, #7c6dfa 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hdr-brand-sub {
+      font-size: 11px; color: var(--text-3); font-weight: 500; margin-left: 2px;
+    }
+    .hdr-right {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px;
+      border-radius: 9999px; font-size: 11px; font-weight: 600;
+    }
+    .badge-guest {
+      background: rgba(241, 250, 140, 0.1); border: 1px solid rgba(241, 250, 140, 0.25); color: var(--yellow);
+    }
+    .badge-user {
+      background: rgba(80, 250, 123, 0.1); border: 1px solid rgba(80, 250, 123, 0.3); color: var(--green);
+    }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+      box-shadow: 0 0 8px var(--green); animation: pulseDot 2s infinite;
+    }
+    @keyframes pulseDot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(1.2); } }
+    .status-label { font-size: 11.5px; color: var(--green); font-weight: 600; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 6px 14px; border-radius: 7px; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.18s ease; text-decoration: none; border: 1px solid transparent;
+      font-family: var(--font);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #7c6dfa 0%, #6352e8 100%);
+      border-color: #7c6dfa; color: #fff; box-shadow: 0 2px 10px rgba(124, 109, 250, 0.3);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #9b8ffb 0%, #7c6dfa 100%);
+      box-shadow: 0 4px 16px rgba(124, 109, 250, 0.45);
+    }
+    .btn-outline {
+      background: rgba(124, 109, 250, 0.1); border-color: rgba(124, 109, 250, 0.35); color: #c4b5fd;
+    }
+    .btn-outline:hover {
+      background: rgba(124, 109, 250, 0.22); color: #fff; border-color: var(--accent);
+    }
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.1); color: var(--text-2);
+    }
+    .btn-ghost:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+    .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+    /* ── Shell & Sidebar ────────────────────────────────────── */
+    #shell {
+      display: flex; margin-top: var(--header-h); height: calc(100vh - var(--header-h));
+    }
+    #sidebar {
+      width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--bg-1);
+      border-right: 1px solid var(--border); display: flex; flex-direction: column;
+      overflow-y: auto; flex-shrink: 0;
+    }
+    .nav-section { padding: 14px 12px 6px; }
+    .nav-section-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--text-3); padding: 0 6px; margin-bottom: 5px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 9px; padding: 8px 11px; border-radius: 7px;
+      cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-2);
+      transition: all .15s; margin-bottom: 2px; border: none; background: none; width: 100%;
+      text-align: left; font-family: var(--font);
+    }
+    .nav-item:hover { background: rgba(124, 109, 250, 0.1); color: var(--text-1); }
+    .nav-item.active {
+      background: rgba(124, 109, 250, 0.2); color: #fff; font-weight: 600;
+      border: 1px solid rgba(124, 109, 250, 0.3);
+    }
+    .nav-icon { width: 16px; height: 16px; opacity: .7; flex-shrink: 0; }
+    .nav-item.active .nav-icon { opacity: 1; stroke: #c4b5fd; }
+    .sidebar-footer {
+      margin-top: auto; padding: 14px; border-top: 1px solid var(--border-light);
+      font-size: 11px; color: var(--text-3);
+    }
+
+    /* ── Main View Panels ───────────────────────────────────── */
+    #main { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--bg-0); }
+    .panel { display: none; padding: 26px 30px; flex-direction: column; gap: 20px; min-height: 100%; }
+    .panel.active { display: flex; }
+    .panel-title { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
+    .panel-sub { font-size: 13px; color: var(--text-2); margin-top: 3px; }
+
+    .card {
+      background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px 22px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    }
+    .card-title {
+      font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    @media(max-width: 900px) { .g2, .g3 { grid-template-columns: 1fr; } }
+
+    .stat-card {
+      background: var(--bg-3); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px;
+    }
+    .stat-label {
+      font-size: 11px; color: var(--text-3); font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; margin-bottom: 6px;
+    }
+    .stat-value { font-size: 24px; font-weight: 800; color: #fff; }
+    .stat-sub { font-size: 11.5px; color: var(--text-2); margin-top: 4px; }
+
+    .key-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .key-code {
+      flex: 1; font-family: var(--mono); font-size: 12.5px; color: var(--cyan);
+      background: var(--bg-0); border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 9px 14px; border-radius: 7px; letter-spacing: .02em; min-width: 0; word-break: break-all;
+    }
+
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block; font-size: 11.5px; font-weight: 600; color: #c4b5fd;
+      margin-bottom: 6px; letter-spacing: .01em;
+    }
+    .form-input {
+      width: 100%; padding: 10px 13px; background: var(--bg-0);
+      border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; color: #fff;
+      font-size: 12.5px; outline: none; transition: border-color .15s; font-family: var(--font);
+    }
+    .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .btn-full { width: 100%; justify-content: center; padding: 11px; }
+
+    .alert { padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; display: none; line-height: 1.45; }
+    .alert.error { display: block; background: rgba(255, 85, 85, 0.12); border: 1px solid rgba(255, 85, 85, 0.35); color: #ff8585; }
+    .alert.success { display: block; background: rgba(80, 250, 123, 0.12); border: 1px solid rgba(80, 250, 123, 0.35); color: var(--green); }
+
+    .key-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+    .key-table th {
+      color: var(--text-3); font-weight: 600; text-align: left; padding: 9px 12px;
+      border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+    }
+    .key-table td {
+      padding: 11px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); color: var(--text-2); vertical-align: middle;
+    }
+    .key-table tr:last-child td { border: none; }
+    .key-table td:first-child { font-family: var(--mono); color: var(--cyan); font-size: 11.5px; }
+
+    .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-size: 10.5px; font-weight: 600; }
+    .tag-green { background: rgba(80, 250, 123, 0.12); border: 1px solid rgba(80, 250, 123, 0.3); color: var(--green); }
+
+    .model-item {
+      display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;
+      border-radius: 9px; background: var(--bg-3); border: 1px solid var(--border); margin-bottom: 8px;
+    }
+    .model-name { font-family: var(--mono); font-size: 13px; color: var(--cyan); font-weight: 600; }
+    .model-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+    /* ── Scalar Reference Panel ─────────────────────────────── */
+    #panel-reference { padding: 0; flex: 1; overflow: hidden; }
+    #panel-reference.active { display: flex; flex-direction: column; height: 100%; }
+    #scalar-container { flex: 1; overflow: auto; }
+
+    /* ── AI Assistant Drawer ────────────────────────────────── */
+    #asst-drawer {
+      position: fixed; right: 0; top: var(--header-h); width: 440px; max-width: 95vw;
+      height: calc(100vh - var(--header-h)); background: var(--bg-1);
+      border-left: 1px solid rgba(124, 109, 250, 0.3); box-shadow: -16px 0 50px rgba(0, 0, 0, 0.75);
+      z-index: 99999; display: flex; flex-direction: column;
+      transform: translateX(105%); transition: transform .26s cubic-bezier(.16, 1, .3, 1);
+    }
+    #asst-drawer.open { transform: translateX(0); }
+    .asst-hdr {
+      padding: 14px 18px; background: var(--bg-2); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .asst-title {
+      display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; color: #fff;
+    }
+    .asst-title img { height: 20px; width: auto; }
+    .asst-subtitle {
+      font-size: 10.5px; color: var(--green); display: flex; align-items: center; gap: 5px; margin-top: 2px;
+    }
+    .asst-cls {
+      width: 28px; height: 28px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06); color: var(--text-2); cursor: pointer; font-size: 14px;
+      display: flex; align-items: center; justify-content: center; transition: all .15s;
+    }
+    .asst-cls:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
+
+    .asst-chips {
+      display: flex; gap: 6px; padding: 9px 16px; overflow-x: auto;
+      border-bottom: 1px solid var(--border-light); background: var(--bg-2); flex-shrink: 0;
+    }
+    .asst-chip {
+      padding: 4px 11px; font-size: 11px; white-space: nowrap; border-radius: 9999px;
+      border: 1px solid rgba(124, 109, 250, 0.25); background: rgba(124, 109, 250, 0.08); color: #c4b5fd;
+      cursor: pointer; transition: all .15s; font-family: var(--font); font-weight: 500;
+    }
+    .asst-chip:hover { background: rgba(124, 109, 250, 0.22); border-color: var(--accent); color: #fff; }
+
+    .asst-msgs {
+      flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .asst-msg {
+      max-width: 92%; padding: 12px 14px; border-radius: 10px; font-size: 12px; line-height: 1.55; word-break: break-word;
+    }
+    .asst-msg.assistant {
+      align-self: flex-start; background: var(--bg-3); border: 1px solid rgba(124, 109, 250, 0.2); color: var(--text-1);
+    }
+    .asst-msg.user { align-self: flex-end; background: var(--accent); color: #fff; }
+    .asst-msg pre {
+      background: var(--bg-0); border: 1px solid rgba(255, 255, 255, 0.08); padding: 8px 10px; border-radius: 6px;
+      font-family: var(--mono); font-size: 11px; overflow-x: auto; margin: 7px 0; color: var(--cyan);
+    }
+    .asst-msg code {
+      font-family: var(--mono); background: rgba(255, 255, 255, 0.08); padding: 1px 5px; border-radius: 3px; font-size: 11px;
+    }
+    .asst-msg-hdr {
+      font-weight: 700; color: #c4b5fd; margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
+    }
+    .ep-btn {
+      display: inline-flex; align-items: center; gap: 5px; margin: 6px 4px 0 0; padding: 4px 10px; border-radius: 5px;
+      background: rgba(80, 250, 123, 0.12); border: 1px solid rgba(80, 250, 123, 0.3); color: var(--green);
+      font-size: 11px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all .15s;
+    }
+    .ep-btn:hover { background: rgba(80, 250, 123, 0.22); }
+
+    .asst-inp-row {
+      padding: 12px 16px; background: var(--bg-2); border-top: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0;
+    }
+    .asst-inp {
+      flex: 1; padding: 10px 12px; background: var(--bg-0); border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px; color: #fff; font-size: 12px; outline: none; transition: border-color .15s; font-family: var(--font);
+    }
+    .asst-inp:focus { border-color: var(--accent); }
+    .asst-send {
+      padding: 10px 16px; background: var(--accent); border: none; border-radius: 8px; color: #fff;
+      font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s; font-family: var(--font);
+    }
+    .asst-send:hover { background: var(--accent-h); }
+    .asst-send:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Auth Modal ─────────────────────────────────────────── */
+    #auth-modal {
+      position: fixed; inset: 0; z-index: 1000000; background: rgba(5, 5, 10, 0.85);
+      backdrop-filter: blur(14px); display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity .2s ease; padding: 16px;
+    }
+    #auth-modal.open { opacity: 1; pointer-events: auto; }
+    .modal-box {
+      width: 430px; max-width: 100%; background: var(--bg-2); border: 1px solid rgba(124, 109, 250, 0.35);
+      border-radius: 14px; overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 35px var(--accent-glow);
+      animation: mpop .2s cubic-bezier(.16, 1, .3, 1);
+    }
+    @keyframes mpop { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-hd {
+      padding: 18px 22px 14px; background: var(--bg-3); border-bottom: 1px solid var(--border-light);
+      display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .modal-hd h3 { font-size: 14.5px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 7px; margin: 0; }
+    .modal-hd p { margin: 4px 0 0; font-size: 11px; color: var(--text-2); }
+    .modal-tabs {
+      display: flex; background: var(--bg-0); border-bottom: 1px solid var(--border-light); padding: 4px 18px; gap: 8px;
+    }
+    .modal-tab {
+      padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--text-2); background: transparent;
+      border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all .15s; font-family: var(--font);
+    }
+    .modal-tab.active { color: #fff; border-bottom-color: var(--accent); }
+    .modal-body { padding: 20px 22px; }
+    .credit-note {
+      display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--green);
+      background: rgba(80, 250, 123, 0.08); border: 1px solid rgba(80, 250, 123, 0.22);
+      border-radius: 6px; padding: 8px 11px; margin-bottom: 14px;
+    }
+
+    /* ── FAB ────────────────────────────────────────────────── */
+    #asst-fab {
+      position: fixed; bottom: 24px; right: 24px; z-index: 99998; display: flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, #1b1739, #0f0c24); border: 1px solid rgba(124, 109, 250, 0.5);
+      border-radius: 9999px; padding: 10px 18px; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+      box-shadow: 0 8px 30px rgba(124, 109, 250, 0.35); transition: all .22s cubic-bezier(.16, 1, .3, 1);
+      font-family: var(--font);
+    }
+    #asst-fab:hover { transform: translateY(-2px); box-shadow: 0 12px 38px rgba(124, 109, 250, 0.55); }
+    .fab-pulse {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+      box-shadow: 0 0 8px var(--green); animation: pulseDot 2s infinite;
+    }
+
+    a[href*="scalar.com"], .scalar-version-number { display: none !important; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(124, 109, 250, 0.25); border-radius: 9999px; }
+    .loading { display: flex; align-items: center; gap: 8px; color: var(--text-3); font-size: 12px; padding: 16px 0; }
+    .spinner {
+      width: 14px; height: 14px; border: 2px solid rgba(124, 109, 250, 0.3); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state { text-align: center; color: var(--text-3); font-size: 13px; padding: 36px 20px; }
+  </style>
+</head>
+<body>
+
+<header id="header">
+  <a class="hdr-brand" href="javascript:void(0)" onclick="navTo('overview', document.querySelector('.nav-item'))">
+    <img src="__FAVICON_URL__" alt="Wolinet AI" />
+    <span>
+      <span class="hdr-brand-name">Wolinet AI</span>
+      <span class="hdr-brand-sub">Sovereign Portal</span>
+    </span>
+  </a>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <div id="badge-guest" class="badge badge-guest">Guest Mode (Read-Only)</div>
+    <div id="badge-user" class="badge badge-user" style="display:none;">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+      <span id="hdr-uname">Developer</span>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <span class="status-dot"></span>
+    <span class="status-label">Gateway Active</span>
+    <span id="hdr-guest-btns" style="display:flex; gap:6px;">
+      <button class="btn btn-primary btn-sm" onclick="openAuth('signin')">Sign In</button>
+      <button class="btn btn-outline btn-sm" onclick="openAuth('signup')">Register</button>
+    </span>
+    <button id="hdr-signout" class="btn btn-ghost btn-sm" style="display:none;" onclick="doLogout()">Sign Out</button>
+    <button class="btn btn-outline btn-sm" onclick="toggleAsst()">
+      <span>🤖</span> AI Assistant
+    </button>
+  </div>
+</header>
+
+<div id="shell">
+  <nav id="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-label">Platform</div>
+      <button class="nav-item active" onclick="navTo('overview', this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Overview
+      </button>
+      <button class="nav-item" onclick="navTo('keys', this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        API Keys
+      </button>
+      <button class="nav-item" onclick="navTo('models', this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        Models &amp; Endpoints
+      </button>
+      <button class="nav-item" onclick="navTo('status', this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Cluster Status
+      </button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Documentation</div>
+      <button class="nav-item" onclick="navTo('reference', this)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        API Reference
+      </button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Tools</div>
+      <button class="nav-item" onclick="toggleAsst()">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        AI Assistant
+      </button>
+      <a class="nav-item" href="/ui/" target="_blank">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Studio Dashboard ↗
+      </a>
+    </div>
+    <div class="sidebar-footer">Wolinet AI &bull; Sovereign Architecture</div>
+  </nav>
+
+  <main id="main">
+
+    <!-- 1. Overview Panel -->
+    <section id="panel-overview" class="panel active">
+      <div>
+        <div class="panel-title">Developer Overview</div>
+        <div class="panel-sub">Sovereign intelligence cluster connected and ready for high-performance inference</div>
+      </div>
+
+      <div id="ov-guest" class="card">
+        <div class="card-title">🚀 Unlock Full Sovereign Access</div>
+        <p style="font-size:13px; color:var(--text-2); margin-bottom:16px; line-height:1.5;">
+          Sign in or register an account to receive your personal sovereign API key preloaded with <b>$25.00 inference credits</b> for testing all models.
+        </p>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-primary" onclick="openAuth('signin')">Sign In</button>
+          <button class="btn btn-outline" onclick="openAuth('signup')">Create Account</button>
+        </div>
+      </div>
+
+      <div id="ov-key" class="card" style="display:none;">
+        <div class="card-title">🔑 Active Sovereign API Key</div>
+        <div class="key-bar">
+          <code class="key-code" id="ov-key-code">sk-••••••••••••••••</code>
+          <button class="btn btn-ghost btn-sm" onclick="ovToggle()">👁️ Show</button>
+          <button class="btn btn-ghost btn-sm" onclick="copyKey()">📋 Copy</button>
+          <button class="btn btn-outline btn-sm" onclick="rollKey()">🔄 Regenerate</button>
+        </div>
+      </div>
+
+      <div id="ov-credits" class="g3" style="display:none;">
+        <div class="stat-card">
+          <div class="stat-label">Allocated Budget</div>
+          <div class="stat-value" id="ov-alloc">$25.00</div>
+          <div class="stat-sub">Sovereign USD</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Current Spend</div>
+          <div class="stat-value" id="ov-spent">$0.00</div>
+          <div class="stat-sub">Active billing cycle</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Remaining Balance</div>
+          <div class="stat-value" id="ov-rem" style="color:var(--green);">$25.00</div>
+          <div class="stat-sub">Available balance</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⚡ Quickstart &mdash; cURL</div>
+        <pre id="ov-curl" style="background:var(--bg-0); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:8px; font-family:var(--mono); font-size:12px; color:var(--cyan); overflow-x:auto; white-space:pre-wrap;"></pre>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🐍 Quickstart &mdash; Python (OpenAI Drop-In)</div>
+        <pre id="ov-python" style="background:var(--bg-0); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:8px; font-family:var(--mono); font-size:12px; color:var(--cyan); overflow-x:auto; white-space:pre-wrap;"></pre>
+      </div>
+    </section>
+
+    <!-- 2. API Keys Panel -->
+    <section id="panel-keys" class="panel">
+      <div>
+        <div class="panel-title">API Keys &amp; Governance</div>
+        <div class="panel-sub">Create, provision, and track keys for your applications and autonomous agents</div>
+      </div>
+
+      <div id="keys-noauth" class="card" style="display:none;">
+        <div class="empty-state">
+          Sign in or register to manage and provision your sovereign API keys.
+          <p style="margin-top:12px;"><button class="btn btn-primary" onclick="openAuth('signin')">Sign In</button></p>
+        </div>
+      </div>
+
+      <div id="keys-content" style="display:none;">
+        <div class="card" style="margin-bottom:18px;">
+          <div class="card-title">Active Primary Key</div>
+          <div class="key-bar">
+            <code class="key-code" id="keys-code">sk-••••••••••••••••</code>
+            <button class="btn btn-ghost btn-sm" onclick="keysToggle()">👁️ Show</button>
+            <button class="btn btn-ghost btn-sm" onclick="copyKey()">📋 Copy</button>
+            <button class="btn btn-outline btn-sm" onclick="rollKey()">🔄 Regenerate</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;">
+          <div class="card-title">✨ Create New API Key</div>
+          <div id="keys-alert" class="alert"></div>
+          <div class="form-group">
+            <label class="form-label" for="nk-alias">Key Label / Alias</label>
+            <input type="text" id="nk-alias" class="form-input" placeholder="e.g. backend-service, agent-worker" />
+          </div>
+          <div class="g2" style="margin-bottom:16px;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" for="nk-budget">Max Budget (USD)</label>
+              <input type="number" id="nk-budget" class="form-input" placeholder="25.00" step="0.5" min="0" />
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" for="nk-expiry">Validity (Days)</label>
+              <input type="number" id="nk-expiry" class="form-input" placeholder="30" min="1" />
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="createKey()">Generate Key</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📋 Key Management History</div>
+          <div id="keys-list"><div class="loading"><span class="spinner"></span> Loading keys...</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Models Panel -->
+    <section id="panel-models" class="panel">
+      <div>
+        <div class="panel-title">Available Models &amp; Deployments</div>
+        <div class="panel-sub">Active models running locally on the sovereign inference cluster</div>
+      </div>
+      <div class="card">
+        <div id="models-list"><div class="loading"><span class="spinner"></span> Fetching active models from gateway...</div></div>
+      </div>
+    </section>
+
+    <!-- 4. Cluster Status Panel -->
+    <section id="panel-status" class="panel">
+      <div>
+        <div class="panel-title">Sovereign Cluster Health &amp; Telemetry</div>
+        <div class="panel-sub">Real-time status of local GGUF models, inference backend, and gateway routing</div>
+      </div>
+      <div id="status-wrap"><div class="loading"><span class="spinner"></span> Querying cluster health...</div></div>
+    </section>
+
+    <!-- 5. API Reference Panel (Scalar) -->
+    <section id="panel-reference" class="panel">
+      <div id="scalar-container">
+        <script id="api-reference"
+          data-url="__OPENAPI_URL__"
+          data-proxy-url=""
+          data-configuration='{"theme":"deepSpace","darkMode":true,"layout":"sidebar","showSidebar":true,"showDeveloperTools":"never","telemetry":false,"agent":{"disabled":true}}'
+        ></script>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Floating Action Button for AI Assistant -->
+<button id="asst-fab" onclick="toggleAsst()" title="Wolinet AI Sovereign Assistant">
+  <span>🤖</span> <span>AI Assistant</span>
+  <span class="fab-pulse"></span>
+</button>
+
+<!-- Slide-out AI Assistant Drawer -->
+<div id="asst-drawer">
+  <div class="asst-hdr">
+    <div>
+      <div class="asst-title"><span>🤖</span> Wolinet AI Sovereign Assistant</div>
+      <div class="asst-subtitle"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;"></span> Self-Hosted &bull; Connected to Cluster</div>
+    </div>
+    <div style="display:flex; gap:6px;">
+      <button class="asst-cls" onclick="clearAsst()" title="Clear conversation">&#8635;</button>
+      <button class="asst-cls" onclick="toggleAsst()" title="Close drawer">&#10005;</button>
+    </div>
+  </div>
+  <div class="asst-chips">
+    <button class="asst-chip" onclick="qp('chat')">Chat Completions</button>
+    <button class="asst-chip" onclick="qp('python')">Python SDK</button>
+    <button class="asst-chip" onclick="qp('auth')">Auth &amp; Keys</button>
+    <button class="asst-chip" onclick="qp('guardrails')">Guardrails</button>
+    <button class="asst-chip" onclick="qp('status')">Cluster Health</button>
+  </div>
+  <div id="asst-msgs" class="asst-msgs">
+    <div class="asst-msg assistant">
+      <div class="asst-msg-hdr"><span>🤖</span> Wolinet AI Sovereign Assistant</div>
+      <div>Hello! 👋 I am your <b>self-hosted developer assistant</b>, connected directly to your local cluster.<br><br>
+      <b>I can help you:</b>
+      <ul style="margin:8px 0 0 16px; padding:0; line-height:1.6;">
+        <li>Explore endpoints and generate code snippets in Python, TypeScript, and cURL</li>
+        <li>Provision and manage API keys for your applications</li>
+        <li>Check model quotas, safety guardrails, and cluster status</li>
+      </ul></div>
+    </div>
+  </div>
+  <form class="asst-inp-row" onsubmit="submitAsst(event)">
+    <input type="text" id="asst-inp" class="asst-inp" placeholder="Ask about endpoints, request schemas, or code generation..." autocomplete="off" />
+    <button type="submit" id="asst-send" class="asst-send">Send</button>
+  </form>
+</div>
+
+<!-- In-Docs Glassmorphic Auth Modal -->
+<div id="auth-modal" onclick="closeAuthBd(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-hd">
+      <div>
+        <h3><span>⚡</span> Wolinet Developer Access</h3>
+        <p>Sign in or register to unlock your personal API key and live test requests.</p>
+      </div>
+      <button class="asst-cls" onclick="closeAuth()">&#10005;</button>
+    </div>
+    <div class="modal-tabs">
+      <button id="tab-signin" class="modal-tab active" onclick="switchTab('signin')">Sign In</button>
+      <button id="tab-signup" class="modal-tab" onclick="switchTab('signup')">Create Account</button>
+      <button id="tab-key" class="modal-tab" onclick="switchTab('key')">Paste API Key</button>
+    </div>
+    <div class="modal-body">
+      <div id="auth-alert" class="alert"></div>
+
+      <!-- Sign In Tab -->
+      <form id="form-signin" onsubmit="doSignIn(event)">
+        <div class="form-group">
+          <label class="form-label" for="si-email">Email Address</label>
+          <input type="email" id="si-email" class="form-input" placeholder="developer@example.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="si-pass">Password</label>
+          <input type="password" id="si-pass" class="form-input" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+        <button type="submit" id="btn-signin" class="btn btn-primary btn-full">Sign In to Sovereign Portal</button>
+      </form>
+
+      <!-- Register Tab -->
+      <form id="form-signup" style="display:none;" onsubmit="doSignUp(event)">
+        <div class="credit-note">🎁 Includes $25.00 sovereign inference credits &amp; active API key</div>
+        <div class="form-group">
+          <label class="form-label" for="su-name">Full Name</label>
+          <input type="text" id="su-name" class="form-input" placeholder="Developer Name" required autocomplete="name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="su-email">Email Address</label>
+          <input type="email" id="su-email" class="form-input" placeholder="developer@example.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="su-pass">Password</label>
+          <input type="password" id="su-pass" class="form-input" placeholder="min 6 characters" required autocomplete="new-password" />
+        </div>
+        <button type="submit" id="btn-signup" class="btn btn-primary btn-full">Create Account &amp; Obtain Key</button>
+      </form>
+
+      <!-- Paste Key Tab -->
+      <form id="form-key" style="display:none;" onsubmit="doKeyAuth(event)">
+        <div class="form-group">
+          <label class="form-label" for="key-inp">Existing Sovereign API Key</label>
+          <input type="password" id="key-inp" class="form-input" placeholder="sk-wolinet-..." required autocomplete="off" />
+        </div>
+        <button type="submit" id="btn-key" class="btn btn-primary btn-full">Authorize with Key</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var S = {
+    authed: false,
+    user: null,
+    key: null,
+    masked: true,
+    hist: [],
+    model: '__DEFAULT_MODEL__'
+  };
+
+  window.navTo = function(id, el) {
+    document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+    var p = document.getElementById('panel-' + id);
+    if (p) p.classList.add('active');
+    if (el) el.classList.add('active');
+    if (id === 'models') loadModels();
+    if (id === 'status') loadStatus();
+    if (id === 'keys') loadKeys();
+    if (id === 'reference') mountScalar();
+  };
+
+  async function initSession() {
+    try {
+      var token = localStorage.getItem('token');
+      var storedKey = localStorage.getItem('wlkey') || localStorage.getItem('wolinet_api_key');
+      var h = {};
+      if (token) h['Authorization'] = 'Bearer ' + token;
+      else if (storedKey) h['Authorization'] = 'Bearer ' + storedKey;
+      var r = await fetch('/api/wolinet/auth/session', { credentials: 'include', headers: h });
+      if (r.ok) {
+        var d = await r.json();
+        if (d.authenticated && d.user) {
+          applyAuth(d.user, d.api_key, d.token || token, d.credits);
+          return;
+        }
+      }
+    } catch(e) {}
+    applyGuest();
+  }
+
+  function applyAuth(user, key, token, credits) {
+    S.authed = true;
+    S.user = user;
+    S.key = key;
+    if (token) localStorage.setItem('token', token);
+    if (key) {
+      localStorage.setItem('wlkey', key);
+      localStorage.setItem('wolinet_api_key', key);
+    }
+    document.getElementById('badge-guest').style.display = 'none';
+    document.getElementById('badge-user').style.display = 'inline-flex';
+    document.getElementById('hdr-uname').textContent = user.name || 'Developer';
+    document.getElementById('hdr-guest-btns').style.display = 'none';
+    document.getElementById('hdr-signout').style.display = 'inline-flex';
+    document.getElementById('ov-guest').style.display = 'none';
+    document.getElementById('ov-key').style.display = 'block';
+    document.getElementById('ov-credits').style.display = 'grid';
+    document.getElementById('keys-noauth').style.display = 'none';
+    document.getElementById('keys-content').style.display = 'block';
+    updateKeyEls();
+    if (credits) updateCredits(credits);
+    renderQS();
+    updateScalar(key);
+  }
+
+  function applyGuest() {
+    S.authed = false;
+    S.user = null;
+    S.key = null;
+    document.getElementById('badge-guest').style.display = 'inline-flex';
+    document.getElementById('badge-user').style.display = 'none';
+    document.getElementById('hdr-guest-btns').style.display = 'flex';
+    document.getElementById('hdr-signout').style.display = 'none';
+    document.getElementById('ov-guest').style.display = 'block';
+    document.getElementById('ov-key').style.display = 'none';
+    document.getElementById('ov-credits').style.display = 'none';
+    document.getElementById('keys-noauth').style.display = 'block';
+    document.getElementById('keys-content').style.display = 'none';
+    renderQS();
+    updateScalar('');
+  }
+
+  function updateCredits(c) {
+    document.getElementById('ov-alloc').textContent = '$' + parseFloat(c.allocated || 25).toFixed(2);
+    document.getElementById('ov-spent').textContent = '$' + parseFloat(c.spent || 0).toFixed(2);
+    document.getElementById('ov-rem').textContent = '$' + parseFloat(c.remaining || 25).toFixed(2);
+  }
+
+  function updateKeyEls() {
+    var k = S.key || '';
+    var masked = k.length > 10 ? k.slice(0, 6) + '••••••••' + k.slice(-4) : 'sk-••••••••';
+    var val = S.masked ? masked : (k || 'Not available');
+    ['ov-key-code', 'keys-code'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = val;
+    });
+  }
+
+  window.ovToggle = function() { S.masked = !S.masked; updateKeyEls(); };
+  window.keysToggle = function() { S.masked = !S.masked; updateKeyEls(); };
+
+  window.copyKey = async function() {
+    if (!S.key) return;
+    try {
+      await navigator.clipboard.writeText(S.key);
+      ['ov-key-code', 'keys-code'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var orig = el.textContent;
+        el.textContent = '✓ Copied to clipboard!';
+        el.style.color = 'var(--green)';
+        setTimeout(function() { el.textContent = orig; el.style.color = ''; }, 1500);
+      });
+    } catch(e) {}
+  };
+
+  window.rollKey = async function() {
+    if (!confirm('Are you sure you want to regenerate your sovereign API key? Any applications using your current key will need to be updated.')) return;
+    try {
+      var r = await fetch('/api/wolinet/auth/regenerate-key', {
+        method: 'POST',
+        credentials: 'include',
+        headers: S.key ? { 'Authorization': 'Bearer ' + S.key } : {}
+      });
+      if (r.ok) {
+        var d = await r.json();
+        if (d.api_key) {
+          S.key = d.api_key;
+          localStorage.setItem('wlkey', S.key);
+          localStorage.setItem('wolinet_api_key', S.key);
+          updateKeyEls();
+          renderQS();
+          updateScalar(S.key);
+          alert('API key regenerated successfully.');
+        }
+      }
+    } catch(e) {
+      alert('Error regenerating key: ' + e.message);
+    }
+  };
+
+  function renderQS() {
+    var o = window.location.origin;
+    var k = S.key || 'YOUR_SOVEREIGN_API_KEY';
+    var m = S.model;
+    document.getElementById('ov-curl').textContent =
+      'curl ' + o + '/v1/chat/completions \\\n' +
+      '  -H "Authorization: Bearer ' + k + '" \\\n' +
+      '  -H "Content-Type: application/json" \\\n' +
+      '  -d \'{"model": "' + m + '", "messages": [{"role": "user", "content": "Hello Wolinet AI!"}]}\'';
+
+    document.getElementById('ov-python').textContent =
+      'from openai import OpenAI\n\n' +
+      'client = OpenAI(\n' +
+      '    api_key="' + k + '",\n' +
+      '    base_url="' + o + '/v1"\n' +
+      ')\n\n' +
+      'response = client.chat.completions.create(\n' +
+      '    model="' + m + '",\n' +
+      '    messages=[{"role": "user", "content": "Hello Wolinet AI!"}]\n' +
+      ')\n' +
+      'print(response.choices[0].message.content)';
+  }
+
+  var scalarMounted = false;
+  function mountScalar() {
+    if (scalarMounted) return;
+    scalarMounted = true;
+    var s = document.createElement('script');
+    s.src = '__SCALAR_JS_URL__';
+    document.body.appendChild(s);
+  }
+
+  function updateScalar(token) {
+    var el = document.getElementById('api-reference');
+    if (!el) return;
+    var cfg = {
+      theme: 'deepSpace',
+      darkMode: true,
+      layout: 'sidebar',
+      showSidebar: true,
+      showDeveloperTools: 'never',
+      telemetry: false,
+      agent: { disabled: true },
+      defaultHttpClient: { targetKey: 'python', clientKey: 'requests' },
+      servers: [
+        { url: window.location.origin, description: 'Wolinet AI Sovereign Gateway (Current Origin)' },
+        { url: '/', description: 'Root Relative' }
+      ]
+    };
+    if (token) {
+      cfg.authentication = {
+        preferredSecurityScheme: 'bearerAuth',
+        securitySchemes: { bearerAuth: { token: token } },
+        apiKey: { token: token },
+        http: { bearer: { token: token } }
+      };
+    } else {
+      cfg.authentication = {
+        preferredSecurityScheme: 'bearerAuth',
+        securitySchemes: { bearerAuth: { token: '' } }
+      };
+    }
+    el.dataset.configuration = JSON.stringify(cfg);
+  }
+
+  var modelsLoaded = false;
+  async function loadModels() {
+    if (modelsLoaded) return;
+    modelsLoaded = true;
+    var wrap = document.getElementById('models-list');
+    try {
+      var h = {};
+      if (S.key) h['Authorization'] = 'Bearer ' + S.key;
+      var r = await fetch('/v1/models', { credentials: 'include', headers: h });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var d = await r.json();
+      var models = d.data || [];
+      if (!models.length) {
+        wrap.innerHTML = '<div class="empty-state">No models loaded. Start inference or load models via CLI.</div>';
+        return;
+      }
+      wrap.innerHTML = models.map(function(m) {
+        return '<div class="model-item"><div><div class="model-name">' + m.id + '</div><div class="model-meta">Mode: ' + (m.object || 'chat') + ' &bull; Owned by: ' + (m.owned_by || 'wolinet') + '</div></div><span class="tag tag-green">Active</span></div>';
+      }).join('');
+    } catch(e) {
+      wrap.innerHTML = '<div class="empty-state">Could not fetch models.<p>' + e.message + '</p></div>';
+    }
+  }
+
+  var statusLoaded = false;
+  async function loadStatus() {
+    if (statusLoaded) return;
+    statusLoaded = true;
+    var wrap = document.getElementById('status-wrap');
+    try {
+      var h = {};
+      if (S.key) h['Authorization'] = 'Bearer ' + S.key;
+      var r = await fetch('/wolinet/status', { credentials: 'include', headers: h });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var d = await r.json();
+      var html = '<div class="g2" style="margin-bottom:16px;">';
+      if (d.status) html += '<div class="stat-card"><div class="stat-label">System Status</div><div class="stat-value" style="font-size:18px; color:var(--green);">' + d.status + '</div></div>';
+      if (d.uptime) html += '<div class="stat-card"><div class="stat-label">Gateway Uptime</div><div class="stat-value" style="font-size:18px;">' + d.uptime + '</div></div>';
+      if (d.default_model) html += '<div class="stat-card"><div class="stat-label">Default Model</div><div class="stat-value" style="font-size:18px; color:var(--cyan);">' + d.default_model + '</div></div>';
+      if (d.models_loaded != null) html += '<div class="stat-card"><div class="stat-label">Active Models</div><div class="stat-value" style="font-size:18px;">' + d.models_loaded + '</div></div>';
+      html += '</div><div class="card"><div class="card-title">Telemetry Raw Diagnostics</div><pre style="background:var(--bg-0); padding:14px; border-radius:8px; font-family:var(--mono); font-size:11.5px; color:var(--cyan); overflow:auto; max-height:400px;">' + JSON.stringify(d, null, 2) + '</pre></div>';
+      wrap.innerHTML = html;
+    } catch(e) {
+      wrap.innerHTML = '<div class="empty-state">Cluster telemetry unavailable.<p>' + e.message + '</p></div>';
+    }
+  }
+
+  async function loadKeys() {
+    if (!S.authed) return;
+    var wrap = document.getElementById('keys-list');
+    wrap.innerHTML = '<div class="loading"><span class="spinner"></span> Loading keys...</div>';
+    try {
+      var r = await fetch('/api/wolinet/keys', {
+        credentials: 'include',
+        headers: S.key ? { 'Authorization': 'Bearer ' + S.key } : {}
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var d = await r.json();
+      var keys = d.keys || d.data || [];
+      if (!keys.length) {
+        wrap.innerHTML = '<div class="empty-state">No additional keys created yet.</div>';
+        return;
+      }
+      var rows = keys.map(function(k) {
+        var disp = k.key || k.token || '';
+        var budget = k.max_budget != null ? '$' + parseFloat(k.max_budget).toFixed(2) : '&mdash;';
+        var spent = k.spend != null ? '$' + parseFloat(k.spend).toFixed(2) : '&mdash;';
+        var tag = '<span class="tag tag-green">Active</span>';
+        return '<tr><td>' + disp + '</td><td>' + (k.key_alias || '&mdash;') + '</td><td>' + budget + '</td><td>' + spent + '</td><td>' + (k.created_at || '&mdash;') + '</td><td>' + tag + '</td></tr>';
+      }).join('');
+      wrap.innerHTML = '<table class="key-table"><thead><tr><th>Key</th><th>Alias</th><th>Budget</th><th>Spent</th><th>Created</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    } catch(e) {
+      wrap.innerHTML = '<div class="empty-state">Could not load keys.<p>' + e.message + '</p></div>';
+    }
+  }
+
+  window.createKey = async function() {
+    var alias = document.getElementById('nk-alias').value.trim();
+    var budget = parseFloat(document.getElementById('nk-budget').value) || 25.0;
+    var expiry = parseInt(document.getElementById('nk-expiry').value) || 30;
+    var al = document.getElementById('keys-alert');
+    al.className = 'alert'; al.style.display = 'none';
+
+    try {
+      var body = { key_alias: alias, max_budget: budget, duration: expiry + 'd' };
+      var r = await fetch('/api/wolinet/keys', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': S.key ? 'Bearer ' + S.key : ''
+        },
+        body: JSON.stringify(body)
+      });
+      var d = await r.json();
+      if (r.ok && d.key) {
+        al.textContent = '✓ New Key Generated: ' + d.key;
+        al.className = 'alert success';
+        al.style.display = 'block';
+        document.getElementById('nk-alias').value = '';
+        loadKeys();
+      } else {
+        al.textContent = d.error || 'Failed to create key.';
+        al.className = 'alert error';
+        al.style.display = 'block';
+      }
+    } catch(e) {
+      al.textContent = 'Network error: ' + e.message;
+      al.className = 'alert error';
+      al.style.display = 'block';
+    }
+  };
+
+  window.openAuth = function(tab) {
+    document.getElementById('auth-modal').classList.add('open');
+    switchTab(tab || 'signin');
+    clearAuthAlert();
+  };
+
+  window.closeAuth = function() {
+    document.getElementById('auth-modal').classList.remove('open');
+  };
+
+  window.closeAuthBd = function(e) {
+    if (e.target && e.target.id === 'auth-modal') closeAuth();
+  };
+
+  window.switchTab = function(tab) {
+    ['signin', 'signup', 'key'].forEach(function(t) {
+      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+      document.getElementById('form-' + t).style.display = (t === tab ? 'block' : 'none');
+    });
+    clearAuthAlert();
+  };
+
+  function showAuthAlert(msg, err) {
+    var el = document.getElementById('auth-alert');
+    el.textContent = msg;
+    el.className = 'alert ' + (err ? 'error' : 'success');
+    el.style.display = 'block';
+  }
+
+  function clearAuthAlert() {
+    var el = document.getElementById('auth-alert');
+    el.style.display = 'none';
+    el.className = 'alert';
+  }
+
+  window.doSignIn = async function(e) {
+    e.preventDefault();
+    var email = document.getElementById('si-email').value.trim();
+    var pass = document.getElementById('si-pass').value;
+    var btn = document.getElementById('btn-signin');
+    btn.disabled = true; clearAuthAlert();
+
+    try {
+      var r = await fetch('/api/wolinet/auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: pass })
+      });
+      var d = await r.json();
+      if (r.ok && d.authenticated) {
+        showAuthAlert('Sign in successful! Connecting session...', false);
+        setTimeout(function() {
+          applyAuth(d.user, d.api_key, d.token, d.credits);
+          closeAuth();
+          loadKeys();
+        }, 350);
+      } else {
+        showAuthAlert(d.error || 'Authentication failed. Please verify email and password.', true);
+      }
+    } catch(ex) {
+      showAuthAlert('Network error: ' + ex.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  window.doSignUp = async function(e) {
+    e.preventDefault();
+    var name = document.getElementById('su-name').value.trim();
+    var email = document.getElementById('su-email').value.trim();
+    var pass = document.getElementById('su-pass').value;
+    var btn = document.getElementById('btn-signup');
+    btn.disabled = true; clearAuthAlert();
+
+    try {
+      var r = await fetch('/api/wolinet/auth/register', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, email: email, password: pass })
+      });
+      var d = await r.json();
+      if (r.ok && d.authenticated) {
+        showAuthAlert('Account created! Allocated $25 sovereign credits...', false);
+        setTimeout(function() {
+          applyAuth(d.user, d.api_key, d.token, d.credits);
+          closeAuth();
+          loadKeys();
+        }, 400);
+      } else {
+        showAuthAlert(d.error || 'Registration failed.', true);
+      }
+    } catch(ex) {
+      showAuthAlert('Network error: ' + ex.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  window.doKeyAuth = async function(e) {
+    e.preventDefault();
+    var key = document.getElementById('key-inp').value.trim();
+    var btn = document.getElementById('btn-key');
+    if (!key.startsWith('sk-')) {
+      showAuthAlert('Key must begin with sk-...', true);
+      return;
+    }
+    btn.disabled = true; clearAuthAlert();
+
+    try {
+      var r = await fetch('/api/wolinet/auth/session', {
+        headers: { 'Authorization': 'Bearer ' + key }
+      });
+      var d = await r.json();
+      if (r.ok && d.authenticated) {
+        localStorage.setItem('wlkey', key);
+        localStorage.setItem('wolinet_api_key', key);
+        applyAuth(d.user, key, null, d.credits);
+        closeAuth();
+      } else {
+        showAuthAlert('Key could not be validated on sovereign cluster.', true);
+      }
+    } catch(ex) {
+      showAuthAlert('Network error: ' + ex.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  window.doLogout = async function() {
+    try {
+      await fetch('/api/wolinet/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch(e) {}
+    localStorage.removeItem('wlkey');
+    localStorage.removeItem('wolinet_api_key');
+    localStorage.removeItem('token');
+    applyGuest();
+  };
+
+  window.toggleAsst = function() {
+    document.getElementById('asst-drawer').classList.toggle('open');
+  };
+
+  window.clearAsst = function() {
+    S.hist = [];
+    document.getElementById('asst-msgs').innerHTML =
+      '<div class="asst-msg assistant"><div class="asst-msg-hdr"><span>🤖</span> Wolinet AI Sovereign Assistant</div><div>Conversation cleared. How can I assist you with your sovereign integration today?</div></div>';
+  };
+
+  function asstMsg(role, html) {
+    var c = document.getElementById('asst-msgs');
+    var d = document.createElement('div');
+    d.className = 'asst-msg ' + role;
+    if (role === 'assistant') {
+      d.innerHTML = '<div class="asst-msg-hdr"><span>🤖</span> Wolinet AI Sovereign Assistant</div>' + html;
+    } else {
+      d.textContent = html;
+    }
+    c.appendChild(d);
+    c.scrollTop = c.scrollHeight;
+  }
+
+  window.qp = function(topic) {
+    var o = window.location.origin;
+    var k = S.key || 'YOUR_SOVEREIGN_API_KEY';
+    var m = S.model;
+    var prompts = {
+      'chat': {
+        u: 'How do I run chat completions?',
+        a: '<div><b>POST /v1/chat/completions</b> &mdash; OpenAI-compatible completions powered by sovereign model <code>' + m + '</code>.<br><br><pre>curl ' + o + '/v1/chat/completions \\\n  -H "Authorization: Bearer ' + k + '" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"model":"' + m + '","messages":[{"role":"user","content":"Hello!"}]}\'</pre></div>'
+      },
+      'python': {
+        u: 'Show me Python SDK quickstart',
+        a: '<div><b>Python SDK Drop-in:</b><pre>from openai import OpenAI\n\nclient = OpenAI(api_key="' + k + '", base_url="' + o + '/v1")\nresp = client.chat.completions.create(\n    model="' + m + '",\n    messages=[{"role":"user","content":"Hello!"}]\n)\nprint(resp.choices[0].message.content)</pre></div>'
+      },
+      'auth': {
+        u: 'How do sovereign API keys work?',
+        a: S.authed
+          ? '<div><b>Your Active API Key:</b> <code>' + k + '</code><br>Include header <code>Authorization: Bearer ' + k + '</code> with your requests.</div>'
+          : '<div><b>Authentication:</b><br>Create an account to obtain an API key with $25.00 sovereign credits.<br><br><button class=\"btn btn-primary btn-sm\" onclick=\"openAuth(&apos;signin&apos;)\">Sign In / Register</button></div>'
+      },
+      'guardrails': {
+        u: 'How do I apply safety guardrails?',
+        a: '<div><b>POST /guardrails/apply_guardrail</b> &mdash; Validate payloads against sovereign content policies.<br><br><pre>curl ' + o + '/guardrails/apply_guardrail \\\n  -H "Authorization: Bearer ' + k + '" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"guardrail_name":"default","text":"Test input text"}\'</pre></div>'
+      },
+      'status': {
+        u: 'What is the sovereign cluster status?',
+        a: '<div><b>GET /wolinet/status</b> &mdash; Check gateway health, active models, and cluster metrics.<br><br><pre>curl ' + o + '/wolinet/status</pre></div>'
+      }
+    };
+    var p = prompts[topic];
+    if (!p) return;
+    asstMsg('user', p.u);
+    asstMsg('assistant', p.a);
+  };
+
+  window.submitAsst = async function(e) {
+    e.preventDefault();
+    var inp = document.getElementById('asst-inp');
+    var send = document.getElementById('asst-send');
+    var q = (inp.value || '').trim();
+    if (!q) return;
+    inp.value = '';
+    asstMsg('user', q);
+    send.disabled = true;
+
+    var tid = 'tk-' + Date.now();
+    var c = document.getElementById('asst-msgs');
+    var td = document.createElement('div');
+    td.id = tid;
+    td.className = 'asst-msg assistant';
+    td.innerHTML = '<div class="asst-msg-hdr"><span>🤖</span> Wolinet AI Sovereign Assistant</div><div class="loading"><span class="spinner"></span> Reasoning across sovereign cluster...</div>';
+    c.appendChild(td);
+    c.scrollTop = c.scrollHeight;
+
+    var o = window.location.origin;
+    var sys = 'You are Wolinet AI Sovereign Assistant, an expert developer guide for the self-hosted Wolinet AI platform.\n' +
+      'Origin: ' + o + '\n' +
+      'User: ' + (S.authed ? (S.user && S.user.name || 'Developer') + ' (' + (S.user && S.user.email || '') + ')' : 'Guest') + '\n' +
+      'Default model: ' + S.model + '\n' +
+      'Key endpoints: POST /v1/chat/completions, POST /v1/embeddings, POST /guardrails/apply_guardrail, GET /v1/models, GET /wolinet/status.\n' +
+      'Provide concise, accurate, production-ready code examples in markdown fenced blocks.';
+
+    S.hist.push({ role: 'user', content: q });
+    if (S.hist.length > 8) S.hist = S.hist.slice(-8);
+
+    try {
+      var r = await fetch('/api/wolinet/chat', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': S.key ? 'Bearer ' + S.key : ''
+        },
+        body: JSON.stringify({
+          model: S.model,
+          messages: [{ role: 'system', content: sys }].concat(S.hist),
+          max_tokens: 700,
+          temperature: 0.2
+        })
+      });
+      var tk = document.getElementById(tid);
+      if (tk) tk.remove();
+
+      if (r.ok) {
+        var d = await r.json();
+        var reply = (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || 'No response generated.';
+        S.hist.push({ role: 'assistant', content: reply });
+        var fmt = reply
+          .replace(/```([a-z0-9_-]*)\n([\s\S]*?)```/g, '<pre><code class="lang-$1">$2</code></pre>')
+          .replace(/`([^`]+)`/g, '<code>$1</code>')
+          .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+          .replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+
+        var eps = reply.match(/(POST|GET|DELETE|PUT)\s+(\/[a-zA-Z0-9_\-\.\/\:]+)/g);
+        var btns = '';
+        if (eps) {
+          var uniq = [...new Set(eps)].slice(0, 3);
+          btns = '<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">' +
+            uniq.map(function(ep) {
+              var pts = ep.split(/\s+/);
+              return '<a class="ep-btn" onclick="navTo(&quot;reference&quot;, document.querySelector(&quot;[onclick*=reference]&quot;)); window.location.hash=&quot;#' + pts[0] + pts[1] + '&quot;">' + ep + ' &rarr;</a>';
+            }).join('') +
+            '</div>';
+        }
+        asstMsg('assistant', '<div>' + fmt + btns + '</div>');
+      } else {
+        var err = await r.json().catch(function() { return {}; });
+        var msg = err.error && (err.error.message || err.error) || ('HTTP ' + r.status);
+        asstMsg('assistant', '<div style="color:var(--red);">⚠️ Assistant Error: ' + msg + '</div>');
+      }
+    } catch(ex) {
+      var tk2 = document.getElementById(tid);
+      if (tk2) tk2.remove();
+      asstMsg('assistant', '<div style="color:var(--red);">⚠️ Connection Error: ' + ex.message + '</div>');
+    } finally {
+      send.disabled = false;
+    }
+  };
+
+  initSession();
+  renderQS();
+})();
+</script>
+</body>
+</html>
