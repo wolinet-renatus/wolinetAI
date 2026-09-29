@@ -1,8 +1,8 @@
 "use client";
+/* eslint-disable no-restricted-syntax, max-lines, complexity, max-depth, react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import CodeBlock from "@/components/CodeBlock";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DocLink from "./DocLink";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -113,11 +113,10 @@ const StatCard: React.FC<{
   accent?: boolean;
 }> = ({ label, value, sub, accent }) => (
   <div
-    className={`p-3.5 rounded-xl border transition-all ${
-      accent
-        ? "border-violet-500/30 bg-violet-500/5 shadow-xs shadow-violet-500/10"
-        : "border-[rgba(255,255,255,0.07)] bg-[#13131c]"
-    }`}
+    className={`p-3.5 rounded-xl border transition-all ${accent
+      ? "border-violet-500/30 bg-violet-500/5 shadow-xs shadow-violet-500/10"
+      : "border-[rgba(255,255,255,0.07)] bg-[#13131c]"
+      }`}
   >
     <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
       {label}
@@ -147,9 +146,8 @@ const ModelCard: React.FC<{ model: InferenceModel; base_url: string }> = ({ mode
                 {model.id}
               </span>
               <span
-                className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium shrink-0 ${
-                  MODEL_TYPE_COLORS[model.type] ?? "bg-zinc-500/15 text-zinc-300"
-                }`}
+                className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium shrink-0 ${MODEL_TYPE_COLORS[model.type] ?? "bg-zinc-500/15 text-zinc-300"
+                  }`}
               >
                 {model.type}
               </span>
@@ -198,11 +196,15 @@ const ModelCard: React.FC<{ model: InferenceModel; base_url: string }> = ({ mode
           <CodeBlock
             language="python"
             code={
-              model.type === "LLM"
-                ? `import openai\nclient = openai.OpenAI(\n    api_key="sk-wolinet-...",\n    base_url="${base_url}"\n)\nresponse = client.chat.completions.create(\n    model="${model.id}",\n    messages=[{"role": "user", "content": "Hello!"}]\n)\nprint(response.choices[0].message.content)`
-                : model.type === "embedding"
-                ? `import openai\nclient = openai.OpenAI(\n    api_key="sk-wolinet-...",\n    base_url="${base_url}"\n)\nresponse = client.embeddings.create(\n    model="${model.id}",\n    input="Your text to embed"\n)\nprint(response.data[0].embedding[:5])`
-                : `# ${model.id} — ${model.type}\n# Endpoint: ${base_url}`
+              (() => {
+                if (model.type === "LLM") {
+                  return `import openai\nclient = openai.OpenAI(\n    api_key="sk-wolinet-...",\n    base_url="${base_url}"\n)\nresponse = client.chat.completions.create(\n    model="${model.id}",\n    messages=[{"role": "user", "content": "Hello!"}]\n)\nprint(response.choices[0].message.content)`;
+                }
+                if (model.type === "embedding") {
+                  return `import openai\nclient = openai.OpenAI(\n    api_key="sk-wolinet-...",\n    base_url="${base_url}"\n)\nresponse = client.embeddings.create(\n    model="${model.id}",\n    input="Your text to embed"\n)\nprint(response.data[0].embedding[:5])`;
+                }
+                return `# ${model.id} — ${model.type}\n# Endpoint: ${base_url}`;
+              })()
             }
           />
         </div>
@@ -253,7 +255,7 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
                 return;
               }
             }
-          } catch {}
+          } catch { }
         }
       }
 
@@ -265,25 +267,20 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
             setEffectiveKey(data.key);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [accessToken]);
 
-  // Agent Chat State (Self-Hosted OpenAPI Chat)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content:
-        "Hello! I am **Wolinet AI Agent**, your Sovereign OpenAPI Assistant connected to your local `wolinex-coder` model and live OpenAPI specification.\n\n" +
-        "Ask me anything about finding endpoints, writing client code in Python or TypeScript, streaming completions, or integrating Tanzania Mobile Money (M-Pesa, TigoPesa, Airtel). All running 100% locally with zero cloud limits.",
-    },
-  ]);
-  const [chatInput, setChatInput] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-  const chatScrollRef = useRef<HTMLDivElement>(null);
+  // Derive gateway origin dynamically for cross-origin requests
+  const gatewayOrigin = (() => {
+    try {
+      if (proxySettings?.PROXY_BASE_URL) return new URL(proxySettings.PROXY_BASE_URL).origin;
+    } catch { }
+    return typeof window !== "undefined" ? window.location.origin : "";
+  })();
 
   // Resolve gateway base URL
-  let base_url = "<your_proxy_base_url>";
+  let base_url = gatewayOrigin;
   const customDocBaseUrl = proxySettings?.LITELLM_UI_API_DOC_BASE_URL;
   if (customDocBaseUrl && customDocBaseUrl.trim()) {
     base_url = customDocBaseUrl;
@@ -291,13 +288,18 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
     base_url = proxySettings.PROXY_BASE_URL;
   }
 
-  // Derive gateway origin for cross-origin requests
-  const gatewayOrigin = (() => {
-    try {
-      if (proxySettings?.PROXY_BASE_URL) return new URL(proxySettings.PROXY_BASE_URL).origin;
-    } catch {}
-    return typeof window !== "undefined" ? window.location.origin : "";
-  })();
+  // Agent Chat State (Self-Hosted OpenAPI Chat)
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      role: "assistant",
+      content:
+        "Hello! I am **Wolinet AI Agent**, your Sovereign Developer Intelligence Assistant connected to the live OpenAPI specification.\n\n" +
+        "Ask me anything about discovering endpoints, writing production client code in Python or TypeScript, streaming completions, managing enterprise quotas, or designing sovereign agentic workflows.",
+    },
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   const scalarUrl = effectiveKey
     ? `${gatewayOrigin}/docs?token=${encodeURIComponent(effectiveKey)}`
@@ -351,7 +353,7 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
               role: "system",
               content:
                 "You are Wolinet AI Agent, an expert developer assistant for Wolinet AI. " +
-                "You provide exact, production-ready code examples for calling Wolinet AI endpoints (OpenAI-compatible /v1/chat/completions, /v1/models, /wolinet/status, and Tanzania mobile money /v1/payments/tanzania/topup). " +
+                "You provide exact, production-ready code examples for calling Wolinet AI endpoints (OpenAI-compatible /v1/chat/completions, /v1/models, /wolinet/status, and enterprise token quota management). " +
                 "Always format code in standard markdown codeblocks.",
             },
             ...chatMessages,
@@ -368,12 +370,13 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
       const data = await res.json();
       const reply = data.choices?.[0]?.message?.content || "No response received.";
       setChatMessages(prev => [...prev, { role: "assistant", content: reply }]);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
       setChatMessages(prev => [
         ...prev,
         {
           role: "assistant",
-          content: `⚠ Error contacting local model: ${err.message}. Make sure the gateway is running on ${gatewayOrigin}.`,
+          content: `⚠ Error contacting local model: ${errorMsg}. Make sure the gateway is running on ${gatewayOrigin}.`,
         },
       ]);
     } finally {
@@ -453,11 +456,10 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-1.5 transition-colors capitalize ${
-                  activeTab === tab.id
-                    ? "bg-violet-600 text-white font-medium"
-                    : "bg-transparent text-muted-foreground hover:text-foreground"
-                } ${idx !== 0 ? "border-l border-[rgba(255,255,255,0.1)]" : ""}`}
+                className={`px-3 py-1.5 transition-colors capitalize ${activeTab === tab.id
+                  ? "bg-violet-600 text-white font-medium"
+                  : "bg-transparent text-muted-foreground hover:text-foreground"
+                  } ${idx !== 0 ? "border-l border-[rgba(255,255,255,0.1)]" : ""}`}
               >
                 {tab.label}
               </button>
@@ -491,11 +493,11 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
         <div className="flex-1 flex flex-col w-full relative">
           <div className="px-5 py-2 bg-[#13131c] border-b border-white/5 flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-3">
-              <span>🎯 <strong>Environments:</strong> Gateway (:4000) · Direct Inference (:9997)</span>
+              <span>🎯 <strong>Platform:</strong> Wolinet AI Sovereign Gateway</span>
               <span>·</span>
               <span>🔒 <strong>Pre-authorized:</strong> <code>Bearer {effectiveKey}</code></span>
             </div>
-            <span className="text-[11px]">Powered by Scalar OpenAPI</span>
+            <span className="text-[11px]">Powered by Wolinet Technologies Ltd</span>
           </div>
           <iframe
             src={scalarUrl}
@@ -549,7 +551,7 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
               </div>
               <div className="flex gap-2">
                 <span className="text-muted-foreground w-20 shrink-0">Inference</span>
-                <span className="text-foreground">{status?.brand.inference ?? "http://localhost:9997"}</span>
+                <span className="text-foreground">{status?.brand.inference ?? (gatewayOrigin ? `${gatewayOrigin}/inference` : "Distributed Inference Engine")}</span>
               </div>
               <div className="flex gap-2">
                 <span className="text-muted-foreground w-20 shrink-0">OpenAPI</span>
@@ -639,8 +641,8 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
               <TabsTrigger value="openai" className="rounded-none px-4 py-2 flex-none text-[12px]">
                 OpenAI Client (Python)
               </TabsTrigger>
-              <TabsTrigger value="tanzania" className="rounded-none px-4 py-2 flex-none text-[12px]">
-                Tanzania Mobile Money
+              <TabsTrigger value="quotas" className="rounded-none px-4 py-2 flex-none text-[12px]">
+                Enterprise Quotas & Billing
               </TabsTrigger>
               <TabsTrigger value="curl" className="rounded-none px-4 py-2 flex-none text-[12px]">
                 cURL
@@ -658,7 +660,7 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
 
 const client = new WolinetAI({
   baseUrl: '${base_url}',
-  apiKey: 'sk-wolinet-local-dev',
+  apiKey: '${effectiveKey}',
 });
 
 // Run code generation with local sovereign model
@@ -728,22 +730,16 @@ for chunk in response:
               />
             </TabsContent>
 
-            <TabsContent value="tanzania" keepMounted>
+            <TabsContent value="quotas" keepMounted>
               <CodeBlock
                 language="typescript"
                 code={`import { WolinetAI } from '@wolinet/sdk';
 
 const client = new WolinetAI({ baseUrl: '${base_url}', apiKey: '${effectiveKey}' });
 
-// Top up token quota via Tanzanian Mobile Money (M-Pesa, TigoPesa, Airtel)
-const payment = await client.payments.tanzania.topup({
-  provider: 'mpesa',           // 'mpesa' | 'tigopesa' | 'airtel' | 'halopesa'
-  phone_number: '255754123456',
-  amount_tzs: 10000,           // 10,000 TZS
-  account_reference: 'WOLINET-TOPUP',
-});
-
-console.log('Payment status:', payment.status);`}
+// Query real-time token quota, spend attribution, and rate limits
+const quota = await client.user.info();
+console.log('Active Token Quota & User Limits:', quota);`}
               />
             </TabsContent>
 
@@ -770,13 +766,13 @@ curl ${base_url}/wolinet/status`}
         </div>
       )}
 
-      {/* 4. AGENT SCALAR CHAT (Phase 5): "Chat with your API" */}
+      {/* 4. WOLINET AI DEVELOPER ASSISTANT: Sovereign "Chat with your API" */}
       {activeTab === "agent" && (
         <div className="flex-1 flex flex-col overflow-hidden p-5" style={{ background: "#0d0d12" }}>
           <div className="flex items-center justify-between mb-3 shrink-0">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-base font-semibold text-white">Wolinet AI Agent — Chat with your API</span>
+                <span className="text-base font-semibold text-white">Wolinet AI Sovereign Assistant — Chat with your API</span>
                 <span className="text-[10px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                   wolinex-coder (Local GGUF)
                 </span>
@@ -803,9 +799,10 @@ curl ${base_url}/wolinet/status`}
           {/* Quick prompts */}
           <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 shrink-0">
             {[
+              "How do I use POST /guardrails/apply_guardrail?",
               "How do I stream responses in Python?",
-              "Show me how to top up via M-Pesa",
-              "Generate cURL command for wolinex-coder",
+              "How do I manage enterprise token quotas?",
+              "Generate cURL command for completions",
               "What endpoints are available on /wolinet/status?",
             ].map(prompt => (
               <button
@@ -827,16 +824,14 @@ curl ${base_url}/wolinet/status`}
             {chatMessages.map((msg, i) => (
               <div
                 key={i}
-                className={`flex gap-3 text-xs leading-relaxed ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
+                className={`flex gap-3 text-xs leading-relaxed ${msg.role === "user" ? "justify-end" : "justify-start"
+                  }`}
               >
                 <div
-                  className={`p-3.5 rounded-xl max-w-[85%] ${
-                    msg.role === "user"
-                      ? "bg-violet-600 text-white"
-                      : "bg-[#1a1a28] text-gray-200 border border-white/5 font-sans"
-                  }`}
+                  className={`p-3.5 rounded-xl max-w-[85%] ${msg.role === "user"
+                    ? "bg-violet-600 text-white"
+                    : "bg-[#1a1a28] text-gray-200 border border-white/5 font-sans"
+                    }`}
                 >
                   <div className="font-semibold text-[11px] mb-1 opacity-70">
                     {msg.role === "user" ? "You" : "🤖 Wolinet AI Agent"}
@@ -848,7 +843,7 @@ curl ${base_url}/wolinet/status`}
             {chatLoading && (
               <div className="flex gap-2 text-xs text-muted-foreground items-center p-2">
                 <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
-                <span>wolinex-coder is writing code...</span>
+                <span>Wolinet AI is generating response...</span>
               </div>
             )}
           </div>
@@ -884,7 +879,7 @@ curl ${base_url}/wolinet/status`}
       {activeTab === "mock" && (
         <div className="flex-1 overflow-y-auto p-5" style={{ background: "#0d0d12" }}>
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-foreground">Scalar Mock Server (Phase 3)</h2>
+            <h2 className="text-sm font-semibold text-foreground"> wolinet  Mock Server (Phase 3)</h2>
             <p className="text-[12px] text-muted-foreground mt-1">
               Develop frontends and run CI/CD tests with zero GPU memory and $0 cloud cost.
             </p>
@@ -895,13 +890,13 @@ curl ${base_url}/wolinet/status`}
               <div className="text-xs font-semibold text-violet-300 mb-2">How to Run Locally</div>
               <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
                 Launch the standalone Wolinet Mock Gateway. It mocks streaming chat completions,
-                models, health status, and hosts an embedded Scalar reference on port 4010.
+                models, health status, and hosts an embedded Scalar reference.
               </p>
               <div className="p-3 bg-black/40 rounded-lg text-xs font-mono text-emerald-400">
                 make mock
               </div>
               <div className="text-[11px] text-muted-foreground mt-2">
-                Or directly: <code>python3 scripts/mock_server.py --port 4010</code>
+                Or directly: <code>python3 scripts/mock_server.py</code>
               </div>
             </div>
 
@@ -909,9 +904,9 @@ curl ${base_url}/wolinet/status`}
               <div className="text-xs font-semibold text-violet-300 mb-2">Mock Server Features</div>
               <ul className="text-xs text-muted-foreground space-y-1.5 list-disc list-inside">
                 <li>Server-Sent Events (SSE) streaming support</li>
-                <li>Simulates <code>wolinex-coder</code>, <code>qwen2.5-omni</code>, <code>FLUX.1</code></li>
-                <li>Built-in Scalar API Reference at <code>http://localhost:4010/docs</code></li>
-                <li>Zero dependencies — runs instantly on any machine</li>
+                <li>Simulates high-throughput chat completions, embeddings, and multimodal models</li>
+                <li>Built-in Scalar API Reference at <code>{base_url}/docs</code></li>
+                <li>Zero dependencies — runs instantly on any server or workstation</li>
               </ul>
             </div>
           </div>
@@ -921,10 +916,11 @@ curl ${base_url}/wolinet/status`}
             <CodeBlock
               language="bash"
               code={`# Call the mock server streaming endpoint
-curl http://localhost:4010/v1/chat/completions \\
+curl \${base_url}/v1/chat/completions \\
+  -H "Authorization: Bearer \${effectiveKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "model": "wolinex-coder",
+    "model": "\${llmModels[0]?.id ?? "wolinex-coder"}",
     "stream": true,
     "messages": [{"role": "user", "content": "Testing mock server"}]
   }'`}

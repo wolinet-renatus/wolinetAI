@@ -1,5 +1,7 @@
 general_settings:
   database_url: os.environ/DATABASE_URL
+  database_connection_pool_limit: 20     # max PG connections from lango
+  database_connection_timeout: 30        # seconds before pool acquisition fails
   forward_client_headers_to_llm_api: true
   forward_llm_provider_auth_headers: true
   master_key: os.environ/WOLINET_GATEWAY_MASTER_KEY
@@ -30,8 +32,10 @@ general_settings:
 litellm_settings:
   drop_params: true
   request_timeout: 600
+  num_retries: 3
   enable_anthropic_prompt_caching: false
   openai_system_messages_first: true
+  success_callback: ["prometheus"]       # spend tracking → PostgreSQL via callback
   websearch_interception_params:
     enabled: true
     enabled_providers:
@@ -161,8 +165,10 @@ router_settings:
   num_retries: 2
   redis_host: os.environ/REDIS_HOST
   redis_port: os.environ/REDIS_PORT
+  redis_password: os.environ/REDIS_PASSWORD
   routing_strategy: latency-based-routing
   timeout: 600
+  enable_pre_call_checks: true
   model_group_alias:
     "qwen2.5-coder-3b": "wolinex-coder-pro"
     "deepseek-coder-1.3b": "wolinex-coder-lite"

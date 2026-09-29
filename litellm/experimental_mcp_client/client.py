@@ -22,7 +22,10 @@ from mcp import ClientSession, MCPError, ReadResourceResult, Resource, StdioServ
 from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
-from mcp.shared._stream_protocols import ReadStream, WriteStream
+try:
+    from mcp.shared._stream_protocols import ReadStream, WriteStream
+except ImportError:
+    from anyio.streams.memory import MemoryObjectReceiveStream as ReadStream, MemoryObjectSendStream as WriteStream
 from mcp.shared.message import SessionMessage
 
 _TransportStreams: TypeAlias = tuple[
@@ -32,9 +35,10 @@ _TransportStreams: TypeAlias = tuple[
 _TransportContext: TypeAlias = AbstractAsyncContextManager[_TransportStreams]
 
 
+from mcp import types as mcp_types
+REQUEST_TIMEOUT: Final = getattr(mcp_types, "REQUEST_TIMEOUT", -32000)
 from mcp.types import (
     METHOD_NOT_FOUND,
-    REQUEST_TIMEOUT,
     ClientCapabilities,
     ElicitationCapability,
     FormElicitationCapability,

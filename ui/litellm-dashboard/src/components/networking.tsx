@@ -6721,7 +6721,8 @@ export const getRemainingUsers = async (
   total_teams_remaining: number | null;
 } | null> => {
   try {
-    const url = proxyBaseUrl ? `${proxyBaseUrl}/user/available_users` : `/user/available_users`;
+    const base = proxyBaseUrl || (typeof window !== "undefined" && window.location.origin ? window.location.origin : "http://localhost:4000");
+    const url = `${base}/user/available_users`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -6761,7 +6762,8 @@ export interface LicenseInfo {
 
 export const getLicenseInfo = async (accessToken: string): Promise<LicenseInfo | null> => {
   try {
-    const url = proxyBaseUrl ? `${proxyBaseUrl}/health/license` : `/health/license`;
+    const base = proxyBaseUrl || (typeof window !== "undefined" && window.location.origin ? window.location.origin : "http://localhost:4000");
+    const url = `${base}/health/license`;
 
     const response = await fetch(url, {
       method: "GET",
