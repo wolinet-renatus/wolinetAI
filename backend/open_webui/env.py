@@ -247,18 +247,10 @@ if FROM_INIT_PY:
     FRONTEND_BUILD_DIR = Path(os.getenv('FRONTEND_BUILD_DIR', OPEN_WEBUI_DIR / 'frontend')).resolve()
 
 ####################################
-# Database
+# Database (PostgreSQL only)
 ####################################
 
-# Check if the file exists
-if os.path.exists(f'{DATA_DIR}/ollama.db'):
-    # Rename the file
-    os.rename(f'{DATA_DIR}/ollama.db', f'{DATA_DIR}/webui.db')
-    log.info('Database migrated from Ollama-WebUI successfully.')
-else:
-    pass
-
-DATABASE_URL = os.getenv('DATABASE_URL', f'sqlite:///{DATA_DIR}/webui.db')
+_DEFAULT_WEBUI_DATABASE_URL = 'postgresql://postgres:postgres@127.0.0.1:5433/webui'
 
 DATABASE_TYPE = os.getenv('DATABASE_TYPE')
 DATABASE_USER = os.getenv('DATABASE_USER')
@@ -282,27 +274,31 @@ if all(DB_VARS.values()):
     DATABASE_URL = (
         f'{DB_VARS["db_type"]}://{DB_VARS["db_cred"]}@{DB_VARS["db_host"]}:{DB_VARS["db_port"]}/{DB_VARS["db_name"]}'
     )
-elif DATABASE_TYPE == 'sqlite+sqlcipher' and not os.getenv('DATABASE_URL'):
-    # Handle SQLCipher with local file when DATABASE_URL wasn't explicitly set
-    DATABASE_URL = f'sqlite+sqlcipher:///{DATA_DIR}/webui.db'
+else:
+    DATABASE_URL = os.getenv('WEBUI_DATABASE_URL') or os.getenv('DATABASE_URL') or _DEFAULT_WEBUI_DATABASE_URL
 
-# Replace the postgres:// with postgresql://
 if 'postgres://' in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://')
 
+if 'sqlite' in DATABASE_URL.lower():
+    raise RuntimeError(
+        'SQLite is disabled for Wolinet AI Studio. Point WEBUI_DATABASE_URL at PostgreSQL '
+        f'(default {_DEFAULT_WEBUI_DATABASE_URL}).'
+    )
+
 DATABASE_SCHEMA = os.getenv('DATABASE_SCHEMA', None)
 
-_pool_size_raw = os.getenv('DATABASE_POOL_SIZE')
+_pool_size_raw = os.getenv('DATABASE_POOL_SIZE', '10')
 try:
-    DATABASE_POOL_SIZE = int(_pool_size_raw) if _pool_size_raw else None
+    DATABASE_POOL_SIZE = int(_pool_size_raw) if _pool_size_raw else 10
 except (ValueError, TypeError):
-    DATABASE_POOL_SIZE = None
+    DATABASE_POOL_SIZE = 10
 
-_pool_overflow_raw = os.getenv('DATABASE_POOL_MAX_OVERFLOW', '0')
+_pool_overflow_raw = os.getenv('DATABASE_POOL_MAX_OVERFLOW', '20')
 try:
-    DATABASE_POOL_MAX_OVERFLOW = int(_pool_overflow_raw) if _pool_overflow_raw else 0
+    DATABASE_POOL_MAX_OVERFLOW = int(_pool_overflow_raw) if _pool_overflow_raw else 20
 except (ValueError, TypeError):
-    DATABASE_POOL_MAX_OVERFLOW = 0
+    DATABASE_POOL_MAX_OVERFLOW = 20
 
 _pool_timeout_raw = os.getenv('DATABASE_POOL_TIMEOUT', '30')
 try:
@@ -316,36 +312,6 @@ try:
 except (ValueError, TypeError):
     DATABASE_POOL_RECYCLE = 3600
 
-DATABASE_ENABLE_SQLITE_WAL = os.getenv('DATABASE_ENABLE_SQLITE_WAL', 'True').lower() == 'true'
-
-# SQLite PRAGMA tuning — these defaults are optimised for WAL-mode web-server
-# workloads.  Each can be overridden via its environment variable.
-# Set any value to an empty string to skip that PRAGMA entirely.
-
-# PRAGMA synchronous: NORMAL (1) is safe with WAL and avoids an fsync per
-# transaction.  Valid values: OFF (0), NORMAL (1), FULL (2), EXTRA (3).
-DATABASE_SQLITE_PRAGMA_SYNCHRONOUS = os.getenv('DATABASE_SQLITE_PRAGMA_SYNCHRONOUS', 'NORMAL')
-
-# PRAGMA busy_timeout (ms): how long a connection waits for a write lock
-# before raising SQLITE_BUSY.
-DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT = os.getenv('DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT', '5000')
-
-# PRAGMA cache_size: negative value = KiB.  -65536 ≈ 64 MB page cache.
-DATABASE_SQLITE_PRAGMA_CACHE_SIZE = os.getenv('DATABASE_SQLITE_PRAGMA_CACHE_SIZE', '-65536')
-
-# PRAGMA temp_store: MEMORY (2) keeps temp tables and indices in RAM.
-# Valid values: DEFAULT (0), FILE (1), MEMORY (2).
-DATABASE_SQLITE_PRAGMA_TEMP_STORE = os.getenv('DATABASE_SQLITE_PRAGMA_TEMP_STORE', 'MEMORY')
-
-# PRAGMA mmap_size (bytes): memory-mapped I/O size.  268435456 ≈ 256 MB.
-# Set to 0 to disable mmap.
-DATABASE_SQLITE_PRAGMA_MMAP_SIZE = os.getenv('DATABASE_SQLITE_PRAGMA_MMAP_SIZE', '268435456')
-
-# PRAGMA journal_size_limit (bytes): caps the WAL file size after checkpoint.
-# Without this the WAL grows unbounded during write bursts and is never
-# truncated.  67108864 ≈ 64 MB.  Set to -1 for no limit (SQLite default).
-DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT = os.getenv('DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT', '67108864')
-
 DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = os.getenv('DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL', None)
 if DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL is not None:
     try:
@@ -353,7 +319,7 @@ if DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL is not None:
     except Exception:
         DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = 0.0
 
-DATABASE_ENABLE_SESSION_SHARING = os.getenv('DATABASE_ENABLE_SESSION_SHARING', 'False').lower() == 'true'
+DATABASE_ENABLE_SESSION_SHARING = os.getenv('DATABASE_ENABLE_SESSION_SHARING', 'True').lower() == 'true'
 ENABLE_PUBLIC_ACTIVE_USERS_COUNT = os.getenv('ENABLE_PUBLIC_ACTIVE_USERS_COUNT', 'True').lower() == 'true'
 RESET_CONFIG_ON_START = os.getenv('RESET_CONFIG_ON_START', 'False').lower() == 'true'
 ENABLE_REALTIME_CHAT_SAVE = os.getenv('ENABLE_REALTIME_CHAT_SAVE', 'False').lower() == 'true'
@@ -768,11 +734,9 @@ if LICENSE_PUBLIC_KEY:
 # WEBUI Identity
 ####################################
 
-WEBUI_NAME = os.getenv('WEBUI_NAME', 'Open WebUI')
-if WEBUI_NAME != 'Open WebUI':
-    WEBUI_NAME += ' (Open WebUI)'
+WEBUI_NAME = os.getenv('WEBUI_NAME', 'Wolinet AI')
 
-WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
+WEBUI_FAVICON_URL = os.getenv('WEBUI_FAVICON_URL', '/static/favicon.png')
 WEBUI_BUILD_HASH = os.getenv('WEBUI_BUILD_HASH', 'dev-build')
 TRUSTED_SIGNATURE_KEY = os.getenv('TRUSTED_SIGNATURE_KEY', '')
 

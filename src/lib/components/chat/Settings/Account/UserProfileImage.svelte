@@ -6,15 +6,13 @@
 
 	import { getGravatarUrl } from '$lib/apis/utils';
 	import { canvasPixelTest, generateInitialsImage } from '$lib/utils';
-
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-	export let profileImageUrl;
+	export let profileImageUrl = '';
 	export let user = null;
+	export let imageClassName = 'size-20';
 
-	export let imageClassName = 'size-14 md:size-18';
-
-	let profileImageInputElement;
+	let profileImageInputElement: HTMLInputElement;
 </script>
 
 <input
@@ -25,9 +23,11 @@
 	accept="image/*"
 	on:change={(e) => {
 		const files = profileImageInputElement.files ?? [];
+		if (files.length === 0) return;
+
 		let reader = new FileReader();
 		reader.onload = (event) => {
-			let originalImageUrl = `${event.target.result}`;
+			let originalImageUrl = `${event.target?.result}`;
 
 			const img = new Image();
 			img.src = originalImageUrl;
@@ -35,11 +35,9 @@
 			img.onload = function () {
 				const canvas = document.createElement('canvas');
 				const ctx = canvas.getContext('2d');
+				if (!ctx) return;
 
-				// Calculate the aspect ratio of the image
 				const aspectRatio = img.width / img.height;
-
-				// Calculate the new width and height to fit within 250x250
 				let newWidth, newHeight;
 				if (aspectRatio > 1) {
 					newWidth = 250 * aspectRatio;
@@ -49,41 +47,34 @@
 					newHeight = 250 / aspectRatio;
 				}
 
-				// Set the canvas size
 				canvas.width = 250;
 				canvas.height = 250;
-
-				// Calculate the position to center the image
 				const offsetX = (250 - newWidth) / 2;
 				const offsetY = (250 - newHeight) / 2;
 
-				// Draw the image on the canvas
 				ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
-
-				// Get the base64 representation of the compressed image
-				const compressedSrc = canvas.toDataURL('image/webp', 0.8);
-
-				// Display the compressed image
+				const compressedSrc = canvas.toDataURL('image/webp', 0.85);
 				profileImageUrl = compressedSrc;
-
-				profileImageInputElement.files = null;
+				profileImageInputElement.value = '';
+				toast.success($i18n.t('Profile image updated'));
 			};
 		};
 
-		if (
-			files.length > 0 &&
-			['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(files[0]['type'])
-		) {
+		if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(files[0]['type'])) {
 			reader.readAsDataURL(files[0]);
+		} else {
+			toast.error($i18n.t('Unsupported file type. Please upload a PNG, JPG, or WebP image.'));
 		}
 	}}
 />
 
-<div class="flex flex-col self-start group">
-	<div class="self-center flex">
+<div class="flex flex-col items-center sm:items-start gap-3">
+	<div class="relative group">
 		<button
-			class="relative rounded-full dark:bg-gray-700"
+			class="relative block rounded-full ring-2 ring-gray-200 dark:ring-gray-700 hover:ring-emerald-500/50 dark:hover:ring-emerald-400/50 transition shadow-sm overflow-hidden focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
 			type="button"
+			title={$i18n.t('Click to upload new photo')}
+			aria-label={$i18n.t('Change profile photo')}
 			on:click={() => {
 				profileImageInputElement.click();
 			}}
@@ -91,61 +82,77 @@
 			<img
 				src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(user?.name)}
 				alt="profile"
-				class=" rounded-full {imageClassName} object-cover"
+				class="{imageClassName} rounded-full object-cover transition duration-150 group-hover:brightness-90"
 			/>
 
-			<div class="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 transition">
-				<div class="p-1 rounded-full bg-white text-black border-gray-100 shadow">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="size-3"
-					>
-						<path
-							d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z"
-						/>
-					</svg>
-				</div>
+			<div
+				class="absolute inset-0 bg-black/40 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-5"
+				>
+					<path
+						d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z"
+					/>
+				</svg>
+				<span class="text-[10px] font-medium tracking-tight mt-0.5">{$i18n.t('Change')}</span>
 			</div>
 		</button>
 	</div>
-	<div class="flex flex-col w-full justify-center mt-2">
+
+	<!-- Quick Avatar Actions -->
+	<div class="flex flex-wrap items-center gap-1.5 w-full justify-center sm:justify-start">
 		<button
-			class=" text-xs text-center text-gray-500 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 transition-all"
+			class="px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-700/80 border border-gray-200 dark:border-gray-700/60 rounded-md transition cursor-pointer"
 			type="button"
+			title={$i18n.t('Reset to default avatar')}
 			on:click={async () => {
 				profileImageUrl = `${WEBUI_BASE_URL}/user.png`;
-			}}>{$i18n.t('Remove')}</button
+				toast.info($i18n.t('Profile picture removed'));
+			}}
 		>
+			{$i18n.t('Remove')}
+		</button>
 
 		<button
-			class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 transition-all"
+			class="px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-700/80 border border-gray-200 dark:border-gray-700/60 rounded-md transition cursor-pointer"
 			type="button"
+			title={$i18n.t('Generate avatar using your initials')}
 			on:click={async () => {
 				if (canvasPixelTest()) {
 					profileImageUrl = generateInitialsImage(user?.name);
+					toast.success($i18n.t('Generated initials avatar'));
 				} else {
 					toast.info(
 						$i18n.t(
 							'Fingerprint spoofing detected: Unable to use initials as avatar. Defaulting to default profile image.'
 						),
-						{
-							duration: 1000 * 10
-						}
+						{ duration: 1000 * 10 }
 					);
 				}
-			}}>{$i18n.t('Initials')}</button
+			}}
 		>
+			{$i18n.t('Initials')}
+		</button>
 
 		<button
-			class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 transition-all"
+			class="px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-700/80 border border-gray-200 dark:border-gray-700/60 rounded-md transition cursor-pointer"
 			type="button"
+			title={$i18n.t('Fetch avatar from Gravatar')}
 			on:click={async () => {
 				const url = await getGravatarUrl(localStorage.token, user?.email);
-
-				profileImageUrl = url;
-			}}>{$i18n.t('Gravatar')}</button
+				if (url) {
+					profileImageUrl = url;
+					toast.success($i18n.t('Gravatar avatar linked'));
+				} else {
+					toast.error($i18n.t('Could not load Gravatar for this email'));
+				}
+			}}
 		>
+			{$i18n.t('Gravatar')}
+		</button>
 	</div>
 </div>

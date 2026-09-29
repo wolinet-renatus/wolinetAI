@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import base64
 import io
 import logging
@@ -759,3 +760,39 @@ async def get_user_preview(
             'total': len(all_tools),
         },
     }
+
+
+@router.get('/user/wallet')
+async def get_user_wallet(user=Depends(get_verified_user)):
+    """
+    Get user credit balance, spend, and assigned models directly from LiteLLM Gateway.
+    """
+    from open_webui.utils.litellm_user import get_litellm_user_info, ensure_litellm_user_exists
+    info = await get_litellm_user_info(user.id)
+    if not info:
+        info = await ensure_litellm_user_exists(user)
+
+    user_info = (info or {}).get('user_info', {})
+    max_budget = float(user_info.get('max_budget') or 25.0)
+    spend = float(user_info.get('spend') or 0.0)
+    remaining = max(0.0, round(max_budget - spend, 4))
+    default_model = os.getenv('DEFAULT_MODELS', 'wolinex-coder')
+
+    return {
+        'user_id': user.id,
+        'email': user.email,
+        'currency': 'USD',
+        'credits_allocated': max_budget,
+        'credits_spent': spend,
+        'credits_remaining': remaining,
+        'default_model': default_model,
+        'assigned_models': [
+            'wolinex-coder',
+            'wolinex-coder-pro',
+            'wolinex-coder-lite',
+            'wolinex-omni',
+            'wolinex-embed',
+        ],
+        'tier': 'Sovereign Administrator' if user.role == 'admin' else 'Sovereign Free Tier',
+    }
+

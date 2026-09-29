@@ -25,6 +25,18 @@ base_url, ssl_query_params = extract_ssl_params_from_url(target_db_url)
 if ssl_query_params:
     target_db_url = reattach_ssl_params_to_url(base_url, ssl_query_params)
 if target_db_url:
+    if target_db_url.startswith(('postgresql://', 'postgres://')):
+        try:
+            import psycopg2  # noqa: F401
+        except ImportError:
+            try:
+                import psycopg  # noqa: F401
+                if target_db_url.startswith('postgresql://'):
+                    target_db_url = target_db_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+                elif target_db_url.startswith('postgres://'):
+                    target_db_url = target_db_url.replace('postgres://', 'postgresql+psycopg://', 1)
+            except ImportError:
+                pass
     alembic_config.set_main_option('sqlalchemy.url', target_db_url.replace('%', '%%'))
 
 

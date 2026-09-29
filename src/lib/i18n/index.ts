@@ -62,6 +62,9 @@ export const initI18n = (defaultLocale?: string | undefined) => {
 			},
 			fallbackLng: {
 				fr: ['fr-FR'],
+				sw: ['sw-TZ'],
+				'sw-KE': ['sw-TZ'],
+				'sw-TZ': ['sw-TZ'],
 				default: fallbackDefaultLocale
 			},
 			ns: 'translation',
