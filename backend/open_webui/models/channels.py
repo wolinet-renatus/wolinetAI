@@ -13,7 +13,6 @@ from open_webui.models.groups import Groups
 from open_webui.utils.validate import validate_profile_image_url
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import (
-    JSON,
     BigInteger,
     Boolean,
     Column,
@@ -50,8 +49,8 @@ class Channel(Base):
     # Used to indicate if the channel is private (for 'group' type channels)
     is_private = Column(Boolean, nullable=True)
 
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
+    data = Column(JSONField, nullable=True)
+    meta = Column(JSONField, nullable=True)
 
     created_at = Column(BigInteger)
 
@@ -109,8 +108,8 @@ class ChannelMember(Base):
     is_channel_muted = Column(Boolean, nullable=False, default=False)
     is_channel_pinned = Column(Boolean, nullable=False, default=False)
 
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
+    data = Column(JSONField, nullable=True)
+    meta = Column(JSONField, nullable=True)
 
     invited_at = Column(BigInteger, nullable=True)
     invited_by = Column(Text, nullable=True)

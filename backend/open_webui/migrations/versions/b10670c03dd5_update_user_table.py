@@ -13,6 +13,7 @@ from typing import Sequence, Union
 import open_webui.internal.db
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects.postgresql import JSONB
 
 # revision identifiers, used by Alembic.
 revision: str = 'b10670c03dd5'
@@ -29,7 +30,7 @@ _user = sa.table(
     'user',
     sa.column('id', sa.Text),
     sa.column('oauth_sub', sa.Text),
-    sa.column('oauth', sa.JSON),
+    sa.column('oauth', JSONB),
     sa.column('api_key', sa.Text),
     sa.column('info', sa.Text),
     sa.column('settings', sa.Text),
@@ -45,98 +46,22 @@ _api_key = sa.table(
 )
 
 
-def _drop_sqlite_indexes_for_column(table_name, column_name, conn):
-    """
-    SQLite requires manual removal of any user-created indexes referencing
-    a column before ALTER TABLE ... DROP COLUMN can succeed.
-
-    NOTE: PRAGMAs have no Core equivalent — raw text is unavoidable here.
-    """
-    indexes = conn.execute(sa.text(f"PRAGMA index_list('{table_name}')")).fetchall()
-
-    for idx in indexes:
-        index_name = idx[1]  # index name
-        # Skip system-managed autoindexes (PK / UNIQUE constraints) — they
-        # cannot be dropped directly and will disappear when the column is
-        # removed via batch_alter_table.
-        if index_name.startswith('sqlite_autoindex_'):
-            continue
-        idx_info = conn.execute(sa.text(f"PRAGMA index_info('{index_name}')")).fetchall()
-        indexed_cols = [row[2] for row in idx_info]
-        if column_name in indexed_cols:
-            conn.execute(sa.text(f'DROP INDEX IF EXISTS {index_name}'))
-
-
 def _convert_column_to_json(table: str, column: str):
-    conn = op.get_bind()
-    dialect = conn.dialect.name
-
-    t = sa.table(table, sa.column('id', sa.Text), sa.column(column, sa.Text))
-    t_json = sa.column(f'{column}_json', sa.JSON)
-
-    # SQLite cannot ALTER COLUMN → must recreate column
-    if dialect == 'sqlite':
-        op.add_column(table, sa.Column(f'{column}_json', sa.JSON(), nullable=True))
-
-        rows = conn.execute(sa.select(t.c.id, t.c[column])).fetchall()
-
-        for uid, raw in rows:
-            if raw is None:
-                parsed = None
-            else:
-                try:
-                    parsed = json.loads(raw)
-                except Exception:
-                    parsed = None
-
-            conn.execute(
-                sa.update(sa.table(table, sa.column('id'), t_json))
-                .where(sa.column('id') == uid)
-                .values({f'{column}_json': json.dumps(parsed) if parsed else None})
-            )
-
-        op.drop_column(table, column)
-        op.alter_column(table, f'{column}_json', new_column_name=column)
-
-    else:
-        # PostgreSQL supports direct CAST
-        op.alter_column(
-            table,
-            column,
-            type_=sa.JSON(),
-            postgresql_using=f'{column}::json',
-        )
+    op.alter_column(
+        table,
+        column,
+        type_=JSONB(),
+        postgresql_using=f'NULLIF({column}, \'\')::jsonb',
+    )
 
 
 def _convert_column_to_text(table: str, column: str):
-    conn = op.get_bind()
-    dialect = conn.dialect.name
-
-    t = sa.table(table, sa.column('id', sa.Text), sa.column(column))
-    t_text = sa.column(f'{column}_text', sa.Text)
-
-    if dialect == 'sqlite':
-        op.add_column(table, sa.Column(f'{column}_text', sa.Text(), nullable=True))
-
-        rows = conn.execute(sa.select(t.c.id, t.c[column])).fetchall()
-
-        for uid, raw in rows:
-            conn.execute(
-                sa.update(sa.table(table, sa.column('id'), t_text))
-                .where(sa.column('id') == uid)
-                .values({f'{column}_text': json.dumps(raw) if raw else None})
-            )
-
-        op.drop_column(table, column)
-        op.alter_column(table, f'{column}_text', new_column_name=column)
-
-    else:
-        op.alter_column(
-            table,
-            column,
-            type_=sa.Text(),
-            postgresql_using=f'to_json({column})::text',
-        )
+    op.alter_column(
+        table,
+        column,
+        type_=sa.Text(),
+        postgresql_using=f'{column}::text',
+    )
 
 
 def upgrade() -> None:
@@ -153,7 +78,7 @@ def upgrade() -> None:
         ('status_emoji', sa.String()),
         ('status_message', sa.Text()),
         ('status_expires_at', sa.BigInteger()),
-        ('oauth', sa.JSON()),
+        ('oauth', JSONB()),
     ]:
         if col_name not in user_columns:
             op.add_column('user', sa.Column(col_name, col_type, nullable=True))
@@ -173,7 +98,7 @@ def upgrade() -> None:
             sa.Column('id', sa.Text(), primary_key=True, unique=True),
             sa.Column('user_id', sa.Text(), sa.ForeignKey('user.id', ondelete='CASCADE')),
             sa.Column('key', sa.Text(), unique=True, nullable=False),
-            sa.Column('data', sa.JSON(), nullable=True),
+            sa.Column('data', JSONB(), nullable=True),
             sa.Column('expires_at', sa.BigInteger(), nullable=True),
             sa.Column('last_used_at', sa.BigInteger(), nullable=True),
             sa.Column('created_at', sa.BigInteger(), nullable=False),
@@ -211,10 +136,6 @@ def upgrade() -> None:
     # ── Drop legacy columns (idempotent) ──────────────────────────────
     cols_to_drop = {'api_key', 'oauth_sub'} & user_columns
     if cols_to_drop:
-        if conn.dialect.name == 'sqlite':
-            for col in cols_to_drop:
-                _drop_sqlite_indexes_for_column('user', col, conn)
-
         with op.batch_alter_table('user') as batch_op:
             for col in cols_to_drop:
                 batch_op.drop_column(col)

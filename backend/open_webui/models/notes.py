@@ -4,12 +4,12 @@ import uuid
 from functools import lru_cache
 from typing import Optional
 
-from open_webui.internal.db import Base, get_async_db_context
+from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import JSON, BigInteger, Boolean, Column, ForeignKey, Text, delete, func, or_, select, update
+from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, Text, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
@@ -24,8 +24,8 @@ class Note(Base):
     user_id = Column(Text)
 
     title = Column(Text)
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
+    data = Column(JSONField, nullable=True)
+    meta = Column(JSONField, nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)

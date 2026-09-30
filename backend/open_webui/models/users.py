@@ -2,24 +2,21 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import time
-from typing import Optional
+
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.misc import throttle
 from open_webui.utils.validate import validate_profile_image_url
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from sqlalchemy import (
-    JSON,
     BigInteger,
-    Boolean,
     Column,
     Date,
     String,
     Text,
     case,
-    cast,
     delete,
     exists,
     func,
@@ -39,8 +36,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 class UserSettings(BaseModel):
     ui: dict | None = {}
+    # Localization defaults — fallback prevents tz_/i18n template freezing
+    language: str | None = None   # e.g. "en-US"; None = use system default
     model_config = ConfigDict(extra='allow')
-    pass
+
 
 
 class User(Base):  # identity & profile
@@ -67,11 +66,11 @@ class User(Base):  # identity & profile
     status_message = Column(Text, nullable=True)
     status_expires_at = Column(BigInteger, nullable=True)
 
-    # Metadata
-    info = Column(JSON, nullable=True)
-    settings = Column(JSON, nullable=True)
-    oauth = Column(JSON, nullable=True)
-    scim = Column(JSON, nullable=True)
+    # Metadata — stored as native PostgreSQL JSONB
+    info = Column(JSONField, nullable=True)
+    settings = Column(JSONField, nullable=True)
+    oauth = Column(JSONField, nullable=True)
+    scim = Column(JSONField, nullable=True)
 
     # Timestamps (epoch seconds)
     last_active_at = Column(BigInteger)
@@ -96,7 +95,7 @@ class UserModel(BaseModel):
 
     bio: str | None = None
     gender: str | None = None
-    date_of_birth: datetime.date | None = None
+    date_of_birth: dt.date | None = None
     timezone: str | None = None
 
     presence_state: str | None = None
@@ -121,7 +120,7 @@ class UserModel(BaseModel):
     # validation schema logic
     # --- model validators ---
     @model_validator(mode='after')
-    def _ensure_profile_image(self) -> 'UserModel':
+    def _ensure_profile_image(self) -> UserModel:
         """Assign a generated avatar when no profile image is provided."""
         self.profile_image_url = self.profile_image_url or _DEFAULT_PROFILE_IMAGE_URL.format(user_id=self.id)
         return self
@@ -139,7 +138,7 @@ class ApiKey(Base):
     id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text, nullable=False)
     key = Column(Text, unique=True, nullable=False)
-    data = Column(JSON, nullable=True)
+    data = Column(JSONField, nullable=True)  # JSONB — per-key metadata / settings
     expires_at = Column(BigInteger, nullable=True)
     last_used_at = Column(BigInteger, nullable=True)
     created_at = Column(BigInteger, nullable=False)
@@ -169,7 +168,7 @@ class UpdateProfileForm(BaseModel):
     name: str
     bio: str | None = None
     gender: str | None = None
-    date_of_birth: datetime.date | None = None
+    date_of_birth: dt.date | None = None
 
     @field_validator('profile_image_url')
     @classmethod
@@ -349,16 +348,10 @@ class UsersTable:
         sub: str,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
-        """Look up a user by OAuth provider + subject claim (dialect-aware JSON filter)."""
+        """Look up a user by OAuth provider and subject claim."""
         async with get_async_db_context(db) as session:
-            dialect = session.bind.dialect.name
-            query = select(User)
-            if dialect == 'sqlite':
-                oauth_match = User.oauth.contains({provider: {'sub': sub}})
-                query = query.where(oauth_match)
-            elif dialect == 'postgresql':
-                oauth_match = User.oauth[provider].cast(JSONB)['sub'].astext == sub
-                query = query.where(oauth_match)
+            oauth_match = User.oauth[provider].cast(JSONB)['sub'].astext == sub
+            query = select(User).where(oauth_match)
             row = (await session.execute(query)).scalars().first()
             return UserModel.model_validate(row) if row else None
 
@@ -368,20 +361,14 @@ class UsersTable:
         external_id: str,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
-        """Look up a user by SCIM provider + external ID (dialect-aware JSON filter)."""
+        """Look up a user by SCIM provider and external ID."""
         async with get_async_db_context(db) as session:
-            dialect = session.bind.dialect.name
-            query = select(User)
-            if dialect == 'sqlite':
-                scim_match = User.scim.contains({provider: {'external_id': external_id}})
-                query = query.where(scim_match)
-            elif dialect == 'postgresql':
-                scim_match = User.scim[provider].cast(JSONB)['external_id'].astext == external_id
-                query = query.where(scim_match)
+            scim_match = User.scim[provider].cast(JSONB)['external_id'].astext == external_id
+            query = select(User).where(scim_match)
             row = (await session.execute(query)).scalars().first()
             return UserModel.model_validate(row) if row else None
 
-    async def get_users(
+    async def get_users(  # noqa: C901
         self,
         filter: dict | None = None,
         skip: int | None = None,
@@ -670,11 +657,20 @@ class UsersTable:
     async def update_user_settings_by_id(
         self, id: str, updated: dict, db: AsyncSession | None = None
     ) -> UserModel | None:
+        import json as _json
         async with get_async_db_context(db) as session:
             user = await session.get(User, id)
             if not user:
                 return None
-            user_settings = dict(user.settings or {})
+            # Guard: settings may arrive as a raw JSON string from legacy rows.
+            # Safely coerce to dict before merging so .update() never throws TypeError.
+            raw = user.settings
+            if isinstance(raw, str):
+                try:
+                    raw = _json.loads(raw)
+                except (_json.JSONDecodeError, ValueError):
+                    raw = {}
+            user_settings = dict(raw or {})
             user_settings.update(updated)
             user.settings = user_settings
             await session.commit()

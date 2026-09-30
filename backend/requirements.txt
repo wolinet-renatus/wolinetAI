@@ -25,7 +25,6 @@ starsessions[redis]==2.2.1
 python-mimeparse==2.0.0
 
 sqlalchemy[asyncio]==2.0.48
-aiosqlite==0.21.0
 psycopg[binary]==3.2.9
 alembic==1.18.4
 peewee==3.19.0
@@ -118,7 +117,6 @@ google-cloud-storage==3.9.0
 
 ## Databases
 pymongo==4.16.0
-psycopg2-binary==2.9.11
 pgvector==0.4.2
 
 PyMySQL==1.1.2

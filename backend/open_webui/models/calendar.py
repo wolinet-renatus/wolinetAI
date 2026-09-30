@@ -3,13 +3,12 @@ import time
 from typing import Optional
 from uuid import uuid4
 
-from open_webui.internal.db import Base, get_async_db_context
+from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import (
-    JSON,
     BigInteger,
     Boolean,
     Column,
@@ -41,8 +40,8 @@ class Calendar(Base):
     name = Column(Text, nullable=False)
     color = Column(Text, nullable=True)
     is_default = Column(Boolean, nullable=False, default=False)
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
+    data = Column(JSONField, nullable=True)
+    meta = Column(JSONField, nullable=True)
 
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
@@ -64,8 +63,8 @@ class CalendarEvent(Base):
     rrule = Column(Text, nullable=True)
     color = Column(Text, nullable=True)
     location = Column(Text, nullable=True)
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
+    data = Column(JSONField, nullable=True)
+    meta = Column(JSONField, nullable=True)
     is_cancelled = Column(Boolean, nullable=False, default=False)
 
     created_at = Column(BigInteger, nullable=False)
@@ -84,7 +83,7 @@ class CalendarEventAttendee(Base):
     event_id = Column(Text, nullable=False)
     user_id = Column(Text, nullable=False)
     status = Column(Text, nullable=False, default='pending')
-    meta = Column(JSON, nullable=True)
+    meta = Column(JSONField, nullable=True)
 
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)

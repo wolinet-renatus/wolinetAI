@@ -16,7 +16,6 @@ from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import (
-    JSON,
     BigInteger,
     Column,
     ForeignKey,
@@ -50,7 +49,7 @@ class Knowledge(Base):
     name = Column(Text)
     description = Column(Text)
 
-    meta = Column(JSON, nullable=True)
+    meta = Column(JSONField, nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)

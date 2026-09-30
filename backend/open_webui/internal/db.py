@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
 import sys
 from contextlib import asynccontextmanager, contextmanager
-from typing import Any
+from typing import Any, Self
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from open_webui.env import (
@@ -22,7 +23,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool, QueuePool
 from sqlalchemy.sql.type_api import _T
-from typing_extensions import Self
 
 log = logging.getLogger(__name__)
 
@@ -79,15 +79,35 @@ reattach_ssl_mode_to_url = reattach_ssl_params_to_url
 
 
 class JSONField(types.TypeDecorator):
-    """PostgreSQL JSONB storage for structured columns."""
+    """PostgreSQL JSONB storage for structured columns.
+
+    PostgreSQL JSONB columns are returned by psycopg as native Python dict/list
+    objects — NO json.loads() call is required.  The only case where we need to
+    parse is if a legacy row somehow contains a raw JSON *string* value (this
+    should not happen after the JSONB migration, but we keep a narrow guard so
+    old data doesn't crash on read).
+    """
 
     impl = JSONB
     cache_ok = True
 
     def process_bind_param(self, value: _T | None, dialect: Dialect) -> Any:
+        # Pass dicts/lists straight through; SQLAlchemy + psycopg handles serialization.
         return value
 
     def process_result_value(self, value: _T | None, dialect: Dialect) -> Any:
+        # JSONB columns already arrive as Python objects from the driver.
+        # Only parse if we receive a raw string (shouldn't happen post-migration).
+        if isinstance(value, str):
+            stripped = value.lstrip()
+            if stripped.startswith(('{', '[')):
+                try:
+                    return json.loads(value)
+                except json.JSONDecodeError:
+                    log.warning(
+                        'Malformed legacy JSON string returned from PostgreSQL JSONB column; '
+                        'returning raw string value to avoid data loss.'
+                    )
         return value
 
     def copy(self, **kwargs: Any) -> Self:
@@ -98,7 +118,7 @@ def _require_postgres_url(url: str) -> str:
     if not url or 'sqlite' in url.lower():
         raise RuntimeError(
             'SQLite is not supported. Set WEBUI_DATABASE_URL or DATABASE_URL to a PostgreSQL '
-            'connection string, e.g. postgresql://postgres:postgres@127.0.0.1:5433/webui'
+            'connection string.'
         )
     if not _is_postgres_url(url):
         raise RuntimeError(
@@ -112,24 +132,18 @@ _require_postgres_url(DATABASE_URL)
 _url_without_ssl, _ssl_dict = extract_ssl_params_from_url(DATABASE_URL)
 SQLALCHEMY_DATABASE_URL = reattach_ssl_params_to_url(_url_without_ssl, _ssl_dict) if _ssl_dict else DATABASE_URL
 
-if SQLALCHEMY_DATABASE_URL.startswith(('postgresql://', 'postgres://')):
-    try:
-        import psycopg2  # noqa: F401
-    except ImportError:
-        try:
-            import psycopg  # noqa: F401
+try:
+    import psycopg  # noqa: F401
+except ImportError as exc:
+    raise RuntimeError('The PostgreSQL psycopg driver is required') from exc
 
-            if SQLALCHEMY_DATABASE_URL.startswith('postgresql://'):
-                SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace('postgresql://', 'postgresql+psycopg://', 1)
-            elif SQLALCHEMY_DATABASE_URL.startswith('postgres://'):
-                SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace('postgres://', 'postgresql+psycopg://', 1)
-        except ImportError:
-            pass
+if SQLALCHEMY_DATABASE_URL.startswith('postgresql://'):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace('postgresql://', 'postgresql+psycopg://', 1)
+elif SQLALCHEMY_DATABASE_URL.startswith('postgres://'):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace('postgres://', 'postgresql+psycopg://', 1)
 
 
 def _make_async_url(url: str) -> str:
-    if url.startswith('postgresql+psycopg2://'):
-        return url.replace('postgresql+psycopg2://', 'postgresql+psycopg://', 1)
     if url.startswith('postgresql://'):
         return url.replace('postgresql://', 'postgresql+psycopg://', 1)
     if url.startswith('postgres://'):

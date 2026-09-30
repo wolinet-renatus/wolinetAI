@@ -9,7 +9,7 @@ import uuid
 # local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Column, Index, PrimaryKeyConstraint, String, delete, select
+from sqlalchemy import BigInteger, Column, Index, PrimaryKeyConstraint, String, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class Tag(Base):  # database table mapping for tag entity
     id = Column(String)
     name = Column(String, index=True)  # tag label
     user_id = Column(String, index=True)  # user identifier
-    meta = Column(JSON, nullable=True)
+    meta = Column(JSONField, nullable=True)
 
     __table_args__ = (
         PrimaryKeyConstraint('id', 'user_id', name='pk_id_user_id'),

@@ -1468,7 +1468,7 @@ if ENABLE_COMPRESSION_MIDDLEWARE:
 # downstream app in an anyio task group whose cancel scope cancelled
 # in-flight DB calls (and any other awaits) on client disconnect /
 # response completion — which surfaced as noisy SQLAlchemy
-# `terminate_force_close` tracebacks under aiosqlite and as random
+# `terminate_force_close` tracebacks during cancelled database calls and as random
 # CancelledError storms across the request path. See
 # `open_webui.utils.asgi_middleware` for the rationale.
 app.add_middleware(RedirectMiddleware)

@@ -5,7 +5,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Column, ForeignKey, Text, delete, select
+from sqlalchemy import BigInteger, Column, ForeignKey, Text, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class SharedChat(Base):
     user_id = Column(Text, nullable=False)  # Who created this share
 
     title = Column(Text)
-    chat = Column(JSON)  # Snapshot of chat JSON at share time
+    chat = Column(JSONField)  # JSONB snapshot of chat content at share time
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)

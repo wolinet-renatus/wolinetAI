@@ -3,11 +3,10 @@ import time
 import uuid
 from typing import Any, Optional
 
-from open_webui.internal.db import Base, get_async_db_context
+from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.response import normalize_usage
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
-    JSON,
     BigInteger,
     Boolean,
     Column,
@@ -51,18 +50,14 @@ def get_usage(data: dict) -> Optional[dict]:
     return normalize_usage(usage) if usage else None
 
 
-def _token_columns(dialect: str):
+def _token_columns():
     """Return (input_tokens, output_tokens) SQL column expressions.
 
     Falls back to OpenAI-style keys (prompt_tokens / completion_tokens)
     when the normalized keys are absent.
     """
-    if dialect == 'sqlite':
-        extract = lambda key: cast(func.json_extract(ChatMessage.usage, f'$.{key}'), Integer)
-    elif dialect == 'postgresql':
-        extract = lambda key: cast(func.json_extract_path_text(ChatMessage.usage, key), Integer)
-    else:
-        raise NotImplementedError(f'Unsupported dialect: {dialect}')
+    def extract(key: str):
+        return cast(ChatMessage.usage[key].astext, Integer)
 
     return (
         func.coalesce(extract('input_tokens'), extract('prompt_tokens')),
@@ -88,24 +83,24 @@ class ChatMessage(Base):
     parent_id = Column(Text, nullable=True)
 
     # Content
-    content = Column(JSON, nullable=True)  # Can be str or list of blocks
-    output = Column(JSON, nullable=True)
+    content = Column(JSONField, nullable=True)  # Can be str or list of blocks
+    output = Column(JSONField, nullable=True)
 
     # Model (for assistant messages)
     model_id = Column(Text, nullable=True, index=True)
 
     # Attachments
-    files = Column(JSON, nullable=True)
-    sources = Column(JSON, nullable=True)
-    embeds = Column(JSON, nullable=True)
+    files = Column(JSONField, nullable=True)
+    sources = Column(JSONField, nullable=True)
+    embeds = Column(JSONField, nullable=True)
 
     # Status
     done = Column(Boolean, default=True)
-    status_history = Column(JSON, nullable=True)
-    error = Column(JSON, nullable=True)
+    status_history = Column(JSONField, nullable=True)
+    error = Column(JSONField, nullable=True)
 
     # Usage (tokens, timing, etc.)
-    usage = Column(JSON, nullable=True)
+    usage = Column(JSONField, nullable=True)
 
     # Timestamps
     created_at = Column(BigInteger, index=True)
@@ -451,12 +446,7 @@ class ChatMessageTable:
         async with get_async_db_context(db) as db:
             from open_webui.models.groups import GroupMember
 
-            # We need the dialect to determine JSON extraction syntax
-            # For async sessions, access via get_bind()
-            bind = await db.connection()
-            dialect = bind.dialect.name
-
-            input_tokens, output_tokens = _token_columns(dialect)
+            input_tokens, output_tokens = _token_columns()
 
             stmt = select(
                 ChatMessage.model_id,
@@ -501,10 +491,7 @@ class ChatMessageTable:
         async with get_async_db_context(db) as db:
             from open_webui.models.groups import GroupMember
 
-            bind = await db.connection()
-            dialect = bind.dialect.name
-
-            input_tokens, output_tokens = _token_columns(dialect)
+            input_tokens, output_tokens = _token_columns()
 
             stmt = select(
                 ChatMessage.user_id,

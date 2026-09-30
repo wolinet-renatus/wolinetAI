@@ -9,7 +9,7 @@ import shutil
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 import markdown
@@ -43,7 +43,7 @@ DOCKER = os.getenv('DOCKER', 'False').lower() == 'true'
 
 USE_CUDA = os.getenv('USE_CUDA_DOCKER', 'false')
 DEVICE_TYPE = 'cpu'
-_cuda_error: Optional[str] = None
+_cuda_error: str | None = None
 
 if USE_CUDA.lower() == 'true':
     try:
@@ -250,8 +250,6 @@ if FROM_INIT_PY:
 # Database (PostgreSQL only)
 ####################################
 
-_DEFAULT_WEBUI_DATABASE_URL = 'postgresql://postgres:postgres@127.0.0.1:5433/webui'
-
 DATABASE_TYPE = os.getenv('DATABASE_TYPE')
 DATABASE_USER = os.getenv('DATABASE_USER')
 DATABASE_PASSWORD = os.getenv('DATABASE_PASSWORD')
@@ -275,15 +273,20 @@ if all(DB_VARS.values()):
         f'{DB_VARS["db_type"]}://{DB_VARS["db_cred"]}@{DB_VARS["db_host"]}:{DB_VARS["db_port"]}/{DB_VARS["db_name"]}'
     )
 else:
-    DATABASE_URL = os.getenv('WEBUI_DATABASE_URL') or os.getenv('DATABASE_URL') or _DEFAULT_WEBUI_DATABASE_URL
+    DATABASE_URL = os.getenv('WEBUI_DATABASE_URL') or os.getenv('DATABASE_URL')
+
+if not DATABASE_URL:
+    raise RuntimeError(
+        'WEBUI_DATABASE_URL or DATABASE_URL must point to the PostgreSQL cluster. '
+        'The Wolinet WebUI does not provide a local database fallback.'
+    )
 
 if 'postgres://' in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://')
 
 if 'sqlite' in DATABASE_URL.lower():
     raise RuntimeError(
-        'SQLite is disabled for Wolinet AI Studio. Point WEBUI_DATABASE_URL at PostgreSQL '
-        f'(default {_DEFAULT_WEBUI_DATABASE_URL}).'
+        'SQLite is disabled for Wolinet AI Studio. Point WEBUI_DATABASE_URL at PostgreSQL.'
     )
 
 DATABASE_SCHEMA = os.getenv('DATABASE_SCHEMA', None)

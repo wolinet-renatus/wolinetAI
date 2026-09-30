@@ -8,7 +8,7 @@ from open_webui.models.channels import ChannelMember, Channels
 from open_webui.models.tags import Tag, TagModel, Tags
 from open_webui.models.users import User, UserNameResponse, Users
 from pydantic import BaseModel, ConfigDict, field_validator
-from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, and_, delete, func, or_, select, text
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, and_, delete, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import exists
 
@@ -52,8 +52,8 @@ class Message(Base):
     pinned_by = Column(Text, nullable=True)
 
     content = Column(Text)
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
+    data = Column(JSONField, nullable=True)
+    meta = Column(JSONField, nullable=True)
 
     created_at = Column(BigInteger)  # time_ns
     updated_at = Column(BigInteger)  # time_ns

@@ -6,7 +6,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Boolean, Column, Text, delete, func, select
+from sqlalchemy import BigInteger, Boolean, Column, Text, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -25,9 +25,9 @@ class Folder(Base):
     parent_id = Column(Text, nullable=True)
     user_id = Column(Text)
     name = Column(Text)
-    items = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
-    data = Column(JSON, nullable=True)
+    items = Column(JSONField, nullable=True)
+    meta = Column(JSONField, nullable=True)
+    data = Column(JSONField, nullable=True)
     is_expanded = Column(Boolean, default=False)
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
