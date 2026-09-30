@@ -20,7 +20,7 @@ general_settings:
     target: os.environ/WOLINET_INFERENCE_URL
   - path: /v1/videos/*
     target: os.environ/WOLINET_INFERENCE_URL
-  store_model_in_db: true
+  store_model_in_db: false
   disable_env_credential_login: true
   user_header_mappings:
     - header_name: X-OpenWebUI-User-Id

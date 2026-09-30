@@ -104,7 +104,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DEFAULT_MODEL: ${DEFAULT_MODEL:-qwen2.5-instruct}
       DEFAULT_MODELS: ${DEFAULT_MODELS:-qwen2.5-instruct}
-      STORE_MODEL_IN_DB: "true"
+      STORE_MODEL_IN_DB: "false"
       ROOT_REDIRECT_URL: /ui
     volumes:
       - ./gateway/config.yaml:/app/config.yaml:ro
