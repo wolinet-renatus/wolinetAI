@@ -1,5 +1,14 @@
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LaunchModelPage() {
-  redirect('/launch-model/llm');
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/launch-model/llm');
+  }, [router]);
+
+  return null;
 }

@@ -12,6 +12,7 @@ import { Select } from '@/components/ui/select';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useI18n } from '@/contexts/i18n-context';
+import { useGlobal } from '@/contexts/global-context';
 import { cn } from '@/lib/utils';
 import { ModelType, CUSTOM_MODEL_OPTIONS } from '@/constants';
 import {
@@ -46,6 +47,7 @@ interface LaunchModelProps {
 
 const LaunchModel = ({ routeType, initialCustomType }: LaunchModelProps) => {
   const { t } = useI18n();
+  const { globalReady } = useGlobal();
   const router = useRouter();
   const isCustomRoute = routeType === ModelType.Custom;
   const launchTargetRef = useRef(peekPendingLaunchModelTarget());
@@ -178,20 +180,23 @@ const LaunchModel = ({ routeType, initialCustomType }: LaunchModelProps) => {
   }, [launchTarget]);
 
   useEffect(() => {
+    if (!globalReady) return;
     fetDevices();
-  }, [fetDevices]);
+  }, [fetDevices, globalReady]);
 
   useEffect(() => {
+    if (!globalReady) return;
     fetchModels();
 
     return () => {
       modelRequestIdRef.current += 1;
     };
-  }, [fetchModels]);
+  }, [fetchModels, globalReady]);
 
   useEffect(() => {
+    if (!globalReady) return;
     fetchVirtualenvs();
-  }, [fetchVirtualenvs]);
+  }, [fetchVirtualenvs, globalReady]);
 
   useEffect(() => {
     if (!targetModelName || loading) return;
