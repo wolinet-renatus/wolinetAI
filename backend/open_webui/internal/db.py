@@ -4,7 +4,7 @@ import json
 import logging
 import sys
 from contextlib import asynccontextmanager, contextmanager
-from typing import Any, Self
+from typing import Any, Literal, Self, overload
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from open_webui.env import (
@@ -16,13 +16,12 @@ from open_webui.env import (
     DATABASE_SCHEMA,
     DATABASE_URL,
 )
-from sqlalchemy import Dialect, MetaData, create_engine, types
+from sqlalchemy import Dialect, Engine, MetaData, create_engine, types
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool, QueuePool
-from sqlalchemy.sql.type_api import _T
 
 log = logging.getLogger(__name__)
 
@@ -91,11 +90,11 @@ class JSONField(types.TypeDecorator):
     impl = JSONB
     cache_ok = True
 
-    def process_bind_param(self, value: _T | None, dialect: Dialect) -> Any:
+    def process_bind_param(self, value: Any, dialect: Dialect) -> Any:
         # Pass dicts/lists straight through; SQLAlchemy + psycopg handles serialization.
         return value
 
-    def process_result_value(self, value: _T | None, dialect: Dialect) -> Any:
+    def process_result_value(self, value: Any, dialect: Dialect) -> Any:
         # JSONB columns already arrive as Python objects from the driver.
         # Only parse if we receive a raw string (shouldn't happen post-migration).
         if isinstance(value, str):
@@ -151,7 +150,11 @@ def _make_async_url(url: str) -> str:
     return url
 
 
-def _build_engine(url: str, *, async_mode: bool):
+@overload
+def _build_engine(url: str, *, async_mode: Literal[True]) -> AsyncEngine: ...
+@overload
+def _build_engine(url: str, *, async_mode: Literal[False]) -> Engine: ...
+def _build_engine(url: str, *, async_mode: bool) -> AsyncEngine | Engine:
     pool_size = DATABASE_POOL_SIZE if isinstance(DATABASE_POOL_SIZE, int) else 10
     max_overflow = DATABASE_POOL_MAX_OVERFLOW if isinstance(DATABASE_POOL_MAX_OVERFLOW, int) else 20
     timeout = DATABASE_POOL_TIMEOUT if isinstance(DATABASE_POOL_TIMEOUT, int) else 30
