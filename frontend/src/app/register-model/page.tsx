@@ -1,5 +1,14 @@
-import { redirect } from 'next/navigation';
+'use client';
 
-export default function LaunchModelPage() {
-  redirect('/register-model/LLM');
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function RegisterModelPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/register-model/LLM');
+  }, [router]);
+
+  return null;
 }

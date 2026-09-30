@@ -53,10 +53,14 @@ export default function AppInit() {
         } catch {
           data = null;
         }
-        if (!res.ok) {
+        if (res.status === 404) {
+          // Compatible with clusters where /v1/cluster/auth is not present (auth disabled)
+          clusterAuth = { auth: false };
+        } else if (!res.ok) {
           throw new Error(`Server error: ${res.status} - ${data?.detail || 'Unknown error'}`);
+        } else {
+          clusterAuth = data;
         }
-        clusterAuth = data;
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Cluster auth failed';
         // Fix Sonner not being mounted during initialization
