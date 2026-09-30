@@ -35,7 +35,6 @@ litellm_settings:
   num_retries: 3
   enable_anthropic_prompt_caching: false
   openai_system_messages_first: true
-  success_callback: ["prometheus"]       # spend tracking → PostgreSQL via callback
   websearch_interception_params:
     enabled: true
     enabled_providers:
@@ -64,7 +63,7 @@ model_list:
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
     api_key: os.environ/XINFERENCE_API_KEY
-    model: wolinet/wolinex-coder
+    model: openai/wolinex-coder
     timeout: 600
   model_name: wolinex-coder
   model_info:
@@ -78,7 +77,7 @@ model_list:
     api_base: os.environ/WOLINET_API_BASE
     api_key: os.environ/XINFERENCE_API_KEY
     max_tokens: 2048
-    model: wolinet/qwen2.5-omni-3b-local
+    model: openai/qwen2.5-omni-3b-local
     timeout: 600
   model_name: wolinex-omni
   model_info:
@@ -91,7 +90,7 @@ model_list:
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
     api_key: os.environ/XINFERENCE_API_KEY
-    model: wolinet/wolinex-coder
+    model: openai/wolinex-coder
     timeout: 600
   model_name: wolinex-coder-pro
   model_info:
@@ -104,7 +103,7 @@ model_list:
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
     api_key: os.environ/XINFERENCE_API_KEY
-    model: wolinet/bge-small-en-v1.5
+    model: openai/bge-small-en-v1.5
     timeout: 600
   model_name: wolinex-embed
   model_info:
@@ -116,7 +115,7 @@ model_list:
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
     api_key: os.environ/XINFERENCE_API_KEY
-    model: wolinet/harrier-oss-v1-0.6b
+    model: openai/harrier-oss-v1-0.6b
     timeout: 600
   model_name: wolinex-retriever
   model_info:
@@ -128,7 +127,7 @@ model_list:
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
     api_key: os.environ/XINFERENCE_API_KEY
-    model: wolinet/deepseek-coder-1.3b
+    model: openai/deepseek-coder-1.3b
     timeout: 600
   model_name: wolinex-coder-lite
   model_info:
@@ -141,7 +140,7 @@ model_list:
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
     api_key: os.environ/XINFERENCE_API_KEY
-    model: wolinet/bge-reranker-v2-m3
+    model: infinity/bge-reranker-v2-m3
     timeout: 600
   model_name: wolinex-rerank
   model_info:
