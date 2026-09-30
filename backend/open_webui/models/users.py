@@ -537,7 +537,7 @@ class UsersTable:
     async def has_users(self, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as session:
             result = await session.execute(select(exists(select(User))))
-            return result.scalar()
+            return bool(result.scalar())
 
     async def get_first_user(self, db: AsyncSession | None = None) -> UserModel | None:
         """Return the earliest-created user (bootstrap admin detection)."""
@@ -549,8 +549,15 @@ class UsersTable:
     async def get_user_webhook_url_by_id(self, id: str, db: AsyncSession | None = None) -> str | None:
         async with get_async_db_context(db) as session:
             user = await session.get(User, id)
-            if user and user.settings:
-                return user.settings.get('ui', {}).get('notifications', {}).get('webhook_url', None)
+            if user is not None:
+                settings = getattr(user, 'settings', None)
+                if isinstance(settings, dict):
+                    ui = settings.get('ui')
+                    if isinstance(ui, dict):
+                        notifications = ui.get('notifications')
+                        if isinstance(notifications, dict):
+                            webhook_url = notifications.get('webhook_url')
+                            return str(webhook_url) if webhook_url else None
             return None
 
     async def get_num_users_active_today(self, db: AsyncSession | None = None) -> int | None:
@@ -567,7 +574,7 @@ class UsersTable:
             user = await session.get(User, id)
             if not user:
                 return None
-            user.role = role
+            setattr(user, 'role', role)
             await session.commit()
             await session.refresh(user)
             return UserModel.model_validate(user)
@@ -595,7 +602,7 @@ class UsersTable:
             user = await session.get(User, id)
             if user is None:
                 return None
-            user.profile_image_url = profile_image_url
+            setattr(user, 'profile_image_url', profile_image_url)
             await session.commit()
             await session.refresh(user)
             return UserModel.model_validate(user)
@@ -614,9 +621,10 @@ class UsersTable:
             user = await session.get(User, id)
             if not user:
                 return None
-            oauth = dict(user.oauth or {})
+            raw_oauth = getattr(user, 'oauth', None)
+            oauth = dict(raw_oauth) if isinstance(raw_oauth, dict) else {}
             oauth[provider] = {'sub': sub}
-            user.oauth = oauth
+            setattr(user, 'oauth', oauth)
             await session.commit()
             await session.refresh(user)
             return UserModel.model_validate(user)
@@ -633,9 +641,10 @@ class UsersTable:
             user = await session.get(User, id)
             if not user:
                 return None
-            scim = dict(user.scim or {})
+            raw_scim = getattr(user, 'scim', None)
+            scim = dict(raw_scim) if isinstance(raw_scim, dict) else {}
             scim[provider] = {'external_id': external_id}
-            user.scim = scim
+            setattr(user, 'scim', scim)
             await session.commit()
             await session.refresh(user)
             return UserModel.model_validate(user)
@@ -662,15 +671,15 @@ class UsersTable:
                 return None
             # Guard: settings may arrive as a raw JSON string from legacy rows.
             # Safely coerce to dict before merging so .update() never throws TypeError.
-            raw = user.settings
+            raw = getattr(user, 'settings', None)
             if isinstance(raw, str):
                 try:
                     raw = _json.loads(raw)
                 except (_json.JSONDecodeError, ValueError):
                     raw = {}
-            user_settings = dict(raw or {})
+            user_settings = dict(raw) if isinstance(raw, dict) else {}
             user_settings.update(updated)
-            user.settings = user_settings
+            setattr(user, 'settings', user_settings)
             await session.commit()
             await session.refresh(user)
             return UserModel.model_validate(user)
