@@ -2905,7 +2905,7 @@ heuristic_v1_tuning_baselines: Mapping[str, str] | None = None
 # Module-level rather than per-ProxyConfig because llm_router is a module global and a
 # second ProxyConfig instance must not get its own independent lock over it.
 MODEL_RECONCILE_LOCK: Final = asyncio.Lock()
-general_settings: dict = {}
+general_settings: dict | SettingsStore = {}
 _GENERAL_SETTINGS_VIEW: Final[TypeAdapter[Mapping[str, object]]] = TypeAdapter(Mapping[str, object])
 
 
@@ -5435,7 +5435,7 @@ def _get_field_default(field_info: FieldInfo) -> JsonValue:
 
 def _bind_general_settings_store(settings: SettingsStore) -> None:
     global general_settings
-    general_settings = settings  # pyright: ignore[reportAssignmentType]  # legacy global accepts mappings
+    general_settings = settings
 
 
 def _current_general_settings() -> Mapping[str, object]:
