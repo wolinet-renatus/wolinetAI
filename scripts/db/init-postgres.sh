@@ -7,11 +7,14 @@ WEBUI_DB="webui"
 PG_USER="${POSTGRES_USER:-postgres}"
 SCHEMA_DIR="/docker-entrypoint-initdb.d/schema"
 
-echo "==> [init-postgres] Creating '${WEBUI_DB}' database"
+echo "==> [init-postgres] Creating '${WEBUI_DB}' and 'wolinex' databases"
 psql -v ON_ERROR_STOP=1 --username "${PG_USER}" --dbname "${PRIMARY_DB}" \
   --set=webui_db="${WEBUI_DB}" --set=owner="${PG_USER}" <<'EOSQL'
 SELECT format('CREATE DATABASE %I OWNER %I', :'webui_db', :'owner')
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'webui_db')
+UNION ALL
+SELECT format('CREATE DATABASE %I OWNER %I', 'wolinex', :'owner')
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wolinex')
 \gexec
 EOSQL
 

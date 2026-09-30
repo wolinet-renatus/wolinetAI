@@ -41,6 +41,7 @@ services:
       PGPORT: "5432"
       PGUSER: ${POSTGRES_USER:-postgres}
       PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Dokploy}
+      DB_INIT_VERSION: "3"
     volumes:
       - ./scripts/deploy/ensure-postgres-databases.sh:/usr/local/bin/ensure-postgres-databases.sh:ro
     networks: [wolinet_internal]
@@ -48,8 +49,8 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
-        max_attempts: 3
-        delay: 10s
+        max_attempts: 5
+        delay: 5s
 
   mitambo:
     image: ${XINFERENCE_CPU_IMAGE:-xprobe/xinference:v3.0.0-cpu}

@@ -14,10 +14,13 @@ done
 psql --set=ON_ERROR_STOP=1 --dbname=litellm <<'EOSQL'
 SELECT format('CREATE DATABASE %I OWNER %I', 'webui', current_user)
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'webui')
+UNION ALL
+SELECT format('CREATE DATABASE %I OWNER %I', 'wolinex', current_user)
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wolinex')
 \gexec
 EOSQL
 
-for database in litellm webui; do
+for database in litellm webui wolinex; do
   psql --set=ON_ERROR_STOP=1 --dbname="${database}" --tuples-only --no-align \
     --command='SELECT current_database()' | grep -Fx "${database}"
 done
