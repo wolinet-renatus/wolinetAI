@@ -60,13 +60,15 @@ services:
       XINFERENCE_AUTH_DB_PATH: /root/.xinference/auth/auth.db
       XINFERENCE_MODEL_SRC: modelscope
       XINFERENCE_ENABLE_VIRTUAL_ENV: "false"
-      # Xinference v3 authentication stays enabled by default.
+      XINFERENCE_AUTH_ADVANCED: "false"
     volumes:
       - xinference_data:/root/.xinference
       - ./models:/models:ro
     networks: [wolinet_internal]
+    ports:
+      - "9997:9997"
     expose: ["9997"]
-    command: ["xinference-local", "-H", "0.0.0.0", "-p", "9997", "--log-level", "info"]
+    command: ["xinference-local", "-H", "0.0.0.0", "--port", "9997", "--log-level", "info"]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9997/ >/dev/null 2>&1 || python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:9997/', timeout=5)\" >/dev/null 2>&1 || python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:9997/', timeout=5)\" >/dev/null 2>&1"]
       interval: 15s
