@@ -694,7 +694,7 @@ class UsersTable:
     async def get_user_api_key_by_id(self, id: str, db: AsyncSession | None = None) -> str | None:
         async with get_async_db_context(db) as session:
             api_key = (await session.execute(select(ApiKey).where(ApiKey.user_id == id))).scalars().first()
-            return api_key.key if api_key else None
+            return str(api_key.key) if api_key and api_key.key is not None else None
 
     async def update_user_api_key_by_id(self, id: str, api_key: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as session:
@@ -719,8 +719,8 @@ class UsersTable:
 
     async def get_valid_user_ids(self, user_ids: list[str], db: AsyncSession | None = None) -> list[str]:
         async with get_async_db_context(db) as session:
-            result = await session.execute(select(User).where(User.id.in_(user_ids)))
-            return [u.id for u in result.scalars().all()]
+            result = await session.execute(select(User.id).where(User.id.in_(user_ids)))
+            return [str(uid) for uid in result.scalars().all()]
 
     async def get_super_admin_user(self, db: AsyncSession | None = None) -> UserModel | None:
         async with get_async_db_context(db) as session:
@@ -734,23 +734,22 @@ class UsersTable:
             result = await session.execute(
                 select(func.count()).select_from(User).where(User.last_active_at >= three_minutes_ago)
             )
-            return result.scalar()
+            count = result.scalar()
+            return int(count) if count is not None else 0
 
     @staticmethod
     def is_active(user: UserModel) -> bool:
         """Compute active status from an already-loaded UserModel (no DB hit)."""
         if user.last_active_at:
             three_minutes_ago = int(time.time()) - 180
-            return user.last_active_at >= three_minutes_ago
+            return bool(user.last_active_at >= three_minutes_ago)
         return False
 
     async def is_user_active(self, user_id: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as session:
             user = await session.get(User, user_id)
-            if user and user.last_active_at:
-                # Consider user active if last_active_at within the last 3 minutes
-                three_minutes_ago = int(time.time()) - 180
-                return user.last_active_at >= three_minutes_ago
+            if user:
+                return self.is_active(UserModel.model_validate(user))
             return False
 
 

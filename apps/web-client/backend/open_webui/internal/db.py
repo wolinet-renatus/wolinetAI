@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, contextmanager
 from typing import Any, Literal, Self, overload
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -223,7 +224,7 @@ async def get_async_session():
 
 
 @asynccontextmanager
-async def get_async_db():
+async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as db:
         try:
             yield db
@@ -232,7 +233,7 @@ async def get_async_db():
 
 
 @asynccontextmanager
-async def get_async_db_context(db: AsyncSession | None = None):
+async def get_async_db_context(db: AsyncSession | None = None) -> AsyncGenerator[AsyncSession, None]:
     if isinstance(db, AsyncSession) and DATABASE_ENABLE_SESSION_SHARING:
         yield db
     else:
