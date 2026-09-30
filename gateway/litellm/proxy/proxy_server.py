@@ -16990,7 +16990,11 @@ async def fallback_login(request: Request):
     """
     Create Proxy API Keys using Google Workspace SSO. Requires setting PROXY_BASE_URL in .env
     PROXY_BASE_URL should be the your deployed proxy endpoint, e.g. PROXY_BASE_URL="https://litellm-production-7002.up.railway.app/"
-    Example:
+    Example::
+
+        # get url from request
+        redirect_url = get_custom_url(str(request.base_url))
+    """
     # get url from request
     redirect_url = get_custom_url(str(request.base_url))
     if redirect_url.endswith("/"):

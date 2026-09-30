@@ -78,10 +78,10 @@ def _clean_proxy_headers(raw_headers) -> dict:
 
 
 async def send_get_request(
-    request: Request = None,
+    request: Request | None = None,
     url=None,
     key=None,
-    user: UserModel = None,
+    user: UserModel | None = None,
     config=None,
 ):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
@@ -112,10 +112,10 @@ async def send_get_request(
 
 
 async def get_models_request(
-    request: Request = None,
+    request: Request | None = None,
     url=None,
     key=None,
-    user: UserModel = None,
+    user: UserModel | None = None,
     config=None,
 ):
     if is_anthropic_url(url):
@@ -148,11 +148,14 @@ async def get_headers_and_cookies(
     request: Request,
     url,
     key=None,
-    config=None,
+    config: dict | None = None,
     metadata: dict | None = None,
-    user: UserModel = None,
+    user: UserModel | None = None,
 ):
     cookies = {}
+    # Guard: callers may pass config=None; treat it as an empty dict so all
+    # subsequent .get() calls are safe without repeated None checks throughout.
+    config = config or {}
     headers = {
         'Content-Type': 'application/json',
         **(
@@ -1576,7 +1579,13 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                 api_version = api_config.get('api_version', '2023-03-15-preview')
                 headers['api-version'] = api_version
 
-                payload = json.loads(body)
+                try:
+                    payload = json.loads(body)
+                except (json.JSONDecodeError, ValueError):
+                    raise HTTPException(
+                        status_code=400,
+                        detail='Request body must be valid JSON for Azure API passthrough',
+                    )
                 url, payload = convert_to_azure_payload(url, payload, api_version)
                 body = json.dumps(payload).encode()
 

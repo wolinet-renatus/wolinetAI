@@ -336,10 +336,8 @@ class UsersTable:
             query = select(User).where(email_filter)
             match = (await session.execute(query)).scalars().first()
             if match is None:
-                return
+                return None
             return UserModel.model_validate(match)
-        # --- context manager above always returns ---
-        return
 
     # --- oauth & integrations ---
     async def get_user_by_oauth_sub(
@@ -523,7 +521,7 @@ class UsersTable:
             users = result.scalars().all()
             return [UserModel.model_validate(user) for user in users]
 
-    async def get_users_by_user_ids(self, user_ids: list[str], db: AsyncSession | None = None) -> list[UserStatusModel]:
+    async def get_users_by_user_ids(self, user_ids: list[str], db: AsyncSession | None = None) -> list[UserModel]:
         async with get_async_db_context(db) as session:
             result = await session.execute(select(User).filter(User.id.in_(user_ids)))
             users = result.scalars().all()

@@ -26,8 +26,8 @@ def get_default_model() -> str:
     )
 
 
-import psycopg  # PostgreSQL adapter — do NOT reintroduce sqlite3
-from psycopg.rows import dict_row
+# psycopg is imported lazily inside _get_conn() so this module can be loaded
+# even when the package is not installed (e.g. during unit-test collection).
 
 
 class WolinetPortalDB:
@@ -46,6 +46,14 @@ class WolinetPortalDB:
         self._init_db()
 
     def _get_conn(self):
+        try:
+            import psycopg  # PostgreSQL adapter — do NOT reintroduce sqlite3
+            from psycopg.rows import dict_row
+        except ImportError as exc:  # pragma: no cover
+            raise RuntimeError(
+                "psycopg is required for the Wolinet Portal DB. "
+                "Install it with: pip install psycopg[binary]"
+            ) from exc
         return psycopg.connect(self.conn_str, row_factory=dict_row)
 
     def _init_db(self) -> None:
@@ -321,8 +329,35 @@ class WolinetPortalDB:
             conn.commit()
 
 
-# Global portal DB instance
-portal_db = WolinetPortalDB()
+# ---------------------------------------------------------------------------
+# Lazy singleton — avoids crashing the entire proxy at import time when
+# DATABASE_URL is absent or the database is temporarily unreachable.
+# ---------------------------------------------------------------------------
+_portal_db_instance: WolinetPortalDB | None = None
+
+
+def get_portal_db() -> WolinetPortalDB:
+    """Return the shared WolinetPortalDB instance, initialising it on first call."""
+    global _portal_db_instance
+    if _portal_db_instance is None:
+        _portal_db_instance = WolinetPortalDB()
+    return _portal_db_instance
+
+
+class _LazyPortalDB:
+    """Transparent proxy that forwards attribute access to the lazy singleton.
+
+    This allows callers that do ``from .wolinet_portal import portal_db`` and
+    then use ``portal_db.some_method(...)`` to keep working without change,
+    while the heavy DB initialisation is deferred until first actual use.
+    """
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(get_portal_db(), name)
+
+
+# Backward-compatible module-level name used by proxy_server.py
+portal_db: Any = _LazyPortalDB()
 
 
 def build_developer_portal_html(
