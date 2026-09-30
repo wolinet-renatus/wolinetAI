@@ -1690,8 +1690,8 @@ def ensure_unique_openapi_operation_ids(
 
 
 app = FastAPI(
-    docs_url=_get_docs_url(),
-    redoc_url=_get_redoc_url(),
+    docs_url=None,
+    redoc_url=None,
     openapi_url=_get_openapi_url(),
     title=_title,
     description=_description,
@@ -2551,25 +2551,36 @@ def mount_scalar_ui() -> None:
 
     _scalar_title: Final = os.getenv("DOCS_TITLE", "Wolinet AI — API Reference")
 
-    # ── /docs  (replaces Swagger UI entirely) ────────────────────────────────
+    # ── /docs  (replaces Swagger UI entirely with clean Scalar engine) ─────
     @app.get("/docs", include_in_schema=False)
     @app.get("/reference", include_in_schema=False)
-    async def scalar_docs(
+    async def scalar_api_documentation():
+        html_content = """
+        <!doctype html>
+        <html>
+          <head>
+            <title>Wolinet Ecosystem - API Gateway Docs</title>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+            <link rel="icon" type="image/png" href="/swagger/favicon.png" />
+          </head>
+          <body>
+            <script id="api-reference" data-url="/openapi.json"></script>
+            <script src="/swagger/scalar.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@scalar/api-reference'"></script>
+          </body>
+        </html>
+        """
+        return HTMLResponse(content=html_content)
+
+    @app.get("/portal", include_in_schema=False)
+    async def developer_portal(
         request: Request,
         token: Optional[str] = None,
         api_key: Optional[str] = None,
     ) -> Response:
         raw = token or api_key or request.query_params.get("token") or request.query_params.get("api_key")
         auth_token = await _resolve_session_api_key(request, raw_token=raw)
-
-        try:
-            verbose_proxy_logger.info(
-                f"Wolinet AI Docs access tracked: key={auth_token[:8]}*** "
-                f"ip={request.client.host if request.client else 'unknown'}"
-            )
-        except Exception:
-            pass
-
         return HTMLResponse(content=_build_scalar_html(_scalar_title, auth_token=auth_token))
 
     # ── OpenAPI spec aliases for Scalar document loader ───────────────────────
@@ -2637,7 +2648,9 @@ def mount_scalar_ui() -> None:
             "token": user["token"],
             "credits": user["credits"],
         })
-        response.set_cookie(key="token", value=user["token"], httponly=True, max_age=30 * 86400, samesite="lax", path="/")
+        cookie_domain = os.getenv("WOLINET_COOKIE_DOMAIN")
+        is_secure = os.getenv("WOLINET_COOKIE_DOMAIN") is not None  # secure=True in production
+        response.set_cookie(key="token", value=user["token"], httponly=True, max_age=30 * 86400, samesite="lax", secure=is_secure, path="/", domain=cookie_domain)
         return response
 
     @app.post("/api/wolinet/auth/register", include_in_schema=False)
@@ -2665,7 +2678,9 @@ def mount_scalar_ui() -> None:
             "token": user["token"],
             "credits": user["credits"],
         })
-        response.set_cookie(key="token", value=user["token"], httponly=True, max_age=30 * 86400, samesite="lax", path="/")
+        cookie_domain = os.getenv("WOLINET_COOKIE_DOMAIN")
+        is_secure = os.getenv("WOLINET_COOKIE_DOMAIN") is not None
+        response.set_cookie(key="token", value=user["token"], httponly=True, max_age=30 * 86400, samesite="lax", secure=is_secure, path="/", domain=cookie_domain)
         return response
 
     @app.post("/api/wolinet/auth/regenerate-key", include_in_schema=False)
@@ -2693,6 +2708,9 @@ def mount_scalar_ui() -> None:
         if token:
             portal_db.logout_session(token)
         response = JSONResponse({"status": "logged_out"})
+        cookie_domain = os.getenv("WOLINET_COOKIE_DOMAIN")
+        if cookie_domain:
+            response.delete_cookie(key="token", path="/", domain=cookie_domain)
         response.delete_cookie(key="token", path="/")
         return response
 
@@ -2824,7 +2842,23 @@ def mount_scalar_ui() -> None:
     #    serves Scalar instead of Swagger UI.  We replace the internal helper
     #    that FastAPI calls to render its docs page.
     def _scalar_html_generator(*args: object, **kwargs: object) -> HTMLResponse:  # noqa: ARG001
-        return HTMLResponse(content=_build_scalar_html(_scalar_title))
+        html_content = """
+        <!doctype html>
+        <html>
+          <head>
+            <title>Wolinet Ecosystem - API Gateway Docs</title>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+            <link rel="icon" type="image/png" href="/swagger/favicon.png" />
+          </head>
+          <body>
+            <script id="api-reference" data-url="/openapi.json"></script>
+            <script src="/swagger/scalar.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@scalar/api-reference'"></script>
+          </body>
+        </html>
+        """
+        return HTMLResponse(content=html_content)
 
     applications.get_swagger_ui_html = _scalar_html_generator
 
@@ -17694,19 +17728,25 @@ async def get_image(theme: Literal["light", "dark"] | None = None):
     return FileResponse(bundled_light_logo, media_type="image/jpeg")
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+@app.head("/favicon.ico", include_in_schema=False)
 @app.get("/get_favicon", include_in_schema=False)
+@app.head("/get_favicon", include_in_schema=False)
 async def get_favicon():
-    """Get custom favicon for the admin UI."""
+    """Get custom favicon for the admin UI and root requests."""
     from litellm.proxy.common_utils.static_asset_utils import (
         resolve_validated_local_image_path,
     )
 
     current_dir: Final = os.path.dirname(os.path.abspath(__file__))
+    swagger_favicon: Final = os.path.join(current_dir, "swagger", "favicon.ico")
     default_favicon: Final = os.path.join(current_dir, "_experimental", "out", "favicon.ico")
 
     favicon_url: Final = os.getenv("LITELLM_FAVICON_URL", "")
 
     if not favicon_url:
+        if os.path.exists(swagger_favicon):
+            return FileResponse(swagger_favicon, media_type="image/x-icon")
         if os.path.exists(default_favicon):
             return FileResponse(default_favicon, media_type="image/x-icon")
         raise HTTPException(status_code=404, detail="Default favicon not found")
@@ -17722,6 +17762,8 @@ async def get_favicon():
             "LITELLM_FAVICON_URL %r is not a supported image file or does not exist, falling back to default favicon",
             favicon_url,
         )
+        if os.path.exists(swagger_favicon):
+            return FileResponse(swagger_favicon, media_type="image/x-icon")
         if os.path.exists(default_favicon):
             return FileResponse(default_favicon, media_type="image/x-icon")
         raise HTTPException(status_code=404, detail="Favicon not found")

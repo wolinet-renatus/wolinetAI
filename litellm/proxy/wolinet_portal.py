@@ -8,13 +8,11 @@ and self-hosted AI Assistant powered by the default sovereign model.
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import os
 import secrets
-import sqlite3
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 log = logging.getLogger("litellm.proxy.wolinet_portal")
 
@@ -28,8 +26,9 @@ def get_default_model() -> str:
     )
 
 
-import psycopg
+import psycopg  # PostgreSQL adapter — do NOT reintroduce sqlite3
 from psycopg.rows import dict_row
+
 
 class WolinetPortalDB:
     """
@@ -37,8 +36,10 @@ class WolinetPortalDB:
     Stores all data directly in PostgreSQL (DATABASE_URL), avoiding local SQLite files.
     """
 
-    def __init__(self, db_url: Optional[str] = None):
-        self.db_url = db_url or os.getenv("DATABASE_URL") or "postgresql://postgres:postgres@127.0.0.1:5433/litellm"
+    def __init__(self, db_url: str | None = None):
+        self.db_url = db_url or os.getenv("DATABASE_URL")
+        if not self.db_url:
+            raise RuntimeError("DATABASE_URL must point to the PostgreSQL cluster")
         if self.db_url.startswith("postgres://"):
             self.db_url = self.db_url.replace("postgres://", "postgresql://", 1)
         self.conn_str = self.db_url.replace("postgresql+psycopg://", "postgresql://")
@@ -90,11 +91,11 @@ class WolinetPortalDB:
                     cur.execute("CREATE INDEX IF NOT EXISTS idx_portal_keys_key ON portal_keys(key)")
                     cur.execute("CREATE INDEX IF NOT EXISTS idx_portal_sessions_token ON portal_sessions(token)")
                 conn.commit()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             log.error("Failed to initialize PostgreSQL portal DB: %s", exc)
 
     @staticmethod
-    def hash_password(password: str, salt: Optional[str] = None) -> Tuple[str, str]:
+    def hash_password(password: str, salt: str | None = None) -> tuple[str, str]:
         if not salt:
             salt = secrets.token_hex(16)
         pw_hash = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000).hex()
@@ -105,7 +106,7 @@ class WolinetPortalDB:
         test_hash, _ = WolinetPortalDB.hash_password(password, salt)
         return secrets.compare_digest(test_hash, password_hash)
 
-    def register_user(self, name: str, email: str, password: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    def register_user(self, name: str, email: str, password: str) -> tuple[dict[str, Any] | None, str | None]:
         email = email.strip().lower()
         name = name.strip()
         if not email or not password or not name:
@@ -155,7 +156,7 @@ class WolinetPortalDB:
                 "credits": {"allocated": 25.0, "spent": 0.0, "remaining": 25.0, "currency": "USD"}
             }, None
 
-    def authenticate_user(self, email: str, password: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    def authenticate_user(self, email: str, password: str) -> tuple[dict[str, Any] | None, str | None]:
         email = email.strip().lower()
         with self._get_conn() as conn:
             with conn.cursor() as cur:
@@ -190,7 +191,7 @@ class WolinetPortalDB:
                 "credits": {"allocated": alloc, "spent": spent, "remaining": rem, "currency": "USD"}
             }, None
 
-    def get_session_user(self, token_or_key: str) -> Optional[Dict[str, Any]]:
+    def get_session_user(self, token_or_key: str) -> dict[str, Any] | None:
         if not token_or_key:
             return None
         token_or_key = token_or_key.strip()
@@ -254,7 +255,7 @@ class WolinetPortalDB:
                 "credits": {"allocated": alloc, "spent": spent, "remaining": max(0.0, round(alloc - spent, 4)), "currency": "USD"}
             }
 
-    def regenerate_key(self, user_id: str) -> Optional[str]:
+    def regenerate_key(self, user_id: str) -> str | None:
         with self._get_conn() as conn:
             with conn.cursor() as cur:
                 new_key = f"sk-wolinet-{secrets.token_hex(16)}"
@@ -269,7 +270,7 @@ class WolinetPortalDB:
             conn.commit()
             return new_key
 
-    def create_key(self, user_id: str, alias: str = "", max_budget: float = 25.0, duration: str = "30d") -> Dict[str, Any]:
+    def create_key(self, user_id: str, alias: str = "", max_budget: float = 25.0, duration: str = "30d") -> dict[str, Any]:
         with self._get_conn() as conn:
             with conn.cursor() as cur:
                 new_key = f"sk-wolinet-{secrets.token_hex(16)}"
@@ -290,7 +291,7 @@ class WolinetPortalDB:
                 "created_at": now
             }
 
-    def list_keys(self, user_id: str) -> List[Dict[str, Any]]:
+    def list_keys(self, user_id: str) -> list[dict[str, Any]]:
         with self._get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT * FROM portal_keys WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
@@ -329,7 +330,7 @@ def build_developer_portal_html(
     openapi_url: str = "/openapi.json",
     scalar_js_url: str = "/swagger/scalar.js",
     favicon_url: str = "/swagger/favicon.png",
-    default_model: Optional[str] = None,
+    default_model: str | None = None,
 ) -> str:
     """
     Renders the unified, state-of-the-art Wolinet AI Developer Portal.
@@ -342,7 +343,7 @@ def build_developer_portal_html(
     try:
         with open(html_path, "r", encoding="utf-8") as f:
             template = f.read()
-    except Exception as ex:
+    except Exception as ex:  # noqa: BLE001
         log.error("Failed to load portal HTML template from %s: %s", html_path, ex)
         return "<html><body><h1>Developer Portal Error</h1><p>Template file missing.</p></body></html>"
 
