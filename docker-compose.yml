@@ -60,7 +60,7 @@ services:
       XINFERENCE_AUTH_DB_PATH: /root/.xinference/auth/auth.db
       XINFERENCE_MODEL_SRC: modelscope
       XINFERENCE_ENABLE_VIRTUAL_ENV: "false"
-      XINFERENCE_AUTH_ADVANCED: "false"
+      XINFERENCE_AUTH_ADVANCED: "true"
     volumes:
       - xinference_data:/root/.xinference
       - ./models:/models:ro
