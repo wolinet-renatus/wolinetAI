@@ -2159,6 +2159,9 @@ class ModelResponse(ModelResponseBase):
     choices: list[Choices]
     """The list of completion choices the model generated for the input prompt."""
 
+    usage: Usage | None = None
+    """Usage statistics for the completion request."""
+
     def __init__(
         self,
         id=None,
