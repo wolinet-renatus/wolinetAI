@@ -79,8 +79,8 @@ services:
         window: 300s
       resources:
         limits:
-          cpus: ${XINFERENCE_CPU_LIMIT:-8.0}
-          memory: ${XINFERENCE_MEMORY_LIMIT:-24G}
+          cpus: ${XINFERENCE_CPU_LIMIT:-4.0}
+          memory: ${XINFERENCE_MEMORY_LIMIT:-8G}
 
   lango:
     image: ghcr.io/berriai/litellm:v1.74.0-stable
@@ -102,6 +102,7 @@ services:
       DEFAULT_MODEL: ${DEFAULT_MODEL:-qwen2.5-instruct}
       DEFAULT_MODELS: ${DEFAULT_MODELS:-qwen2.5-instruct}
       STORE_MODEL_IN_DB: "true"
+      ROOT_REDIRECT_URL: /ui
     volumes:
       - ./gateway/config.yaml:/app/config.yaml:ro
     networks: [wolinet_internal]
@@ -137,7 +138,7 @@ services:
     build:
       context: ./apps/web-client
       dockerfile: Dockerfile
-    image: wolinet/wolinex:${WOLINEX_IMAGE_TAG:-latest}
+    image: ${WOLINEX_IMAGE:-ghcr.io/open-webui/open-webui:main}
     environment:
       PORT: "8080"
       HOST: 0.0.0.0
