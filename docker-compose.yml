@@ -16,6 +16,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/db/init-postgres.sh:/docker-entrypoint-initdb.d/00-init.sh:ro
+    command: ["postgres", "-c", "tcp_keepalives_idle=60", "-c", "tcp_keepalives_interval=10", "-c", "tcp_keepalives_count=5"]
     networks: [wolinet_internal]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d litellm"]
