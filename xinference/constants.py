@@ -476,13 +476,29 @@ XINFERENCE_MODEL_DOWNLOAD_WORKERS = int(
 )
 
 
+def _parse_bool_env(val: Any, default: bool = False) -> bool:
+    if val is None:
+        return default
+    if isinstance(val, bool):
+        return val
+    s = str(val).strip().lower()
+    if s in ("1", "true", "yes", "on"):
+        return True
+    if s in ("0", "false", "no", "off"):
+        return False
+    try:
+        return bool(int(s))
+    except ValueError:
+        return default
+
+
 def is_metrics_disabled() -> bool:
     # Read at call time rather than freezing a module-level constant: the
     # supervisor/worker often run in a forked subprocess (the default start
     # method on Linux), which inherits the parent's already-imported modules.
     # A frozen constant would keep the parent's value and ignore a
     # XINFERENCE_DISABLE_METRICS set after this module was first imported.
-    return bool(int(os.environ.get(XINFERENCE_ENV_DISABLE_METRICS, 0)))
+    return _parse_bool_env(os.environ.get(XINFERENCE_ENV_DISABLE_METRICS), default=False)
 
 
 XINFERENCE_DOWNLOAD_MAX_ATTEMPTS = int(
@@ -497,20 +513,22 @@ XINFERENCE_SSE_PING_ATTEMPTS_SECONDS = int(
 )
 XINFERENCE_LAUNCH_MODEL_RETRY = 3
 XINFERENCE_DEFAULT_CANCEL_BLOCK_DURATION = 30
-XINFERENCE_ENABLE_VIRTUAL_ENV = bool(int(os.getenv(XINFERENCE_ENV_VIRTUAL_ENV, "1")))
-XINFERENCE_VIRTUAL_ENV_SKIP_INSTALLED = bool(
-    int(os.getenv(XINFERENCE_ENV_VIRTUAL_ENV_SKIP_INSTALLED, "1"))
+XINFERENCE_ENABLE_VIRTUAL_ENV = _parse_bool_env(
+    os.getenv(XINFERENCE_ENV_VIRTUAL_ENV), default=True
 )
-XINFERENCE_VIRTUAL_ENV_OFFLINE_INSTALL = bool(
-    int(os.getenv(XINFERENCE_ENV_VIRTUAL_ENV_OFFLINE_INSTALL, "0"))
+XINFERENCE_VIRTUAL_ENV_SKIP_INSTALLED = _parse_bool_env(
+    os.getenv(XINFERENCE_ENV_VIRTUAL_ENV_SKIP_INSTALLED), default=True
+)
+XINFERENCE_VIRTUAL_ENV_OFFLINE_INSTALL = _parse_bool_env(
+    os.getenv(XINFERENCE_ENV_VIRTUAL_ENV_OFFLINE_INSTALL), default=False
 )
 XINFERENCE_MAX_TOKENS = os.getenv(XINFERENCE_ENV_MAX_TOKENS)
 XINFERENCE_MAX_TOKENS = int(XINFERENCE_MAX_TOKENS) if XINFERENCE_MAX_TOKENS else None  # type: ignore
 XINFERENCE_ALLOWED_IPS = os.getenv(XINFERENCE_ENV_ALLOWED_IPS)
 XINFERENCE_BATCH_SIZE = int(os.getenv(XINFERENCE_ENV_BATCH_SIZE, "32"))
 XINFERENCE_BATCH_INTERVAL = float(os.getenv(XINFERENCE_ENV_BATCH_INTERVAL, "0.003"))
-XINFERENCE_ALLOW_MULTI_REPLICA_PER_GPU = bool(
-    int(os.getenv(XINFERENCE_ENV_ALLOW_MULTI_REPLICA_PER_GPU, "1"))
+XINFERENCE_ALLOW_MULTI_REPLICA_PER_GPU = _parse_bool_env(
+    os.getenv(XINFERENCE_ENV_ALLOW_MULTI_REPLICA_PER_GPU), default=True
 )
 XINFERENCE_LAUNCH_STRATEGY = os.getenv(
     XINFERENCE_ENV_LAUNCH_STRATEGY, "IDLE_FIRST_LAUNCH_STRATEGY"
