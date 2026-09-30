@@ -1199,7 +1199,7 @@ async def _connect_to_count_stored_values() -> SupportsRawQueries:
         database_url=str(get_secret("DATABASE_URL")), proxy_logging_obj=proxy_logging_obj
     )
     await client.connect()
-    return client.writer_db
+    return cast(SupportsRawQueries, client.writer_db)
 
 
 @asynccontextmanager
