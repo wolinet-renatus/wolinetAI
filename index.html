@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#151a16" />
+    <meta
+      name="description"
+      content="Build with the Wolinet AI API. Manage your developer key, explore the API, and get help from Wolinex."
+    />
+    <title>Developer Studio | Wolinet AI</title>
+    <link rel="stylesheet" href="/styles.css?v=20260930" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="https://ai.wolinet.com"
+        ><span class="brand-mark"><i></i><i></i><i></i><i></i></span
+        ><span>WOLINET<span class="brand-ai">AI</span></span></a
+      >
+      <nav>
+        <a href="#overview" class="active">Overview</a
+        ><a href="#quickstart">Quickstart</a
+        ><a href="#reference">API reference</a>
+      </nav>
+      <div class="account">
+        <span class="status-dot"></span
+        ><span id="account-label">Checking session</span
+        ><a href="https://wolinex.wolinet.com">Open Wolinex ↗</a>
+      </div>
+    </header>
+    <main>
+      <section class="intro" id="overview">
+        <div>
+          <div class="eyebrow">DEVELOPER STUDIO <span>/</span> 001</div>
+          <h1>Make something<br /><em>intelligent.</em></h1>
+          <p>
+            One reliable API for local inference and frontier models. Your
+            workspace session follows you here, so you can start building
+            without another sign-in.
+          </p>
+        </div>
+        <div class="intro-aside">
+          <span class="aside-index">W / API</span
+          ><span>OPENAI-COMPATIBLE<br />BASE URL</span
+          ><code>https://lango.wolinet.com/v1</code
+          ><a href="https://lango.wolinet.com">Gateway status ↗</a>
+        </div>
+      </section>
+      <section class="studio-grid">
+        <div class="main-column">
+          <article class="panel key-panel">
+            <div class="panel-heading">
+              <div>
+                <div class="eyebrow">YOUR ACCESS</div>
+                <h2>Developer key</h2>
+              </div>
+              <span id="key-state" class="pill">SESSION CHECK</span>
+            </div>
+            <p class="panel-copy">
+              Use this key in your applications. Keep it private and rotate it
+              if it is exposed.
+            </p>
+            <div class="key-field">
+              <code id="api-key">Sign in through Wolinex to load your key</code
+              ><button id="copy-key" type="button">Copy</button>
+            </div>
+            <div class="key-actions">
+              <button id="reveal-key" class="button button-soft" type="button">
+                Reveal key</button
+              ><button
+                id="rotate-key"
+                class="button button-outline"
+                type="button"
+              >
+                Rotate key</button
+              ><a class="inline-link" href="https://wolinex.wolinet.com"
+                >Manage account ↗</a
+              >
+            </div>
+            <p id="key-message" class="message" aria-live="polite"></p>
+          </article>
+          <article id="quickstart" class="panel quickstart">
+            <div class="panel-heading">
+              <div>
+                <div class="eyebrow">FIRST REQUEST</div>
+                <h2>Up and running in minutes</h2>
+              </div>
+              <span class="step-count">01 / 03</span>
+            </div>
+            <p class="panel-copy">
+              The gateway speaks the OpenAI API format. Point an existing client
+              at Lango and choose a model.
+            </p>
+            <div class="code-head">
+              <span>PYTHON / OPENAI SDK</span
+              ><button class="copy-snippet" type="button">Copy</button>
+            </div>
+            <pre><code>from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://lango.wolinet.com/v1",
+    api_key="YOUR_WOLINET_KEY",
+)
+
+response = client.chat.completions.create(
+    model="wolinex-coder",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+print(response.choices[0].message.content)</code></pre>
+            <div class="code-foot">
+              <span>MODEL <b>wolinex-coder</b></span
+              ><span>FORMAT <b>CHAT COMPLETIONS</b></span>
+            </div>
+          </article>
+          <article id="reference" class="panel reference-panel">
+            <div>
+              <div class="eyebrow">MODEL CATALOG</div>
+              <h2>Choose your route</h2>
+            </div>
+            <div class="model-row">
+              <span class="model-type">LOCAL / CHAT</span
+              ><code>wolinex-coder</code
+              ><span>Private coding and general tasks</span>
+            </div>
+            <div class="model-row">
+              <span class="model-type">LOCAL / EMBEDDING</span
+              ><code>wolinex-embed</code
+              ><span>Semantic search and retrieval</span>
+            </div>
+            <div class="model-row">
+              <span class="model-type">CLOUD / REASONING</span
+              ><code>deepseek-r1</code><span>Multi-step reasoning</span>
+            </div>
+            <a class="reference-link" href="https://lango.wolinet.com/docs"
+              >Open full API reference <span>↗</span></a
+            >
+          </article>
+        </div>
+        <aside class="side-column">
+          <article class="assistant panel">
+            <div class="assistant-head">
+              <div>
+                <div class="eyebrow">WOLINEX ASSISTANT</div>
+                <h2>Build with a guide.</h2>
+              </div>
+              <span class="assistant-star">✳</span>
+            </div>
+            <p>
+              Ask about the API, SDKs, or model routing. Replies use your
+              Wolinet developer key.
+            </p>
+            <div id="chat-log" class="chat-log" aria-live="polite">
+              <div class="chat-bubble assistant-bubble">
+                Hi. I can help you make your first request or choose a model.
+                What are you building?
+              </div>
+            </div>
+            <form id="chat-form" class="chat-form">
+              <label class="visually-hidden" for="chat-input"
+                >Message the Wolinex assistant</label
+              ><input
+                id="chat-input"
+                autocomplete="off"
+                placeholder="Ask a technical question…"
+              /><button aria-label="Send message" type="submit">↑</button>
+            </form>
+            <div class="assistant-foot">
+              <span><i></i> ROUTED THROUGH LANGO</span
+              ><span>WOLINEX-CODER</span>
+            </div>
+          </article>
+          <article class="help-card">
+            <div class="eyebrow">NEED A HAND?</div>
+            <h3>We build alongside you.</h3>
+            <p>
+              Find client libraries, deployment notes, and practical examples in
+              the documentation.
+            </p>
+            <a
+              href="https://github.com/wolinet-renatus/wolinetAI/tree/main/packages"
+              >Browse SDKs <span>↗</span></a
+            >
+          </article>
+          <div class="private-note">
+            <span class="private-mark">W.</span
+            ><span>YOUR REQUESTS. YOUR ROUTING.<br />YOUR INFRASTRUCTURE.</span>
+          </div>
+        </aside>
+      </section>
+    </main>
+    <footer>
+      <a href="https://ai.wolinet.com">WOLINET AI</a
+      ><span>DEVELOPER STUDIO · DAR ES SALAAM</span
+      ><a href="mailto:hello@wolinet.com">Contact support ↗</a>
+    </footer>
+    <script src="/app.js?v=20260930" defer></script>
+  </body>
+</html>
