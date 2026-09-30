@@ -113,6 +113,7 @@ function DialogContent({
         }}
         {...props}
       >
+        <DialogPrimitive.Description className="sr-only">Dialog content</DialogPrimitive.Description>
         {headerChildren}
         {bodyChildren.length > 0 && (
           <div
