@@ -110,7 +110,7 @@ class JSONField(types.TypeDecorator):
                     )
         return value
 
-    def copy(self, **kwargs: Any) -> Self:
+    def copy(self, **kwargs: Any) -> JSONField:
         return JSONField()
 
 
