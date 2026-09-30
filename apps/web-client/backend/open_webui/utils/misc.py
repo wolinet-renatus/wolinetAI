@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections.abc
+import functools
 import hashlib
 import json
 import logging
@@ -10,7 +11,7 @@ import time
 import uuid
 from datetime import timedelta
 from pathlib import Path
-from typing import Callable, Optional, Sequence, Union
+from typing import Any, Callable, Coroutine, Optional, ParamSpec, Sequence, TypeVar, Union
 
 import aiohttp
 import mimeparse
@@ -923,7 +924,13 @@ def freeze(value):
     return value
 
 
-def throttle(interval: float = 10.0):
+P = ParamSpec('P')
+R = TypeVar('R')
+
+
+def throttle(
+    interval: float | None = 10.0,
+) -> Callable[[Callable[P, Coroutine[Any, Any, R]]], Callable[P, Coroutine[Any, Any, R | None]]]:
     """
     Decorator to prevent a function from being called more than once within a specified duration.
     If the function is called again within the duration, it returns None. To avoid returning
@@ -932,11 +939,14 @@ def throttle(interval: float = 10.0):
     :param interval: Duration in seconds to wait before allowing the function to be called again.
     """
 
-    def decorator(func):
-        last_calls = {}
+    def decorator(
+        func: Callable[P, Coroutine[Any, Any, R]],
+    ) -> Callable[P, Coroutine[Any, Any, R | None]]:
+        last_calls: dict[Any, float] = {}
         lock = threading.Lock()
 
-        async def wrapper(*args, **kwargs):
+        @functools.wraps(func)
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | None:
             if interval is None:
                 return await func(*args, **kwargs)
 
