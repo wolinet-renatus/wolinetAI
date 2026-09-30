@@ -1,16 +1,18 @@
 services:
   mitambo:
+    image: ${XINFERENCE_GPU_IMAGE:-xprobe/xinference:latest}
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    shm_size: ${XINFERENCE_GPU_SHM_SIZE:-8gb}
     deploy:
       resources:
         limits:
-          cpus: "16.0"
-          memory: 28G
+          cpus: ${XINFERENCE_GPU_CPU_LIMIT:-16.0}
+          memory: ${XINFERENCE_GPU_MEMORY_LIMIT:-28G}
         reservations:
           memory: 8G
           devices:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-    environment:
-      NVIDIA_VISIBLE_DEVICES: all
-      NVIDIA_DRIVER_CAPABILITIES: compute,utility

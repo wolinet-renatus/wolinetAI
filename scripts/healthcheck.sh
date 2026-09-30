@@ -12,7 +12,7 @@ echo "=== Wolinet AI Platform Health Check ==="
 
 # Check Xinference
 echo -n "1. Checking Xinference Engine (:9997)... "
-if curl -s "http://127.0.0.1:9997/v1/models" >/dev/null; then
+if curl -sf "http://127.0.0.1:9997/status" >/dev/null; then
     echo "✅ HEALTHY"
 else
     echo "❌ DOWN"
@@ -20,7 +20,13 @@ fi
 
 # Check Running Models
 echo "2. Active Local Models:"
-"${ROOT_DIR}/.venv/bin/xinference" list || echo "Unable to list models."
+if [[ -n "${XINFERENCE_API_KEY:-}" ]]; then
+    "${ROOT_DIR}/.venv/bin/xinference" list \
+        --endpoint "http://127.0.0.1:9997" \
+        --api-key "${XINFERENCE_API_KEY}" || echo "Unable to list models."
+else
+    echo "Set XINFERENCE_API_KEY to list authenticated models."
+fi
 
 # Check LiteLLM Gateway
 echo -n "3. Checking AI Gateway (:4000)... "
@@ -33,6 +39,7 @@ fi
 echo -n "4. Testing Local Inference ('wolinex-coder')... "
 RESPONSE=$(curl -s -X POST http://127.0.0.1:9997/v1/chat/completions \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${XINFERENCE_API_KEY:-}" \
   -d '{
     "model": "wolinex-coder",
     "messages": [{"role": "user", "content": "ping"}],
