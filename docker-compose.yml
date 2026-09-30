@@ -74,9 +74,9 @@ services:
     deploy:
       restart_policy:
         condition: any
-        delay: 10s
-        max_attempts: 5
-        window: 120s
+        delay: 20s
+        max_attempts: 0
+        window: 300s
       resources:
         limits:
           cpus: ${XINFERENCE_CPU_LIMIT:-8.0}
@@ -117,9 +117,9 @@ services:
     deploy:
       restart_policy:
         condition: any
-        delay: 10s
-        max_attempts: 5
-        window: 120s
+        delay: 15s
+        max_attempts: 0
+        window: 300s
       resources:
         limits:
           cpus: ${LITELLM_CPU_LIMIT:-2.0}
@@ -174,9 +174,9 @@ services:
     deploy:
       restart_policy:
         condition: any
-        delay: 10s
-        max_attempts: 5
-        window: 120s
+        delay: 15s
+        max_attempts: 0
+        window: 300s
       resources:
         limits:
           cpus: ${WOLINEX_CPU_LIMIT:-2.0}
