@@ -971,6 +971,43 @@ _EXTRA_SECRET_GENERAL_SETTINGS_FIELDS: Final = frozenset(
 )
 
 
+def _is_secret_general_setting_field(field_name: str) -> bool:
+    return field_name in _EXTRA_SECRET_GENERAL_SETTINGS_FIELDS or SENSITIVE_DATA_MASKER.is_sensitive_key(field_name)
+
+
+# Matches the cap on _redact_sensitive_litellm_params (the closest analog in the
+# proxy). Past this depth we fail closed by returning "REDACTED" for the whole
+# subtree rather than recursing further — better to over-redact a pathological
+# config than to silently return a deeply-nested credential verbatim
+_REDACT_SECRET_MAX_DEPTH: Final = 10
+
+
+def _redact_secret_values_in_obj(value: JsonValue, depth: int = 0) -> JsonValue:
+    """Recursively redact secret leaves inside a structured field so a nested
+    credential (e.g. aws_web_identity_token under database_args) is never
+    returned to a non-admin, while non-secret siblings stay visible. At
+    _REDACT_SECRET_MAX_DEPTH the whole subtree is replaced with "REDACTED"
+    so depth-overrun fails closed."""
+    if depth >= _REDACT_SECRET_MAX_DEPTH:
+        return "REDACTED"
+    if isinstance(value, dict):
+        return {
+            key: ("REDACTED" if _is_secret_general_setting_field(key) else _redact_secret_values_in_obj(sub, depth + 1))
+            for key, sub in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_secret_values_in_obj(item, depth + 1) for item in value]
+    return value
+
+
+def _redact_config_param_value_for_logging(param_name: str | None, param_value: JsonValue) -> JsonValue:
+    if param_name == "environment_variables" and isinstance(param_value, dict):
+        return {key: "REDACTED" for key in param_value}
+    if isinstance(param_value, (dict, list)):
+        return _redact_secret_values_in_obj(param_value)
+    return param_value
+
+
 def _redact_worker_config_for_logging(worker_config: str | dict[str, JsonValue] | None) -> JsonValue:
     """Mask sensitive fields in the worker config before it enters a log record.
 
@@ -18429,43 +18466,6 @@ async def update_config_general_settings(
     _apply_ssrf_general_settings(general_settings)
 
     return response
-
-
-def _is_secret_general_setting_field(field_name: str) -> bool:
-    return field_name in _EXTRA_SECRET_GENERAL_SETTINGS_FIELDS or SENSITIVE_DATA_MASKER.is_sensitive_key(field_name)
-
-
-# Matches the cap on _redact_sensitive_litellm_params (the closest analog in the
-# proxy). Past this depth we fail closed by returning "REDACTED" for the whole
-# subtree rather than recursing further — better to over-redact a pathological
-# config than to silently return a deeply-nested credential verbatim
-_REDACT_SECRET_MAX_DEPTH: Final = 10
-
-
-def _redact_secret_values_in_obj(value: JsonValue, depth: int = 0) -> JsonValue:
-    """Recursively redact secret leaves inside a structured field so a nested
-    credential (e.g. aws_web_identity_token under database_args) is never
-    returned to a non-admin, while non-secret siblings stay visible. At
-    _REDACT_SECRET_MAX_DEPTH the whole subtree is replaced with "REDACTED"
-    so depth-overrun fails closed."""
-    if depth >= _REDACT_SECRET_MAX_DEPTH:
-        return "REDACTED"
-    if isinstance(value, dict):
-        return {
-            key: ("REDACTED" if _is_secret_general_setting_field(key) else _redact_secret_values_in_obj(sub, depth + 1))
-            for key, sub in value.items()
-        }
-    if isinstance(value, list):
-        return [_redact_secret_values_in_obj(item, depth + 1) for item in value]
-    return value
-
-
-def _redact_config_param_value_for_logging(param_name: str | None, param_value: JsonValue) -> JsonValue:
-    if param_name == "environment_variables" and isinstance(param_value, dict):
-        return {key: "REDACTED" for key in param_value}
-    if isinstance(param_value, (dict, list)):
-        return _redact_secret_values_in_obj(param_value)
-    return param_value
 
 
 def _redact_general_setting_value(field_name: str, value: JsonValue, is_full_admin: bool) -> JsonValue:
