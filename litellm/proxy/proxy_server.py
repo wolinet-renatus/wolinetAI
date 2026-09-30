@@ -16954,9 +16954,6 @@ async def fallback_login(request: Request):
     Create Proxy API Keys using Google Workspace SSO. Requires setting PROXY_BASE_URL in .env
     PROXY_BASE_URL should be the your deployed proxy endpoint, e.g. PROXY_BASE_URL="https://litellm-production-7002.up.railway.app/"
     Example:
-    """
-    from litellm.proxy.proxy_server import ui_link
-
     # get url from request
     redirect_url = get_custom_url(str(request.base_url))
     if redirect_url.endswith("/"):
@@ -17345,7 +17342,7 @@ async def onboarding(invite_link: str, request: Request):
         user_id=user_obj.user_id,
         key=onboarding_token,
         user_email=user_obj.user_email,
-        user_role=user_obj.user_role,  # pyright: ignore[reportArgumentType]  # nullable DB column, no unset contract
+        user_role=user_obj.user_role or LitellmUserRoles.INTERNAL_USER_VIEW_ONLY.value,
         login_method="username_password",
         premium_user=premium_user,
         auth_header_name=general_settings.get("litellm_key_header_name", "Authorization"),
@@ -17456,7 +17453,7 @@ async def _generate_onboarding_ui_session_token(user_obj: _UserTableRow) -> str:
         user_id=user_obj.user_id,
         key=key,
         user_email=user_obj.user_email,
-        user_role=user_obj.user_role,  # pyright: ignore[reportArgumentType]  # nullable DB column, no unset contract
+        user_role=user_obj.user_role or LitellmUserRoles.INTERNAL_USER_VIEW_ONLY.value,
         login_method="username_password",
         premium_user=premium_user,
         auth_header_name=general_settings.get("litellm_key_header_name", "Authorization"),
