@@ -16,7 +16,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import PromptHistories
 from open_webui.models.users import User, UserModel, UserResponse, Users
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, text, update
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -30,9 +30,9 @@ class Prompt(Base):  # versioned template
     user_id = Column(String, index=True)  # owner user id
     name = Column(Text)
     content = Column(Text)  # the prompt template body
-    data = Column(JSON, nullable=True)  # structured prompt parameters
-    meta = Column(JSON, nullable=True)  # freeform metadata (description, etc.)
-    tags = Column(JSON, nullable=True)
+    data = Column(JSONField, nullable=True)  # structured prompt parameters
+    meta = Column(JSONField, nullable=True)  # freeform metadata (description, etc.)
+    tags = Column(JSONField, nullable=True)
     is_active = Column(Boolean, default=True)
     version_id = Column(Text, nullable=True)  # Points to active history entry
     created_at = Column(BigInteger, nullable=True)
@@ -331,24 +331,10 @@ class PromptsTable:
 
                 tag = filter.get('tag')
                 if tag:
-                    bind = await session.connection()
-                    dialect_name = bind.dialect.name
                     tag_lower = tag.lower()
-
-                    if dialect_name == 'sqlite':
-                        tag_clause = text(
-                            'EXISTS (SELECT 1 FROM json_each(prompt.tags) t WHERE LOWER(t.value) = :tag_val)'
-                        )
-                    elif dialect_name == 'postgresql':
-                        tag_clause = text(
-                            'EXISTS (SELECT 1 FROM json_array_elements_text(prompt.tags) t WHERE LOWER(t) = :tag_val)'
-                        )
-                    else:
-                        # Fallback: LIKE on serialised JSON text (ASCII-safe only)
-                        tag_clause = func.lower(cast(Prompt.tags, String)).like(
-                            f'%{json.dumps(tag_lower, ensure_ascii=False)}%'
-                        )
-                        tag_lower = None
+                    tag_clause = text(
+                        'EXISTS (SELECT 1 FROM json_array_elements_text(prompt.tags) t WHERE LOWER(t) = :tag_val)'
+                    )
 
                     if tag_lower is not None:
                         query = query.filter(tag_clause.params(tag_val=tag_lower))

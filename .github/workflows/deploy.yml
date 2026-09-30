@@ -1,258 +1,164 @@
-name: Wolinet AI — CI/CD Pipeline
+name: Wolinet deployment
 
 on:
+  pull_request:
+    branches: [main, production]
   push:
     branches: [main, production]
-  pull_request:
-    branches: [main]
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+permissions:
+  contents: read
 
-# ──────────────────────────────────────────────────────────────────────────────
-# STAGE 1: Lint & Static Analysis
-# ──────────────────────────────────────────────────────────────────────────────
 jobs:
-  lint:
-    name: "🔍 Lint & Static Analysis"
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-
-      - name: Install linting tools
-        run: pip install ruff mypy types-requests
-
-      - name: Ruff lint (gateway)
-        run: ruff check gateway/litellm/proxy/ --select E,W,F,I --ignore E501
-        continue-on-error: false
-
-      - name: Ruff lint (webui backend)
-        run: ruff check apps/web-client/backend/open_webui/ --select E,W,F,I --ignore E501
-        continue-on-error: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: apps/web-client/package-lock.json
+          node-version: "22"
+      - name: Run deployment contract tests
+        run: python -m unittest discover -s tests -v
+      - name: Check browser scripts
+        run: |
+          node --check apps/homepage/app.js
+          node --check apps/dev-portal/app.js
+          python -m compileall -q tests/deployment
+          ruby -e 'require "yaml"; YAML.parse_file(".github/workflows/deploy.yml")'
+      - name: Validate Compose configurations
+        run: |
+          cp .env.prod.example .env
+          docker compose --project-name wolinet --file docker-compose.prod.yml config --quiet
+          docker compose --project-name wolinet --file docker-compose.prod.yml --file docker-compose.gpu.yml config --quiet
+      - name: Validate the Nginx edge configuration
+        run: |
+          cert_dir="$(mktemp -d)"
+          secret_dir="$(mktemp -d)"
+          for domain in ai wolinex lango mitambo dev; do
+            mkdir -p "${cert_dir}/${domain}.wolinet.com"
+            openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+              -keyout "${cert_dir}/${domain}.wolinet.com/privkey.pem" \
+              -out "${cert_dir}/${domain}.wolinet.com/fullchain.pem" \
+              -subj "/CN=${domain}.wolinet.com" >/dev/null 2>&1
+          done
+          hash="$(printf '%s' 'ci-only-password-0123456789' | openssl passwd -6 -stdin)"
+          printf 'ci-operator:%s\n' "$hash" > "${secret_dir}/mitambo.htpasswd"
+          docker run --rm \
+            -v "$PWD/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+            -v "$PWD/nginx/conf.d:/etc/nginx/conf.d:ro" \
+            -v "${cert_dir}:/etc/nginx/certs:ro" \
+            -v "${secret_dir}/mitambo.htpasswd:/etc/nginx/secrets/mitambo.htpasswd:ro" \
+            nginx:1.27-alpine nginx -t
+          docker run --rm \
+            -v "$PWD/apps/dev-portal/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:1.27-alpine nginx -t
+          docker run --rm \
+            -v "$PWD/apps/homepage/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:1.27-alpine nginx -t
 
-      - name: Install WebUI frontend deps
-        working-directory: apps/web-client
-        run: npm ci --prefer-offline
-
-      - name: ESLint WebUI frontend
-        working-directory: apps/web-client
-        run: npm run lint -- --max-warnings 0
-        continue-on-error: true
-
-      - name: Svelte-check type validation
-        working-directory: apps/web-client
-        run: npx svelte-check --tsconfig ./tsconfig.json
-        continue-on-error: true
-
-# ──────────────────────────────────────────────────────────────────────────────
-# STAGE 2: Automated Tests
-# ──────────────────────────────────────────────────────────────────────────────
-  test:
-    name: "🧪 Unit & Integration Tests"
+  build:
+    needs: validate
     runs-on: ubuntu-latest
-    needs: lint
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: litellm_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Install gateway deps
-        working-directory: gateway
-        run: pip install -e ".[proxy]" psycopg pytest pytest-asyncio httpx
-
-      - name: Run gateway unit tests
-        working-directory: gateway
-        env:
-          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/litellm_test
-          LITELLM_MASTER_KEY: sk-test-ci-key
-          REDIS_URL: redis://localhost:6379
-        run: pytest tests/ -x -q --timeout=60 || true
-
-      - name: Init test webui DB
-        run: psql postgresql://postgres:test_password@localhost:5432/litellm_test -f scripts/db/migrations/01_litellm_core.sql
-        continue-on-error: true
-
-      - name: Install webui backend deps
-        working-directory: apps/web-client/backend
-        run: pip install -r requirements.txt psycopg pytest pytest-asyncio
-
-      - name: Run webui backend tests
-        working-directory: apps/web-client/backend
-        env:
-          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/litellm_test
-          WEBUI_DATABASE_URL: postgresql://postgres:test_password@localhost:5432/litellm_test
-          REDIS_URL: redis://localhost:6379
-          LITELLM_MASTER_KEY: sk-test-ci-key
-          WEBUI_SECRET_KEY: test-secret
-        run: pytest open_webui/ -x -q --timeout=60 -k "not integration" || true
-
-# ──────────────────────────────────────────────────────────────────────────────
-# STAGE 3: Build & Push Docker Images
-# ──────────────────────────────────────────────────────────────────────────────
-  build-wolinex:
-    name: "🐳 Build wolinex (Open WebUI)"
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
     permissions:
       contents: read
       packages: write
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: wolinet-homepage
+            context: apps/homepage
+            dockerfile: apps/homepage/Dockerfile
+          - image: wolinet-devportal
+            context: apps/dev-portal
+            dockerfile: apps/dev-portal/Dockerfile
+          - image: wolinet-lango
+            context: gateway
+            dockerfile: gateway/Dockerfile
+          - image: wolinet-wolinex
+            context: apps/web-client
+            dockerfile: apps/web-client/Dockerfile
     steps:
       - uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name == 'push'
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
+      - uses: docker/setup-buildx-action@v3
+      - name: Set image tags
+        id: tags
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${{ matrix.image }}"
+          tags="${image}:sha-${GITHUB_SHA}"
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then tags="${tags},${image}:latest"; fi
+          if [ "${GITHUB_REF_NAME}" = "production" ]; then tags="${tags},${image}:production"; fi
+          echo "value=${tags}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
         with:
-          images: ${{ env.IMAGE_PREFIX }}/wolinex
-          tags: |
-            type=sha,prefix=sha-
-            type=ref,event=branch
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-
-      - name: Build & push wolinex image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./apps/web-client
-          file: ./apps/web-client/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: ${{ github.event_name == 'push' }}
           platforms: linux/amd64
+          tags: ${{ steps.tags.outputs.value }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
-# ──────────────────────────────────────────────────────────────────────────────
-# STAGE 4: Rolling Deploy to Contabo Production Server
-# ──────────────────────────────────────────────────────────────────────────────
   deploy:
-    name: "🚀 Rolling Deploy → Contabo"
+    needs: build
+    if: github.ref == 'refs/heads/production' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    needs: [build-wolinex]
-    if: github.ref == 'refs/heads/production'
     environment:
       name: production
       url: https://ai.wolinet.com
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
+      - uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.CONTABO_SSH_KEY }}
-
-      - name: Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.CONTABO_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Copy updated configs to server
-        run: |
-          rsync -avz --checksum \
-            --exclude '.git' \
-            --exclude 'node_modules' \
-            --exclude '__pycache__' \
-            --exclude '.env' \
-            --exclude 'models/' \
-            docker-compose.prod.yml \
-            gateway/config.yaml \
-            nginx/ \
-            scripts/db/ \
-            ${{ secrets.CONTABO_USER }}@${{ secrets.CONTABO_HOST }}:/opt/wolinetai/
-
-      - name: Pull latest images & rolling restart
+      - name: Add server host key
+        env:
+          CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
+        run: ssh-keyscan -H "$CONTABO_HOST" >> "$HOME/.ssh/known_hosts"
+      - name: Copy runtime configuration
         env:
           CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
           CONTABO_USER: ${{ secrets.CONTABO_USER }}
         run: |
-          ssh ${{ env.CONTABO_USER }}@${{ env.CONTABO_HOST }} << 'REMOTE_EOF'
-            set -euo pipefail
-            cd /opt/wolinetai
-
-            echo "==> Pulling latest Docker images..."
-            docker compose -f docker-compose.prod.yml pull lango wolinex nginx
-
-            echo "==> Running DB migrations (idempotent)..."
-            docker compose -f docker-compose.prod.yml exec -T postgres \
-              psql -U postgres -d litellm -f /docker-entrypoint-initdb.d/00-init.sh || true
-
-            echo "==> Rolling restart: lango (gateway)..."
-            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate lango
-            sleep 10
-            docker compose -f docker-compose.prod.yml ps lango | grep -q "healthy\|running"
-
-            echo "==> Rolling restart: wolinex (webui)..."
-            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate wolinex
-            sleep 15
-            docker compose -f docker-compose.prod.yml ps wolinex | grep -q "healthy\|running"
-
-            echo "==> Reloading nginx (zero-downtime)..."
-            docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
-
-            echo "==> Pruning old images..."
-            docker image prune -f --filter "until=24h"
-
-            echo "==> Deploy complete. Stack status:"
-            docker compose -f docker-compose.prod.yml ps
-          REMOTE_EOF
-
-      - name: Health check
+          ssh "${CONTABO_USER}@${CONTABO_HOST}" "mkdir -p /opt/wolinetai"
+          rsync -avzR \
+            ./docker-compose.prod.yml \
+            ./docker-compose.gpu.yml \
+            ./gateway/config.yaml \
+            ./nginx/nginx.conf \
+            ./nginx/conf.d \
+            ./scripts/deploy_production.sh \
+            ./scripts/setup_mitambo_auth.sh \
+            ./scripts/renew_tls.sh \
+            ./scripts/db/init-postgres.sh \
+            ./scripts/db/migrations \
+            "${CONTABO_USER}@${CONTABO_HOST}:/opt/wolinetai/"
+      - name: Authenticate registry and roll out release
+        env:
+          CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
+          CONTABO_USER: ${{ secrets.CONTABO_USER }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
         run: |
-          sleep 10
-          curl -sf https://ai.wolinet.com/nginx-health      || echo "website check failed"
-          curl -sf https://wolinex.wolinet.com/health        || echo "wolinex check failed"
-          curl -sf https://lango.wolinet.com/health          || echo "lango check failed"
-          curl -sf https://dev.wolinet.com/nginx-health      || echo "dev portal check failed"
-          echo "Post-deploy health checks complete."
+          printf '%s' "$GHCR_READ_TOKEN" | ssh "${CONTABO_USER}@${CONTABO_HOST}" \
+            "docker login ghcr.io --username '${GHCR_USERNAME}' --password-stdin"
+          ssh "${CONTABO_USER}@${CONTABO_HOST}" \
+            "cd /opt/wolinetai && chmod +x scripts/deploy_production.sh && ./scripts/deploy_production.sh sha-${GITHUB_SHA}"
+      - name: Verify public services
+        run: |
+          for url in \
+            https://ai.wolinet.com/healthz \
+            https://wolinex.wolinet.com/health \
+            https://lango.wolinet.com/health \
+            https://dev.wolinet.com/healthz; do
+            curl --fail --silent --show-error --retry 10 --retry-delay 3 "$url" >/dev/null
+          done

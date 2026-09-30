@@ -9,7 +9,7 @@ import time
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.misc import sanitize_metadata
 from pydantic import BaseModel, ConfigDict, model_validator
-from sqlalchemy import JSON, BigInteger, Column, String, Text, delete, func, select
+from sqlalchemy import BigInteger, Column, String, Text, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -24,8 +24,8 @@ class File(Base):  # uploaded file record
     filename = Column(Text)  # original upload filename
     path = Column(Text, nullable=True)
 
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
+    data = Column(JSONField, nullable=True)
+    meta = Column(JSONField, nullable=True)
 
     created_at = Column(BigInteger, index=True)  # upload timestamp
     updated_at = Column(BigInteger)
@@ -403,7 +403,7 @@ class FilesTable:
         have not yet been added to the ``knowledge_file`` join table.
 
         The JSON subscript syntax (``Column['key']['subkey'].as_string()``)
-        is supported by both SQLite (``json_extract``) and PostgreSQL
+        uses PostgreSQL JSONB operators
         (``->>``/``->``).
         """
         async with get_async_db_context(db) as db:

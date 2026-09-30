@@ -5,8 +5,6 @@
 # 2. LiteLLM AI Gateway (Cost routing, budget caps, cloud failover)
 # ==============================================================================
 
-version: '3.8'
-
 services:
   # ----------------------------------------------------------------------------
   # 1. Xinference Inference Engine (Tier 1: Local Heavy-Duty)

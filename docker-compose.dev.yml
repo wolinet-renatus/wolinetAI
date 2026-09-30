@@ -4,8 +4,6 @@
 # Spins up: LiteLLM Gateway (lango:4000) + Open WebUI (wolinex:3080)
 # ==============================================================================
 
-version: "3.9"
-
 networks:
   wolinet_dev:
     driver: bridge
@@ -30,6 +28,7 @@ services:
     environment:
       LITELLM_MASTER_KEY: sk-wolinet-dev-master-key
       WOLINET_GATEWAY_MASTER_KEY: sk-wolinet-dev-master-key
+      LITELLM_SALT_KEY: sk-wolinet-dev-master-key
       LITELLM_CONFIG_PATH: /app/config.yaml
       STORE_MODEL_IN_DB: "true"
       # Reuse existing wolinex-postgres on host port 5433
@@ -48,8 +47,12 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DEFAULT_MODEL: wolinex-coder
       DEFAULT_MODELS: wolinex-coder
+      UI_LOGO_PATH: "/app/assets/wolinet_logo.png"
+      UI_LOGO_PATH_DARK: "/app/assets/wolinet_logo_dark.png"
     volumes:
       - ./gateway/config.yaml:/app/config.yaml:ro
+      - ./gateway/litellm:/app/.venv/lib/python3.13/site-packages/litellm:ro
+      - ./gateway/assets:/app/assets:ro
     command: >
       --config /app/config.yaml --port 4000 --host 0.0.0.0
     healthcheck:
@@ -108,8 +111,18 @@ services:
       CORS_ALLOW_ORIGIN: "*"
       FORWARDED_ALLOW_IPS: "*"
       DEFAULT_USER_BUDGET: "25.0"
+      # Model discovery and session stability
+      DEFAULT_MODELS: "wolinex-coder"
+      ENABLE_MODEL_FILTER: "False"
+      BYPASS_MODEL_ACCESS_CONTROL: "True"
+      WEBUI_AUTH_COOKIE_SECURE: "False"
+      DEFAULT_LOCALE: "en-US"
+      APP_NAME: "Wolinet AI"
+      USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS: "True"
     volumes:
       - webui_dev_data:/app/backend/data
+      - ./gateway/assets/wolinet_logo.png:/app/backend/open_webui/static/logo.png:ro
+      - ./apps/web-client/backend/open_webui/routers/openai.py:/app/backend/open_webui/routers/openai.py:ro
     depends_on:
       lango:
         condition: service_healthy
@@ -119,3 +132,44 @@ services:
       timeout: 5s
       retries: 15
       start_period: 45s
+
+  # ── 3. Marketing / Home Page (website) ────────────────────────────────────
+  website:
+    build:
+      context: ./apps/homepage
+      dockerfile: Dockerfile
+    image: wolinet-website:latest
+    container_name: wolinet-dev-website
+    restart: unless-stopped
+    networks:
+      - wolinet_dev
+    ports:
+      - "3000:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/healthz > /dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── 4. Developer Portal (devportal) ───────────────────────────────────────
+  devportal:
+    build:
+      context: ./apps/dev-portal
+      dockerfile: Dockerfile
+    image: wolinet-devportal:latest
+    container_name: wolinet-dev-devportal
+    restart: unless-stopped
+    networks:
+      - wolinet_dev
+    ports:
+      - "8081:8080"
+    depends_on:
+      wolinex:
+        condition: service_healthy
+      lango:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/healthz > /dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

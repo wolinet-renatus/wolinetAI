@@ -131,19 +131,6 @@ CREATE TABLE IF NOT EXISTS "LiteLLMSpendLogs" (
     PRIMARY KEY ("request_id", "startTime")
 ) PARTITION BY RANGE ("startTime");
 
--- Current + rolling partitions (run monthly in cron/migration)
-CREATE TABLE IF NOT EXISTS "LiteLLMSpendLogs_2026_09"
-    PARTITION OF "LiteLLMSpendLogs"
-    FOR VALUES FROM ('2026-09-01') TO ('2026-10-01');
-
-CREATE TABLE IF NOT EXISTS "LiteLLMSpendLogs_2026_10"
-    PARTITION OF "LiteLLMSpendLogs"
-    FOR VALUES FROM ('2026-10-01') TO ('2026-11-01');
-
-CREATE TABLE IF NOT EXISTS "LiteLLMSpendLogs_2026_11"
-    PARTITION OF "LiteLLMSpendLogs"
-    FOR VALUES FROM ('2026-11-01') TO ('2026-12-01');
-
 -- ---------------------------------------------------------------------------
 -- Portal tables (sovereign developer portal — wolinet_portal.py)
 -- ---------------------------------------------------------------------------
@@ -191,14 +178,6 @@ CREATE INDEX IF NOT EXISTS idx_token_blocked    ON "LiteLLM_VerificationToken" (
 -- Users
 CREATE INDEX IF NOT EXISTS idx_user_email       ON "LiteLLM_UserTable" ("user_email");
 CREATE INDEX IF NOT EXISTS idx_user_role        ON "LiteLLM_UserTable" ("user_role");
-
--- Spend logs
-CREATE INDEX IF NOT EXISTS idx_spend_logs_user_time     ON "LiteLLMSpendLogs" ("user", "startTime" DESC);
-CREATE INDEX IF NOT EXISTS idx_spend_logs_apikey_time   ON "LiteLLMSpendLogs" ("api_key", "startTime" DESC);
-CREATE INDEX IF NOT EXISTS idx_spend_logs_team_time     ON "LiteLLMSpendLogs" ("team_id", "startTime" DESC);
-CREATE INDEX IF NOT EXISTS idx_spend_logs_model_time    ON "LiteLLMSpendLogs" ("model", "startTime" DESC);
-CREATE INDEX IF NOT EXISTS idx_spend_logs_metadata_gin  ON "LiteLLMSpendLogs" USING GIN ("metadata");
-CREATE INDEX IF NOT EXISTS idx_spend_logs_request_tags  ON "LiteLLMSpendLogs" USING GIN ("request_tags");
 
 -- Portal indexes
 CREATE INDEX IF NOT EXISTS idx_portal_users_email       ON portal_users(email);

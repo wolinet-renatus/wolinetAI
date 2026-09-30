@@ -1,0 +1,26 @@
+{
+  "include": [
+    "apps/web-client/backend",
+    "gateway",
+    "tests"
+  ],
+  "extraPaths": [
+    "apps/web-client/backend",
+    "gateway",
+    "."
+  ],
+  "executionEnvironments": [
+    {
+      "root": "apps/web-client/backend",
+      "extraPaths": [
+        "apps/web-client/backend"
+      ]
+    },
+    {
+      "root": "gateway",
+      "extraPaths": [
+        "gateway"
+      ]
+    }
+  ]
+}

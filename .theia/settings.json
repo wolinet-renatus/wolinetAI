@@ -54,5 +54,13 @@
       "url": "http://127.0.0.1:4000/v1",
       "apiKey": "sk-wolinet-admin-2026"
     }
+  ],
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/apps/web-client/backend",
+    "${workspaceFolder}/gateway"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}/apps/web-client/backend",
+    "${workspaceFolder}/gateway"
   ]
 }

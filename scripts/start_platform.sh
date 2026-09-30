@@ -20,7 +20,7 @@ if [ -f "${ROOT_DIR}/.env" ]; then
 fi
 
 # Ensure HF token and download policy are available for fast direct downloads
-export HF_TOKEN="${HF_TOKEN:-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}"
+export HF_TOKEN="${HF_TOKEN:-}"
 export HUGGING_FACE_HUB_TOKEN="${HF_TOKEN}"
 export XINFERENCE_MODEL_SRC="${XINFERENCE_MODEL_SRC:-huggingface}"
 export XINFERENCE_DOWNLOAD_MAX_ATTEMPTS="${XINFERENCE_DOWNLOAD_MAX_ATTEMPTS:-3}"

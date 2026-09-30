@@ -1,5 +1,5 @@
 # ==============================================================================
-# Wolinet AI — Production Docker Compose (Single Contabo GPU Server)
+# Wolinet AI production stack
 # ==============================================================================
 # Services:
 #   postgres   → Shared PostgreSQL cluster (LiteLLM + Open WebUI)
@@ -8,28 +8,21 @@
 #   lango      → LiteLLM AI Gateway          (lango.wolinet.com)
 #   wolinex    → Open WebUI (web client)     (wolinex.wolinet.com)
 #   website    → Marketing / home page       (ai.wolinet.com)
-#   devportal  → Developer portal            (dev.wolinet.com — served by lango)
+#   devportal  → Developer docs and key studio (dev.wolinet.com)
 #   nginx      → Reverse proxy + TLS terminator
 # ==============================================================================
-
-version: "3.9"
 
 networks:
   wolinet_internal:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16
 
 volumes:
   postgres_data:
   redis_data:
   xinference_data:
   webui_data:
-  website_data:
 
 services:
-
   # ==========================================================================
   # 1. PostgreSQL — shared state backend for all services
   # ==========================================================================
@@ -42,14 +35,13 @@ services:
       - wolinet_internal
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wolinet_pg_secret_change_me}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: litellm
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/db/init-postgres.sh:/docker-entrypoint-initdb.d/00-init.sh:ro
-    ports:
-      - "5432:5432"
+      - ./scripts/db/migrations:/docker-entrypoint-initdb.d/schema:ro
     command: >
       postgres
         -c max_connections=200
@@ -70,6 +62,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 8G
 
   # ==========================================================================
   # 2. Redis — session cache + LiteLLM router coordination
@@ -84,50 +81,54 @@ services:
       - redis_data:/data
     command: >
       redis-server
-        --requirepass ${REDIS_PASSWORD:-wolinet_redis_secret_change_me}
+        --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
         --maxmemory 512mb
         --maxmemory-policy allkeys-lru
         --save 60 1000
         --loglevel warning
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-wolinet_redis_secret_change_me}", "ping"]
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "-a",
+          "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}",
+          "ping",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
-    ports:
-      - "6379:6379"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
 
   # ==========================================================================
   # 3. Xinference — Local GPU inference engine  →  mitambo.wolinet.com
   # ==========================================================================
   mitambo:
-    image: xprobe/xinference:latest
+    image: xprobe/xinference:${XINFERENCE_IMAGE_TAG:-latest}
     container_name: wolinet-mitambo
     restart: unless-stopped
     networks:
       - wolinet_internal
-    ports:
-      - "9997:9997"
     environment:
       XINFERENCE_HOME: /root/.xinference
       XINFERENCE_AUTH_ADVANCED: "false"
-      HF_ENDPOINT: "https://hf-mirror.com"
+      HF_HOME: /root/.xinference/cache
+      XINFERENCE_MODEL_SRC: ${XINFERENCE_MODEL_SRC:-huggingface}
+      HF_TOKEN: ${HF_TOKEN:-}
+      HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN:-}
     volumes:
-      - ./models:/models
       - xinference_data:/root/.xinference
     command: >
       xinference-local -H 0.0.0.0 -p 9997
-    # ── Uncomment on NVIDIA GPU server ─────────────────────────────────────
     deploy:
       resources:
         limits:
+          cpus: "12.0"
           memory: 28G
-        reservations:
-          memory: 8G
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9997/v1/models || exit 1"]
       interval: 30s
@@ -139,25 +140,23 @@ services:
   # 4. LiteLLM Gateway  →  lango.wolinet.com + dev.wolinet.com (portal)
   # ==========================================================================
   lango:
-    image: ghcr.io/berriai/litellm:main-latest
-    container_name: wolinet-lango
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-wolinet-renatus}/wolinet-lango:${WOLINET_IMAGE_TAG:-latest}
     restart: unless-stopped
     networks:
       - wolinet_internal
-    ports:
-      - "4000:4000"
     environment:
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-wolinet-master-key-change-me}
-      WOLINET_GATEWAY_MASTER_KEY: ${WOLINET_GATEWAY_MASTER_KEY:-sk-wolinet-master-key-change-me}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?Set LITELLM_MASTER_KEY in .env}
+      WOLINET_GATEWAY_MASTER_KEY: ${WOLINET_GATEWAY_MASTER_KEY:?Set WOLINET_GATEWAY_MASTER_KEY in .env}
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:-${LITELLM_MASTER_KEY}}
       LITELLM_CONFIG_PATH: /app/config.yaml
       STORE_MODEL_IN_DB: "true"
       # Database
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-wolinet_pg_secret_change_me}@postgres:5432/litellm
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/litellm
       # Redis
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-wolinet_redis_secret_change_me}
-      REDIS_URL: redis://:${REDIS_PASSWORD:-wolinet_redis_secret_change_me}@redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}@redis:6379
       LITELLM_DISABLE_NO_REDIS_WARNING: "true"
       # Inference engine (internal bridge)
       WOLINET_API_BASE: http://mitambo:9997/v1
@@ -170,6 +169,7 @@ services:
       # Portal
       DEFAULT_MODEL: ${DEFAULT_MODEL:-wolinex-coder}
       DEFAULT_MODELS: ${DEFAULT_MODELS:-wolinex-coder}
+      WOLINET_COOKIE_DOMAIN: ".wolinet.com"
     volumes:
       - ./gateway/config.yaml:/app/config.yaml:ro
     depends_on:
@@ -185,57 +185,62 @@ services:
       timeout: 10s
       retries: 5
       start_period: 40s
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "3.0"
+          memory: 6G
 
   # ==========================================================================
   # 5. Open WebUI (Wolinex)  →  wolinex.wolinet.com
   # ==========================================================================
   wolinex:
-    build:
-      context: ./apps/web-client
-      dockerfile: Dockerfile
-    image: wolinet/wolinex:latest
-    container_name: wolinet-wolinex
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-wolinet-renatus}/wolinet-wolinex:${WOLINET_IMAGE_TAG:-latest}
     restart: unless-stopped
     networks:
       - wolinet_internal
-    ports:
-      - "3080:8080"
     environment:
       PORT: "8080"
       HOST: "0.0.0.0"
       WEBUI_NAME: "Wolinet AI"
       WEBUI_URL: "https://wolinex.wolinet.com"
-      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:-wolinet-sovereign-master-secret-2026}
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?Set WEBUI_SECRET_KEY in .env}
       # LiteLLM gateway (internal bridge — zero latency)
       OPENAI_API_BASE_URL: "http://lango:4000/v1"
-      OPENAI_API_KEY: ${LITELLM_MASTER_KEY:-sk-wolinet-master-key-change-me}
+      OPENAI_API_KEY: ${LITELLM_MASTER_KEY:?Set LITELLM_MASTER_KEY in .env}
+      WEBUI_AUTH_COOKIE_SAME_SITE: lax
+      WEBUI_AUTH_COOKIE_SECURE: "True"
+      WEBUI_SESSION_COOKIE_SAME_SITE: lax
+      WEBUI_SESSION_COOKIE_SECURE: "True"
+      WEBUI_AUTH_COOKIE_DOMAIN: ".wolinet.com"
       LITELLM_BASE_URL: "http://lango:4000"
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-wolinet-master-key-change-me}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?Set LITELLM_MASTER_KEY in .env}
       ENABLE_FORWARD_USER_INFO_HEADERS: "True"
       # Database
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-wolinet_pg_secret_change_me}@postgres:5432/webui
-      WEBUI_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-wolinet_pg_secret_change_me}@postgres:5432/webui
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/webui
+      WEBUI_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/webui
       DATABASE_POOL_SIZE: "10"
       DATABASE_POOL_MAX_OVERFLOW: "20"
       DATABASE_POOL_TIMEOUT: "30"
       DATABASE_POOL_RECYCLE: "3600"
       DATABASE_ENABLE_SESSION_SHARING: "True"
       # Redis
-      REDIS_URL: redis://:${REDIS_PASSWORD:-wolinet_redis_secret_change_me}@redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}@redis:6379
       # Models
       ENABLE_OLLAMA_API: "False"
       ENABLE_OPENAI_API: "True"
       RAG_EMBEDDING_ENGINE: openai
       RAG_EMBEDDING_MODEL: wolinex-embed
       RAG_OPENAI_API_BASE_URL: "http://lango:4000/v1"
-      RAG_OPENAI_API_KEY: ${LITELLM_MASTER_KEY:-sk-wolinet-master-key-change-me}
+      RAG_OPENAI_API_KEY: ${LITELLM_MASTER_KEY:?Set LITELLM_MASTER_KEY in .env}
       ENABLE_RAG_HYBRID_SEARCH: "False"
       VECTOR_DB: chroma
       # Telemetry
       SCARF_NO_ANALYTICS: "true"
       DO_NOT_TRACK: "true"
       ANONYMIZED_TELEMETRY: "false"
-      CORS_ALLOW_ORIGIN: "*"
+      CORS_ALLOW_ORIGIN: "https://wolinex.wolinet.com;https://dev.wolinet.com"
       FORWARDED_ALLOW_IPS: "*"
       DEFAULT_USER_BUDGET: "25.0"
     volumes:
@@ -251,25 +256,33 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 5G
 
   # ==========================================================================
   # 6. Marketing Website  →  ai.wolinet.com
   # ==========================================================================
   website:
-    image: nginx:alpine
-    container_name: wolinet-website
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-wolinet-renatus}/wolinet-homepage:${WOLINET_IMAGE_TAG:-latest}
     restart: unless-stopped
     networks:
       - wolinet_internal
-    ports:
-      - "8000:80"
-    volumes:
-      - website_data:/usr/share/nginx/html:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/ || exit 1"]
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz >/dev/null 2>&1"]
       interval: 30s
       timeout: 5s
       retries: 3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   # ==========================================================================
   # 7. Nginx — reverse proxy + TLS termination for all 5 subdomains
@@ -287,14 +300,44 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/certs:/etc/nginx/certs:ro
-      - ./nginx/dhparam.pem:/etc/nginx/dhparam.pem:ro
+      - ./nginx/certbot:/var/www/certbot:ro
+      - ./nginx/secrets/mitambo.htpasswd:/etc/nginx/secrets/mitambo.htpasswd:ro
     depends_on:
       - website
       - wolinex
       - lango
       - mitambo
+      - devportal
     healthcheck:
-      test: ["CMD-SHELL", "nginx -t && wget -qO- http://localhost/nginx-health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "nginx -t && wget -qO- http://localhost/nginx-health || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  devportal:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-wolinet-renatus}/wolinet-devportal:${WOLINET_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    networks:
+      - wolinet_internal
+    depends_on:
+      wolinex:
+        condition: service_healthy
+      lango:
+        condition: service_healthy
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M

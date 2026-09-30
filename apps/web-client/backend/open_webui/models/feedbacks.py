@@ -6,7 +6,7 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.users import User, UserModel
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Boolean, Column, Text, delete, func, select
+from sqlalchemy import BigInteger, Boolean, Column, Text, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -23,9 +23,9 @@ class Feedback(Base):
     user_id = Column(Text)
     version = Column(BigInteger, default=0)
     type = Column(Text)
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
-    snapshot = Column(JSON, nullable=True)
+    data = Column(JSONField, nullable=True)
+    meta = Column(JSONField, nullable=True)
+    snapshot = Column(JSONField, nullable=True)
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 

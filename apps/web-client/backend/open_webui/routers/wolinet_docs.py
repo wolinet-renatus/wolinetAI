@@ -15,61 +15,56 @@ Routes exposed:
 """
 from __future__ import annotations
 
-import os
 import logging
+import os
 from pathlib import Path
-from typing import Optional, Tuple
 
 import aiohttp
-from fastapi import APIRouter, Depends, Request, Response, status
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from open_webui.env import FRONTEND_BUILD_DIR, STATIC_DIR
+from open_webui.internal.db import get_async_session
+from open_webui.models.auths import Auths
+from open_webui.models.users import UserModel, Users
+from open_webui.utils.auth import (
+    create_token,
+    decode_token,
+    get_password_hash,
+    verify_password,
+)
+from open_webui.utils.litellm_user import (
+    ensure_litellm_user_exists,
+    get_litellm_user_info,
+    provision_litellm_user,
+)
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from open_webui.env import STATIC_DIR, FRONTEND_BUILD_DIR
-from open_webui.internal.db import get_async_session
-from open_webui.models.users import Users, UserModel
-from open_webui.models.auths import Auths
-from open_webui.utils.auth import (
-    create_api_key,
-    create_token,
-    decode_token,
-    verify_password,
-    get_password_hash,
-)
-from open_webui.utils.litellm_user import (
-    provision_litellm_user,
-    get_litellm_user_info,
-    ensure_litellm_user_exists,
-)
-
 log = logging.getLogger(__name__)
-router = APIRouter(tags=["Wolinet Developer Portal"])
+router = APIRouter(tags=['Wolinet Developer Portal'])
 
 
 # ── Config helpers (fully env-driven, zero hardcodes) ────────────────────────
 
 def _gateway_base() -> str:
-    url = (
-        os.getenv("LITELLM_BASE_URL")
-        or os.getenv("OPENAI_API_BASE_URL", "").replace("/v1", "")
-        or "http://127.0.0.1:4000"
-    ).rstrip("/")
-    if url.endswith("/v1"):
+    url = (os.getenv('LITELLM_BASE_URL') or os.getenv('OPENAI_API_BASE_URL', '').replace('/v1', '')).rstrip('/')
+    if not url:
+        raise HTTPException(status_code=503, detail='LiteLLM gateway URL is not configured')
+    if url.endswith('/v1'):
         url = url[:-3]
     return url
 
 
 def _master_key() -> str:
-    return os.getenv(
-        "LITELLM_MASTER_KEY",
-        os.getenv("OPENAI_API_KEY", "sk-wolinet-admin-2026"),
-    )
+    key = os.getenv('LITELLM_MASTER_KEY') or os.getenv('OPENAI_API_KEY')
+    if not key:
+        raise HTTPException(status_code=503, detail='LiteLLM gateway credentials are not configured')
+    return key
 
 
 def _default_model() -> str:
-    return (os.getenv("DEFAULT_MODELS", "wolinex-coder").split(",")[0].strip()
-            or "wolinex-coder")
+    return (os.getenv('DEFAULT_MODELS', 'wolinex-coder').split(',')[0].strip()
+            or 'wolinex-coder')
 
 
 # ── Pydantic Schemas ──────────────────────────────────────────────────────────
@@ -87,244 +82,261 @@ class RegisterForm(BaseModel):
 
 # ── Internal Helpers ──────────────────────────────────────────────────────────
 
-async def _generate_gateway_key(user_id: str, email: str = "", name: str = "", db=None) -> str:
+async def _generate_gateway_key(user_id: str, email: str = '', name: str = '', db=None) -> str:
     payload = {
-        "user_id": user_id,
-        "user_email": email or f"{user_id}@wolinet.local",
-        "user_alias": name or "Developer",
-        "max_budget": float(os.getenv("DEFAULT_USER_BUDGET", "25.0")),
+        'user_id': user_id,
+        'user_email': email or f'{user_id}@wolinet.local',
+        'user_alias': name or 'Developer',
+        'max_budget': float(os.getenv('DEFAULT_USER_BUDGET', '25.0')),
     }
     generated = None
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as s:
             async with s.post(
-                f"{_gateway_base()}/key/generate",
+                f'{_gateway_base()}/key/generate',
                 json=payload,
-                headers={"Authorization": f"Bearer {_master_key()}", "Content-Type": "application/json"},
+                headers={'Authorization': f'Bearer {_master_key()}', 'Content-Type': 'application/json'},
             ) as r:
                 if r.status in (200, 201):
-                    generated = (await r.json()).get("key")
+                    generated = (await r.json()).get('key')
     except Exception as exc:
-        log.warning("Gateway /key/generate unreachable for %s: %s", user_id, exc)
+        log.warning('Gateway /key/generate unreachable for %s: %s', user_id, exc)
 
-    key = generated or create_api_key()
-    await Users.update_user_api_key_by_id(user_id, key, db=db)
-    return key
+    if not generated:
+        raise HTTPException(status_code=502, detail='LiteLLM did not return a developer key')
+    await Users.update_user_api_key_by_id(user_id, generated, db=db)
+    return generated
 
 
-async def _extract_session(request: Request, db=None) -> Tuple[Optional[UserModel], Optional[str], Optional[str]]:
+def _session_response(payload: dict, token: str) -> JSONResponse:
+    response = JSONResponse(payload)
+    response.set_cookie(
+        'token',
+        token,
+        httponly=True,
+        samesite='lax',
+        secure=True,
+        path='/',
+        domain=os.getenv('WEBUI_AUTH_COOKIE_DOMAIN', '.wolinet.com'),
+        max_age=30 * 86400,
+    )
+    return response
+
+
+async def _extract_session(request: Request, db=None) -> tuple[UserModel | None, str | None, str | None]:
     raw = None
-    auth = request.headers.get("Authorization", request.headers.get("authorization", ""))
-    if auth.startswith("Bearer "):
+    auth = request.headers.get('Authorization', request.headers.get('authorization', ''))
+    if auth.startswith('Bearer '):
         raw = auth[7:].strip()
-    elif "token" in request.cookies:
-        raw = request.cookies["token"]
+    elif 'token' in request.cookies:
+        raw = request.cookies['token']
     else:
         raw = (
-            request.query_params.get("token")
-            or request.query_params.get("api_key")
-            or request.query_params.get("key")
+            request.query_params.get('token')
+            or request.query_params.get('api_key')
+            or request.query_params.get('key')
         )
     if not raw:
         return None, None, None
 
-    if raw.startswith("sk-"):
+    if raw.startswith('sk-'):
         user = await Users.get_user_by_api_key(raw, db=db)
         return (user, raw, None) if user else (None, None, None)
 
     try:
         data = decode_token(raw)
-        if not data and "." in raw:
+        if not data and '.' in raw:
             try:
                 import jwt as pyjwt
-                data = pyjwt.decode(raw, options={"verify_signature": False})
+                data = pyjwt.decode(raw, options={'verify_signature': False})
             except Exception:
                 pass
         if data:
-            uid = data.get("id") or data.get("user_id") or data.get("sub")
+            uid = data.get('id') or data.get('user_id') or data.get('sub')
             user = None
             if uid:
                 user = await Users.get_user_by_id(uid, db=db)
-            if not user and "email" in data:
-                user = await Users.get_user_by_email(data["email"], db=db)
+            if not user and 'email' in data:
+                user = await Users.get_user_by_email(data['email'], db=db)
             if user:
                 key = await Users.get_user_api_key_by_id(user.id, db=db)
                 if not key:
                     key = await _generate_gateway_key(user.id, user.email, user.name, db=db)
                 return user, key, raw
     except Exception as exc:
-        log.warning("Session extract error: %s", exc)
+        log.warning('Session extract error: %s', exc)
     return None, None, None
 
 
 # ── Auth Endpoints ────────────────────────────────────────────────────────────
 
-@router.get("/api/wolinet/auth/session", include_in_schema=False)
+@router.get('/api/wolinet/auth/session', include_in_schema=False)
 async def auth_session(request: Request, db: AsyncSession = Depends(get_async_session)):
     user, api_key, jwt = await _extract_session(request, db=db)
     if not user:
-        return JSONResponse({"authenticated": False, "user": None, "api_key": None, "credits": None})
+        return JSONResponse({'authenticated': False, 'user': None, 'api_key': None, 'credits': None})
 
-    credits = {"allocated": 25.0, "spent": 0.0, "remaining": 25.0, "currency": "USD"}
+    credits = {'allocated': 25.0, 'spent': 0.0, 'remaining': 25.0, 'currency': 'USD'}
     try:
         info = await get_litellm_user_info(user.id)
         if info:
-            u = info.get("user_info", {})
-            alloc = float(u.get("max_budget") or 25.0)
-            spent = float(u.get("spend") or 0.0)
-            credits = {"allocated": alloc, "spent": spent, "remaining": max(0.0, round(alloc - spent, 4)), "currency": "USD"}
+            u = info.get('user_info', {})
+            alloc = float(u.get('max_budget') or 25.0)
+            spent = float(u.get('spend') or 0.0)
+            credits = {'allocated': alloc, 'spent': spent, 'remaining': max(0.0, round(alloc - spent, 4)), 'currency': 'USD'}
     except Exception:
         pass
 
     return JSONResponse({
-        "authenticated": True,
-        "user": {"id": user.id, "name": user.name, "email": user.email, "role": user.role},
-        "api_key": api_key,
-        "token": jwt,
-        "credits": credits,
+        'authenticated': True,
+        'user': {'id': user.id, 'name': user.name, 'email': user.email, 'role': user.role},
+        'api_key': api_key,
+        'token': jwt,
+        'credits': credits,
     })
 
 
-@router.post("/api/wolinet/auth/login", include_in_schema=False)
-async def auth_login(request: Request, response: Response, form: LoginForm, db: AsyncSession = Depends(get_async_session)):
+@router.post('/api/wolinet/auth/login', include_in_schema=False)
+async def auth_login(request: Request, form: LoginForm, db: AsyncSession = Depends(get_async_session)):
     user = await Auths.authenticate_user(form.email.strip().lower(), lambda pw: verify_password(form.password, pw), db=db)
     if not user:
-        return JSONResponse(status_code=401, content={"error": "Invalid email or password."})
+        return JSONResponse(status_code=401, content={'error': 'Invalid email or password.'})
     try:
         await ensure_litellm_user_exists(user)
     except Exception:
         pass
     key = await Users.get_user_api_key_by_id(user.id, db=db) or await _generate_gateway_key(user.id, user.email, user.name, db=db)
-    token = create_token(data={"id": user.id})
-    response.set_cookie("token", token, httponly=True, samesite="lax", secure=False, max_age=30 * 86400)
-    return JSONResponse({
-        "authenticated": True, "token": token,
-        "user": {"id": user.id, "name": user.name, "email": user.email, "role": user.role},
-        "api_key": key,
-    })
+    token = create_token(data={'id': user.id})
+    return _session_response({
+        'authenticated': True, 'token': token,
+        'user': {'id': user.id, 'name': user.name, 'email': user.email, 'role': user.role},
+        'api_key': key,
+    }, token)
 
 
-@router.post("/api/wolinet/auth/register", include_in_schema=False)
-async def auth_register(request: Request, response: Response, form: RegisterForm, db: AsyncSession = Depends(get_async_session)):
+@router.post('/api/wolinet/auth/register', include_in_schema=False)
+async def auth_register(request: Request, form: RegisterForm, db: AsyncSession = Depends(get_async_session)):
     name, email, password = form.name.strip(), form.email.strip().lower(), form.password.strip()
     if not all([name, email, password]):
-        return JSONResponse(status_code=400, content={"error": "Name, email, and password are required."})
+        return JSONResponse(status_code=400, content={'error': 'Name, email, and password are required.'})
     if await Users.get_user_by_email(email, db=db):
-        return JSONResponse(status_code=400, content={"error": "Account already exists. Please sign in."})
+        return JSONResponse(status_code=400, content={'error': 'Account already exists. Please sign in.'})
     user = None
     try:
         from open_webui.routers.auths import signup_handler
         user = await signup_handler(request, email=email, password=password, name=name, db=db)
     except Exception:
         hashed = get_password_hash(password)
-        user = await Auths.insert_new_auth(email=email, password=hashed, name=name, role="user", db=db)
+        user = await Auths.insert_new_auth(email=email, password=hashed, name=name, role='user', db=db)
         if user:
             try:
-                await provision_litellm_user(user.id, email, name, role="user")
+                await provision_litellm_user(user.id, email, name, role='user')
             except Exception:
                 pass
     if not user:
-        return JSONResponse(status_code=500, content={"error": "Account creation failed. Please try again."})
+        return JSONResponse(status_code=500, content={'error': 'Account creation failed. Please try again.'})
     key = await _generate_gateway_key(user.id, email, name, db=db)
-    token = create_token(data={"id": user.id})
-    response.set_cookie("token", token, httponly=True, samesite="lax", secure=False, max_age=30 * 86400)
-    return JSONResponse({
-        "authenticated": True, "token": token,
-        "user": {"id": user.id, "name": user.name, "email": user.email, "role": user.role},
-        "api_key": key,
-    })
+    token = create_token(data={'id': user.id})
+    return _session_response({
+        'authenticated': True, 'token': token,
+        'user': {'id': user.id, 'name': user.name, 'email': user.email, 'role': user.role},
+        'api_key': key,
+    }, token)
 
 
-@router.post("/api/wolinet/auth/regenerate-key", include_in_schema=False)
+@router.post('/api/wolinet/auth/regenerate-key', include_in_schema=False)
 async def auth_regenerate_key(request: Request, db: AsyncSession = Depends(get_async_session)):
     user, _, _ = await _extract_session(request, db=db)
     if not user:
-        return JSONResponse(status_code=401, content={"error": "Authentication required."})
+        return JSONResponse(status_code=401, content={'error': 'Authentication required.'})
     key = await _generate_gateway_key(user.id, user.email, user.name, db=db)
-    return JSONResponse({"authenticated": True, "api_key": key})
+    return JSONResponse({'authenticated': True, 'api_key': key})
 
 
-@router.post("/api/wolinet/auth/logout", include_in_schema=False)
-async def auth_logout(response: Response):
-    response.delete_cookie("token")
-    return JSONResponse({"authenticated": False})
+@router.post('/api/wolinet/auth/logout', include_in_schema=False)
+async def auth_logout():
+    cookie_domain = os.getenv('WEBUI_AUTH_COOKIE_DOMAIN', '.wolinet.com')
+    response = JSONResponse({'authenticated': False})
+    response.delete_cookie('token', path='/', domain=cookie_domain)
+    response.delete_cookie('token', path='/')
+    return response
 
 
 # ── Key Management Proxy ──────────────────────────────────────────────────────
 
-@router.get("/api/wolinet/keys", include_in_schema=False)
+@router.get('/api/wolinet/keys', include_in_schema=False)
 async def list_keys(request: Request, db: AsyncSession = Depends(get_async_session)):
     user, api_key, _ = await _extract_session(request, db=db)
     if not user:
-        return JSONResponse(status_code=401, content={"error": "Authentication required."})
+        return JSONResponse(status_code=401, content={'error': 'Authentication required.'})
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as s:
             async with s.get(
-                f"{_gateway_base()}/key/list",
-                headers={"Authorization": f"Bearer {_master_key()}"},
-                params={"user_id": user.id},
+                f'{_gateway_base()}/key/list',
+                headers={'Authorization': f'Bearer {_master_key()}'},
+                params={'user_id': user.id},
             ) as r:
                 return JSONResponse(await r.json(), status_code=r.status)
     except Exception as exc:
-        return JSONResponse(status_code=502, content={"error": str(exc)})
+        return JSONResponse(status_code=502, content={'error': str(exc)})
 
 
-@router.post("/api/wolinet/keys", include_in_schema=False)
+@router.post('/api/wolinet/keys', include_in_schema=False)
 async def create_key(request: Request, db: AsyncSession = Depends(get_async_session)):
     user, _, _ = await _extract_session(request, db=db)
     if not user:
-        return JSONResponse(status_code=401, content={"error": "Authentication required."})
+        return JSONResponse(status_code=401, content={'error': 'Authentication required.'})
     body = await request.json()
-    body.setdefault("user_id", user.id)
-    body.setdefault("user_email", user.email)
+    body.setdefault('user_id', user.id)
+    body.setdefault('user_email', user.email)
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as s:
             async with s.post(
-                f"{_gateway_base()}/key/generate",
+                f'{_gateway_base()}/key/generate',
                 json=body,
-                headers={"Authorization": f"Bearer {_master_key()}", "Content-Type": "application/json"},
+                headers={'Authorization': f'Bearer {_master_key()}', 'Content-Type': 'application/json'},
             ) as r:
                 return JSONResponse(await r.json(), status_code=r.status)
     except Exception as exc:
-        return JSONResponse(status_code=502, content={"error": str(exc)})
+        return JSONResponse(status_code=502, content={'error': str(exc)})
 
 
 # ── AI Assistant Chat Proxy ───────────────────────────────────────────────────
 
-@router.post("/api/wolinet/chat", include_in_schema=False)
+@router.post('/api/wolinet/chat', include_in_schema=False)
 async def assistant_chat(request: Request, db: AsyncSession = Depends(get_async_session)):
     user, _, _ = await _extract_session(request, db=db)
     body = await request.body()
-    hdrs = {"Authorization": f"Bearer {_master_key()}", "Content-Type": "application/json"}
+    hdrs = {'Authorization': f'Bearer {_master_key()}', 'Content-Type': 'application/json'}
     if user:
         hdrs.update({
-            "x-openwebui-user-id": user.id,
-            "x-openwebui-user-email": user.email,
-            "x-openwebui-user-name": user.name,
-            "x-litellm-user-id": user.id,
+            'x-openwebui-user-id': user.id,
+            'x-openwebui-user-email': user.email,
+            'x-openwebui-user-name': user.name,
+            'x-litellm-user-id': user.id,
         })
     else:
-        hdrs["x-litellm-user-id"] = "docs-assistant"
+        hdrs['x-litellm-user-id'] = 'docs-assistant'
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as s:
-            async with s.post(f"{_gateway_base()}/v1/chat/completions", data=body, headers=hdrs) as r:
+            async with s.post(f'{_gateway_base()}/v1/chat/completions', data=body, headers=hdrs) as r:
                 return Response(content=await r.read(), status_code=r.status, media_type=r.content_type)
     except Exception as exc:
-        return JSONResponse(status_code=502, content={"error": f"Gateway unreachable: {exc}"})
+        return JSONResponse(status_code=502, content={'error': f'Gateway unreachable: {exc}'})
 
 
 # ── Scalar JS Bundle Fallback ─────────────────────────────────────────────────
 
-@router.get("/static/scalar.js", include_in_schema=False)
-@router.get("/swagger/scalar.js", include_in_schema=False)
+@router.get('/static/scalar.js', include_in_schema=False)
+@router.get('/swagger/scalar.js', include_in_schema=False)
 async def scalar_bundle():
     for candidate in [
-        Path(STATIC_DIR) / "scalar.js",
-        Path(FRONTEND_BUILD_DIR) / "static" / "scalar.js",
-        Path(__file__).parents[4] / "gateway" / "litellm" / "proxy" / "swagger" / "scalar.js",
+        Path(STATIC_DIR) / 'scalar.js',
+        Path(FRONTEND_BUILD_DIR) / 'static' / 'scalar.js',
+        Path(__file__).parents[4] / 'gateway' / 'litellm' / 'proxy' / 'swagger' / 'scalar.js',
     ]:
         if candidate.exists():
-            return FileResponse(str(candidate), media_type="text/javascript")
+            return FileResponse(str(candidate), media_type='text/javascript')
     return Response(status_code=404)
 
 
@@ -1097,7 +1109,7 @@ def _build_portal_html(title: str, openapi_url: str, scalar_js_url: str, favicon
         if(eps){{var uniq=[...new Set(eps)].slice(0,3);btns='<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">'+uniq.map(function(ep){{var pts=ep.split(/\\s+/);return '<a class="ep-btn" onclick="navTo(\'reference\',document.querySelector(\'[onclick*=reference]\'));window.location.hash=\'#'+pts[0]+pts[1]+'\'">'+ep+' &rarr;</a>';}}).join('')+'</div>';}}
         asstMsg('assistant','<div>'+fmt+btns+'</div>');
       }}else{{
-        var err=await r.json().catch(function(){{return {{}};}}); 
+        var err=await r.json().catch(function(){{return {{}};}});
         asstMsg('assistant','<div style="color:var(--red);">Gateway error: '+(err.error&&(err.error.message||err.error)||'HTTP '+r.status)+'</div>');
       }}
     }}catch(ex){{
@@ -1123,19 +1135,19 @@ def _build_portal_html(title: str, openapi_url: str, scalar_js_url: str, favicon
 
 # ── Route Definitions ─────────────────────────────────────────────────────────
 
-@router.get("/docs", include_in_schema=False)
-@router.get("/scalar", include_in_schema=False)
+@router.get('/docs', include_in_schema=False)
+@router.get('/scalar', include_in_schema=False)
 async def sovereign_docs(request: Request):
     """Serve the Wolinet AI Sovereign Developer Portal."""
     return HTMLResponse(
         content=_build_portal_html(
-            title="Wolinet AI — Sovereign Intelligence & Inference API",
-            openapi_url="/gateway/openapi.json",
-            scalar_js_url="/static/scalar.js",
-            favicon_url="/static/favicon.png",
+            title='Wolinet AI — Sovereign Intelligence & Inference API',
+            openapi_url='/gateway/openapi.json',
+            scalar_js_url='/static/scalar.js',
+            favicon_url='/static/favicon.png',
             default_model=_default_model(),
         ),
-        headers={"Cache-Control": "no-cache"},
+        headers={'Cache-Control': 'no-cache'},
     )
 
 

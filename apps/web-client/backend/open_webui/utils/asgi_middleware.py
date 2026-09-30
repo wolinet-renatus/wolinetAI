@@ -16,7 +16,7 @@ In Open WebUI this surfaces as:
 
 * SQLAlchemy logging multi-page `NotImplementedError:
   terminate_force_close()` tracebacks at ERROR every time a request is
-  cancelled mid-DB-call (the aiosqlite connector cleanup path).
+  cancelled mid-database-call while the connector is cleaning up.
 * Spurious cancellations cascading through the four stacked
   `@app.middleware('http')` wrappers.
 

@@ -6,10 +6,10 @@ import time
 import uuid
 from typing import Optional
 
-from open_webui.internal.db import Base, get_async_db_context
+from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.users import UserResponse, Users
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Column, Index, Text, delete, func, select
+from sqlalchemy import BigInteger, Column, Index, Text, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
@@ -23,7 +23,7 @@ class PromptHistory(Base):
     id = Column(Text, primary_key=True)
     prompt_id = Column(Text, nullable=False, index=True)
     parent_id = Column(Text, nullable=True)  # Reference to parent commit
-    snapshot = Column(JSON, nullable=False)
+    snapshot = Column(JSONField, nullable=False)
     user_id = Column(Text, nullable=False)
     commit_message = Column(Text, nullable=True)
     created_at = Column(BigInteger, nullable=False)

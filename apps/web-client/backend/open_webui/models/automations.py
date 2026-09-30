@@ -3,9 +3,9 @@ import time
 from typing import Optional
 from uuid import uuid4
 
-from open_webui.internal.db import Base, get_async_db_context
+from open_webui.internal.db import Base, JSONField, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Boolean, Column, Index, String, Text, cast, delete, func, or_, select, update
+from sqlalchemy import BigInteger, Boolean, Column, Index, String, Text, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -22,8 +22,8 @@ class Automation(Base):
     id = Column(Text, primary_key=True)
     user_id = Column(Text, nullable=False)
     name = Column(Text, nullable=False)
-    data = Column(JSON, nullable=False)  # {prompt, model_id, rrule}
-    meta = Column(JSON, nullable=True)
+    data = Column(JSONField, nullable=False)  # {prompt, model_id, rrule}
+    meta = Column(JSONField, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     last_run_at = Column(BigInteger, nullable=True)
     next_run_at = Column(BigInteger, nullable=True)

@@ -9,7 +9,6 @@ from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.files import FileMetadataResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
-    JSON,
     BigInteger,
     Column,
     ForeignKey,
@@ -43,10 +42,10 @@ class Group(Base):
     name = Column(Text)
     description = Column(Text)
 
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
+    data = Column(JSONField, nullable=True)
+    meta = Column(JSONField, nullable=True)
 
-    permissions = Column(JSON, nullable=True)
+    permissions = Column(JSONField, nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -210,7 +209,7 @@ class GroupTable:
                             Group.data.is_(None),
                             json_share_str.is_(None),
                             json_share_lower == 'true',
-                            json_share_lower == '1',  # Handle SQLite boolean true
+                            json_share_lower == '1',
                         )
 
                         if member_id:

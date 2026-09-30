@@ -10,7 +10,7 @@ An enterprise-ready, high-performance self-hosted AI platform featuring intellig
 ---
 
 ## 📖 Complete Documentation
-For full architectural blueprints, cost breakdown, contributor guidelines, and production scaling, see **[WOLINETAI.md](file:///Users/apple/Documents/wolinetai/WOLINETAI.md)**.
+For the platform architecture, see **[WOLINETAI.md](WOLINETAI.md)**. For the current single-server Compose deployment, CPU/GPU profiles, TLS setup, shared login, and CI rollout, see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 ---
 
