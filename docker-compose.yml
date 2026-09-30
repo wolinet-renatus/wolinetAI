@@ -68,12 +68,11 @@ services:
     expose: ["9997"]
     command: ["xinference-local", "-H", "0.0.0.0", "-p", "9997", "--log-level", "info"]
     healthcheck:
-      # /status is checked by scripts/deploy/verify-stack.sh with the API key.
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:9997/status', timeout=5)\" >/dev/null 2>&1"]
-      interval: 20s
-      timeout: 8s
-      retries: 12
-      start_period: 90s
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9997/ >/dev/null 2>&1 || python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:9997/', timeout=5)\" >/dev/null 2>&1 || python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:9997/', timeout=5)\" >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
     deploy:
       restart_policy:
         condition: any
