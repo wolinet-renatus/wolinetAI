@@ -52,9 +52,18 @@ search_tools:
     search_tool_info:
       description: "Default web search provider via DuckDuckGo"
 model_list:
+- model_name: "*"
+  litellm_params:
+    # Capture any Xinference model UID requested by the caller and forward it
+    # to Xinference's OpenAI-compatible chat endpoint. Xinference's UI must
+    # launch the model first; this route does not launch or enumerate models.
+    model: openai/*
+    api_base: http://mitambo:9997/v1
+    api_key: os.environ/XINFERENCE_API_KEY
+    timeout: 600
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/WOLINET_API_KEY
+    api_key: os.environ/XINFERENCE_API_KEY
     model: wolinet/wolinex-coder
     timeout: 600
   model_name: wolinex-coder
@@ -67,7 +76,7 @@ model_list:
     max_input_tokens: 32768
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/WOLINET_API_KEY
+    api_key: os.environ/XINFERENCE_API_KEY
     max_tokens: 2048
     model: wolinet/qwen2.5-omni-3b-local
     timeout: 600
@@ -81,7 +90,7 @@ model_list:
     max_input_tokens: 32768
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/WOLINET_API_KEY
+    api_key: os.environ/XINFERENCE_API_KEY
     model: wolinet/wolinex-coder
     timeout: 600
   model_name: wolinex-coder-pro
@@ -94,7 +103,7 @@ model_list:
     max_input_tokens: 32768
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/WOLINET_API_KEY
+    api_key: os.environ/XINFERENCE_API_KEY
     model: wolinet/bge-small-en-v1.5
     timeout: 600
   model_name: wolinex-embed
@@ -106,7 +115,7 @@ model_list:
     max_input_tokens: 512
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/WOLINET_API_KEY
+    api_key: os.environ/XINFERENCE_API_KEY
     model: wolinet/harrier-oss-v1-0.6b
     timeout: 600
   model_name: wolinex-retriever
@@ -118,7 +127,7 @@ model_list:
     max_input_tokens: 2048
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/WOLINET_API_KEY
+    api_key: os.environ/XINFERENCE_API_KEY
     model: wolinet/deepseek-coder-1.3b
     timeout: 600
   model_name: wolinex-coder-lite
@@ -131,7 +140,7 @@ model_list:
     max_input_tokens: 16384
 - litellm_params:
     api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/WOLINET_API_KEY
+    api_key: os.environ/XINFERENCE_API_KEY
     model: wolinet/bge-reranker-v2-m3
     timeout: 600
   model_name: wolinex-rerank
