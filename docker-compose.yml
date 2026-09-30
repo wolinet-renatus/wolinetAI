@@ -64,10 +64,6 @@ services:
     volumes:
       - xinference_data:/root/.xinference
       - ./models:/models:ro
-      - type: tmpfs
-        target: /dev/shm
-        tmpfs:
-          size: 2147483648
     networks: [wolinet_internal]
     expose: ["9997"]
     command: ["xinference-local", "-H", "0.0.0.0", "-p", "9997", "--log-level", "info"]
