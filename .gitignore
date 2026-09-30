@@ -138,6 +138,7 @@ models/*.onnx
 # Logs & Runtime Storage
 *.log
 logs/
+backups/
 *.pid
 scratch/
 .system_generated/
