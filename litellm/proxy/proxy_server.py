@@ -3001,15 +3001,15 @@ db_writer_client: AsyncHTTPHandler | None = None
 
 def _resolve_typed_dict_type(typ: object):
     """Resolve the actual TypedDict class from a potentially wrapped type."""
-    from typing_extensions import _TypedDictMeta
+    from typing_extensions import is_typeddict
 
     origin: Final[object] = get_origin(typ)
     if origin is Union or origin is UnionType:  # Check if it's a Union (like Optional)
         union_args: Final[tuple[object, ...]] = get_args(typ)
         for arg in union_args:
-            if isinstance(arg, _TypedDictMeta):
+            if is_typeddict(arg):
                 return arg
-    elif isinstance(typ, type) and isinstance(typ, dict):
+    elif is_typeddict(typ):
         return typ
     return None
 
