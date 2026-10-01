@@ -130,7 +130,62 @@ if os.path.exists(p):
         print('==> [lango] Note: target pattern in login_utils.py already updated')
 " || true
 
-# 6. Copy custom logos and favicon to internal bundled paths if not already mounted
+# 6. Patch SecurityHeadersMiddleware to:
+# - Add Cache-Control: no-cache, no-store to /ui/ and HTML routes so browsers never serve stale chunk hashes
+# - Recover from stale chunk 404s by serving text/javascript auto-reload instead of JSON 404 (avoids strict MIME checking error)
+python3 -c "
+import os
+
+p = '/app/.venv/lib/python3.13/site-packages/litellm/proxy/middleware/security_headers_middleware.py'
+if os.path.exists(p):
+    with open(p, 'r', encoding='utf-8') as f:
+        code = f.read()
+
+    target = '''        async def send_with_security_headers(message: Message) -> None:
+            if message[\"type\"] == \"http.response.start\":
+                headers: Final = MutableHeaders(scope=message)
+                applied: Final = (*STATIC_SECURITY_HEADERS, HSTS_HEADER) if _hsts_enabled() else STATIC_SECURITY_HEADERS
+                for name, value in applied:
+                    headers.setdefault(name, value)
+            await send(message)
+
+        await self.app(scope, receive, send_with_security_headers)'''
+
+    replacement = '''        path = scope.get(\"path\", \"\")
+        is_stale_js = False
+
+        async def send_with_security_headers(message: Message) -> None:
+            nonlocal is_stale_js
+            if message[\"type\"] == \"http.response.start\":
+                headers: Final = MutableHeaders(scope=message)
+                applied: Final = (*STATIC_SECURITY_HEADERS, HSTS_HEADER) if _hsts_enabled() else STATIC_SECURITY_HEADERS
+                for name, value in applied:
+                    headers.setdefault(name, value)
+                if path.startswith(\"/ui\") or path == \"/\" or \"html\" in str(headers.get(\"content-type\", \"\")):
+                    headers[\"Cache-Control\"] = \"no-cache, no-store, must-revalidate\"
+                    headers[\"Pragma\"] = \"no-cache\"
+                    headers[\"Expires\"] = \"0\"
+                if message[\"status\"] == 404 and (path.endswith(\".js\") or \"/_next/static/\" in path):
+                    is_stale_js = True
+                    message[\"status\"] = 200
+                    headers[\"Content-Type\"] = \"text/javascript; charset=utf-8\"
+                    headers[\"Cache-Control\"] = \"no-cache, no-store, must-revalidate\"
+                    if \"content-length\" in headers:
+                        del headers[\"content-length\"]
+            elif message[\"type\"] == \"http.response.body\" and is_stale_js:
+                message[\"body\"] = b\"/* stale chunk */ window.location.reload();\"
+            await send(message)
+
+        await self.app(scope, receive, send_with_security_headers)'''
+
+    if target in code:
+        code = code.replace(target, replacement)
+        with open(p, 'w', encoding='utf-8') as f:
+            f.write(code)
+        print('==> [lango] Successfully patched SecurityHeadersMiddleware for cache-control and stale chunk recovery')
+" || true
+
+# 7. Copy custom logos and favicon to internal bundled paths if not already mounted
 if [ -f "/app/assets/wolinet_logo.png" ]; then
   cp -f /app/assets/wolinet_logo.png /app/.venv/lib/python3.13/site-packages/litellm/proxy/logo.jpg 2>/dev/null || true
 fi
