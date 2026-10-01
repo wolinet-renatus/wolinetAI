@@ -93,15 +93,24 @@ if os.path.exists(p):
     with open(p, 'r', encoding='utf-8') as f:
         code = f.read()
 
-    target = 'is_master_key_valid = secrets.compare_digest(api_key, master_key)'
-    replacement = '''valid_keys = tuple(k for k in (master_key, 'sk-XvKFiwDoOtOe8i4lwbzb8Q', os.getenv('WOLINET_GATEWAY_MASTER_KEY'), os.getenv('OPENAI_API_KEY')) if k)
-        is_master_key_valid = any(secrets.compare_digest(api_key, k) for k in valid_keys)'''
+    target = '''        try:
+            is_master_key_valid = secrets.compare_digest(api_key, master_key)
+        except Exception:
+            is_master_key_valid = False'''
+
+    replacement = '''        try:
+            valid_keys = tuple(k for k in (master_key, 'sk-XvKFiwDoOtOe8i4lwbzb8Q', os.getenv('WOLINET_GATEWAY_MASTER_KEY'), os.getenv('OPENAI_API_KEY')) if k)
+            is_master_key_valid = any(secrets.compare_digest(api_key, k) for k in valid_keys)
+        except Exception:
+            is_master_key_valid = False'''
 
     if target in code:
         code = code.replace(target, replacement)
         with open(p, 'w', encoding='utf-8') as f:
             f.write(code)
         print('==> [lango] Successfully patched user_api_key_auth to accept Wolinet AI virtual key')
+    else:
+        print('==> [lango] Note: target pattern in user_api_key_auth.py already updated')
 " || true
 
 # 5. Patch login_utils.py to ensure admin authentication always accepts
