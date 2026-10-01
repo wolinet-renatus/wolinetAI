@@ -287,7 +287,7 @@ services:
       SCARF_NO_ANALYTICS: "true"
       DO_NOT_TRACK: "true"
       ANONYMIZED_TELEMETRY: "false"
-      CORS_ALLOW_ORIGIN: "https://wolinex.wolinet.com;https://dev.wolinet.com"
+      CORS_ALLOW_ORIGIN: "https://wolinex.wolinet.com;https://dev.wolinet.com;https://docs.wolinet.com"
       FORWARDED_ALLOW_IPS: "*"
       DEFAULT_USER_BUDGET: "25.0"
     volumes:

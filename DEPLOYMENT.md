@@ -24,6 +24,7 @@ The ecosystem exposes 5 distinct public subdomains terminating TLS on an isolate
         ├── lango.wolinet.com   ──► lango:4000      (LiteLLM AI Gateway, Replicas: 2)
         ├── mitambo.wolinet.com ──► mitambo:9997    (Xinference Engine, Basic Auth)
         └── dev.wolinet.com     ──► devportal:8080  (Docs, Key Studio & Live Assistant)
+            (docs.wolinet.com)
                                │
         ├── postgres:5432       (Shared DB: 'litellm' & 'webui' databases)
         └── redis:6379          (Session cache & router coordination)
@@ -35,7 +36,7 @@ The ecosystem exposes 5 distinct public subdomains terminating TLS on an isolate
 | **`wolinex.wolinet.com`** | `wolinex:8080` | **Wolinet AI Studio:** User-facing WebUI client with model chat, vision/audio streaming, file RAG, and wildcard session cookie issuance (`.wolinet.com`). |
 | **`lango.wolinet.com`** | `lango:4000` | **LiteLLM AI Gateway:** Sovereign routing engine, OpenAI-compatible `/v1` endpoints, budget controls, Postgres spend logging, and CORS preflight handling. |
 | **`mitambo.wolinet.com`** | `mitambo:9997` | **Xinference Inference Engine:** High-performance local inference backend (CPU / NVIDIA CUDA). Protected by HTTP Basic Auth (`mitambo.htpasswd`). |
-| **`dev.wolinet.com`** | `devportal:8080` | **Developer Documentation & Key Studio:** Unified SSO session recognition, dynamic API key generation/rotation, and SSE streaming assistant widget. |
+| **`dev.wolinet.com`** / **`docs.wolinet.com`** | `devportal:8080` | **Developer Documentation & Key Studio:** Unified SSO session recognition, dynamic API key generation/rotation, SSE streaming assistant widget, and `/docs` interactive Scalar API specification. |
 
 ---
 

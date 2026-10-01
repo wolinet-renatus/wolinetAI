@@ -11,7 +11,7 @@ CERTS_DIR="${ROOT_DIR}/nginx/certs"
 mkdir -p "${CERTS_DIR}"
 mkdir -p "${ROOT_DIR}/nginx/certbot"
 
-for domain in ai wolinex lango mitambo dev; do
+for domain in ai wolinex lango mitambo dev docs; do
     host="${domain}.wolinet.com"
     certbot certonly \
         --standalone \
