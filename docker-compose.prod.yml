@@ -13,8 +13,12 @@
 # ==============================================================================
 
 networks:
+  default:
+    driver: overlay
+    attachable: true
   wolinet_internal:
-    driver: bridge
+    driver: overlay
+    attachable: true
 
 volumes:
   postgres_data:
