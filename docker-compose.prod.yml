@@ -138,7 +138,7 @@ services:
       - wolinet_internal
     environment:
       XINFERENCE_HOME: /root/.xinference
-      XINFERENCE_AUTH_ADVANCED: "false"
+      XINFERENCE_AUTH_ADVANCED: ${XINFERENCE_AUTH_ADVANCED:-false}
       HF_HOME: /root/.xinference/cache
       XINFERENCE_MODEL_SRC: ${XINFERENCE_MODEL_SRC:-huggingface}
       HF_TOKEN: ${HF_TOKEN:-}
