@@ -105,12 +105,16 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      DEFAULT_MODEL: ${DEFAULT_MODEL:-qwen2.5-instruct}
-      DEFAULT_MODELS: ${DEFAULT_MODELS:-qwen2.5-instruct}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-deepseek-coder-instruct}
+      DEFAULT_MODELS: ${DEFAULT_MODELS:-deepseek-coder-instruct}
       STORE_MODEL_IN_DB: "false"
       ROOT_REDIRECT_URL: /ui
+      UI_LOGO_PATH: "/app/assets/wolinet_logo.png"
+      UI_LOGO_PATH_DARK: "/app/assets/wolinet_logo_dark.png"
     volumes:
       - ./gateway/config.yaml:/app/config.yaml:ro
+      - ./gateway/litellm:/app/.venv/lib/python3.13/site-packages/litellm:ro
+      - ./gateway/assets:/app/assets:ro
     networks: [wolinet_internal]
     expose: ["4000"]
     command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
@@ -148,15 +152,15 @@ services:
     environment:
       PORT: "8080"
       HOST: 0.0.0.0
-      WEBUI_NAME: Wolinet AI
-      WEBUI_URL: https://wolinex.wolinet.com
+      WEBUI_NAME: ${WEBUI_NAME:-Wolinet AI}
+      WEBUI_URL: ${WEBUI_URL:-https://wolinex.wolinet.com}
       WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?Set WEBUI_SECRET_KEY in Dokploy}
       OPENAI_API_BASE_URL: http://lango:4000/v1
       OPENAI_API_KEY: ${LITELLM_MASTER_KEY}
       LITELLM_BASE_URL: http://lango:4000
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
       DATABASE_URL: ${WEBUI_DATABASE_URL:?Set WEBUI_DATABASE_URL in Dokploy}
-      WEBUI_DATABASE_URL: ${WEBUI_DATABASE_URL}
+      WEBUI_DATABASE_URL: ${WEBUI_DATABASE_URL:?Set WEBUI_DATABASE_URL in Dokploy}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       ENABLE_OLLAMA_API: "False"
       ENABLE_OPENAI_API: "True"
@@ -170,6 +174,12 @@ services:
       DEFAULT_USER_BUDGET: "25.0"
     volumes:
       - webui_data:/app/backend/data
+      - ./apps/web-client/backend/open_webui:/app/backend/open_webui:ro
+      - ./gateway/assets/wolinet_logo.png:/app/build/logo.png:ro
+      - ./gateway/assets/favicon.png:/app/build/favicon.png:ro
+      - ./gateway/assets/favicon.ico:/app/build/favicon.ico:ro
+      - ./gateway/assets/wolinet_logo.png:/app/build/splash.png:ro
+      - ./gateway/assets/wolinet_logo_dark.png:/app/build/splash-dark.png:ro
     networks: [wolinet_internal]
     expose: ["8080"]
     healthcheck:

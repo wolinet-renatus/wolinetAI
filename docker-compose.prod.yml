@@ -169,11 +169,15 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # Portal
-      DEFAULT_MODEL: ${DEFAULT_MODEL:-wolinex-coder}
-      DEFAULT_MODELS: ${DEFAULT_MODELS:-wolinex-coder}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-deepseek-coder-instruct}
+      DEFAULT_MODELS: ${DEFAULT_MODELS:-deepseek-coder-instruct}
       WOLINET_COOKIE_DOMAIN: ".wolinet.com"
+      UI_LOGO_PATH: "/app/assets/wolinet_logo.png"
+      UI_LOGO_PATH_DARK: "/app/assets/wolinet_logo_dark.png"
     volumes:
       - ./gateway/config.yaml:/app/config.yaml:ro
+      - ./gateway/litellm:/app/.venv/lib/python3.13/site-packages/litellm:ro
+      - ./gateway/assets:/app/assets:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -247,6 +251,12 @@ services:
       DEFAULT_USER_BUDGET: "25.0"
     volumes:
       - webui_data:/app/backend/data
+      - ./apps/web-client/backend/open_webui:/app/backend/open_webui:ro
+      - ./gateway/assets/wolinet_logo.png:/app/build/logo.png:ro
+      - ./gateway/assets/favicon.png:/app/build/favicon.png:ro
+      - ./gateway/assets/favicon.ico:/app/build/favicon.ico:ro
+      - ./gateway/assets/wolinet_logo.png:/app/build/splash.png:ro
+      - ./gateway/assets/wolinet_logo_dark.png:/app/build/splash-dark.png:ro
     depends_on:
       postgres:
         condition: service_healthy
