@@ -165,13 +165,14 @@ services:
   lango:
     image: ${LANGO_IMAGE:-ghcr.io/berriai/litellm:main-latest}
     restart: unless-stopped
+    entrypoint: ["/usr/local/bin/start-gateway.sh"]
     networks:
       - wolinet_internal
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?Set LITELLM_MASTER_KEY in .env}
       WOLINET_GATEWAY_MASTER_KEY: ${WOLINET_GATEWAY_MASTER_KEY:?Set WOLINET_GATEWAY_MASTER_KEY in .env}
       UI_USERNAME: ${UI_USERNAME:-admin}
-      UI_PASSWORD: ${UI_PASSWORD:-${LITELLM_MASTER_KEY}}
+      UI_PASSWORD: ${UI_PASSWORD:-Wolinet@2026!}
       LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:-${LITELLM_MASTER_KEY}}
       LITELLM_CONFIG_PATH: /app/config.yaml
       STORE_MODEL_IN_DB: "true"
@@ -202,6 +203,7 @@ services:
       UI_LOGO_PATH_DARK: "/app/assets/wolinet_logo_dark.png"
       LITELLM_FAVICON_URL: "/app/assets/favicon.png"
     volumes:
+      - ./gateway/start-gateway.sh:/usr/local/bin/start-gateway.sh:ro
       - ./gateway/config.yaml:/app/config.yaml:ro
       - ./gateway/assets:/app/assets:ro
       - ./gateway/assets/wolinet_logo.png:/app/.venv/lib/python3.13/site-packages/litellm/proxy/logo.jpg:ro
