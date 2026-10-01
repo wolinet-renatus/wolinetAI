@@ -1,0 +1,11 @@
+{
+  "name": "Wolinet Coder",
+  "id": "wolinet-coder",
+  "description": "Wolinet AI Sovereign High-Performance AI Coding Engine",
+  "version": "1.0.0",
+  "provider": "Wolinet AI",
+  "url": "https://dev.wolinet.com",
+  "api_base": "https://lango.wolinet.com/v1",
+  "documentation": "https://docs.wolinet.com",
+  "capabilities": ["chat", "code-generation", "tools", "refactoring"]
+}
