@@ -52,124 +52,22 @@ search_tools:
     search_tool_info:
       description: "Default web search provider via DuckDuckGo"
 model_list:
-- model_name: "*"
-  litellm_params:
-    # Capture any Xinference model UID requested by the caller and forward it
-    # to Xinference's OpenAI-compatible chat endpoint. Xinference's UI must
-    # launch the model first; this route does not launch or enumerate models.
-    model: openai/*
-    api_base: http://mitambo:9997/v1
-    api_key: os.environ/XINFERENCE_API_KEY
-    timeout: 600
-- litellm_params:
-    api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/XINFERENCE_API_KEY
-    model: openai/wolinex-coder
-    timeout: 600
-  model_name: wolinex-coder
-  model_info:
-    mode: chat
-    provider: "Wolinet AI"
-    litellm_provider: "wolinet_ai"
-    description: "Wolinex Coder 3B - Sovereign AI Coding Engine by Wolinet Tech"
-    max_tokens: 8192
-    max_input_tokens: 32768
-- litellm_params:
-    api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/XINFERENCE_API_KEY
-    max_tokens: 2048
-    model: openai/qwen2.5-omni-3b-local
-    timeout: 600
-  model_name: wolinex-omni
-  model_info:
-    mode: chat
-    provider: "Wolinet AI"
-    litellm_provider: "wolinet_ai"
-    description: "Wolinex Omni 3B - Sovereign Multimodal Voice & Vision Intelligence"
-    max_tokens: 2048
-    max_input_tokens: 32768
-- litellm_params:
-    api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/XINFERENCE_API_KEY
-    model: openai/wolinex-coder
-    timeout: 600
-  model_name: wolinex-coder-pro
-  model_info:
-    mode: chat
-    provider: "Wolinet AI"
-    litellm_provider: "wolinet_ai"
-    description: "Wolinex Coder Pro - Advanced Sovereign Coding & Tool Calling Engine"
-    max_tokens: 8192
-    max_input_tokens: 32768
-- litellm_params:
-    api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/XINFERENCE_API_KEY
-    model: openai/bge-small-en-v1.5
-    timeout: 600
-  model_name: wolinex-embed
-  model_info:
-    mode: embedding
-    provider: "Wolinet AI"
-    litellm_provider: "wolinet_ai"
-    description: "Wolinex Embed - Sovereign High-Efficiency Semantic Vector Engine (384-dim)"
-    max_input_tokens: 512
-- litellm_params:
-    api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/XINFERENCE_API_KEY
-    model: openai/harrier-oss-v1-0.6b
-    timeout: 600
-  model_name: wolinex-retriever
-  model_info:
-    mode: embedding
-    provider: "Wolinet AI"
-    litellm_provider: "wolinet_ai"
-    description: "Wolinex Retriever - Sovereign Dense Semantic Search & RAG Engine (1024-dim)"
-    max_input_tokens: 2048
-- litellm_params:
-    api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/XINFERENCE_API_KEY
-    model: openai/deepseek-coder-1.3b
-    timeout: 600
-  model_name: wolinex-coder-lite
-  model_info:
-    mode: chat
-    provider: "Wolinet AI"
-    litellm_provider: "wolinet_ai"
-    description: "Wolinex Coder Lite - Sovereign Ultra-Fast Lightweight Coding Model"
-    max_tokens: 4096
-    max_input_tokens: 16384
-- litellm_params:
-    api_base: os.environ/WOLINET_API_BASE
-    api_key: os.environ/XINFERENCE_API_KEY
-    model: infinity/bge-reranker-v2-m3
-    timeout: 600
-  model_name: wolinex-rerank
-  model_info:
-    mode: rerank
-    provider: "Wolinet AI"
-    litellm_provider: "wolinet_ai"
-    description: "Wolinex Rerank - Sovereign Multilingual Cross-Encoder Reranker"
-- litellm_params:
-    api_key: os.environ/DEEPSEEK_API_KEY
-    model: deepseek/deepseek-reasoner
-    merge_reasoning_content_in_choices: true
-  model_name: deepseek-r1
-- litellm_params:
-    api_key: os.environ/DEEPSEEK_API_KEY
-    model: deepseek/deepseek-chat
-  model_name: deepseek-v3
-- litellm_params:
-    api_key: os.environ/ANTHROPIC_API_KEY
-    model: anthropic/claude-3-5-sonnet-20241022
-  model_name: claude-3-5-sonnet
-- litellm_params:
-    api_key: os.environ/OPENAI_API_KEY
-    model: openai/gpt-4o
-  model_name: gpt-4o
-- litellm_params:
-    api_key: os.environ/OPENAI_API_KEY
-    model: openai/gpt-4o-mini
-  model_name: gpt-4o-mini
+  - model_name: wolinet-coder
+    litellm_params:
+      model: openai/deepseek-coder-instruct
+      api_base: os.environ/WOLINET_API_BASE
+      api_key: os.environ/XINFERENCE_API_KEY
+      timeout: 600
+    model_info:
+      id: "wolinet-coder"
+      name: "Wolinet Coder"
+      mode: chat
+      provider: "Wolinet AI"
+      litellm_provider: "wolinet_ai"
+      description: "Wolinet Coder - Sovereign High-Performance AI Coding Engine"
+      max_tokens: 2048
+      max_input_tokens: 2048
+
 router_settings:
   num_retries: 2
   redis_host: os.environ/REDIS_HOST
@@ -179,8 +77,7 @@ router_settings:
   timeout: 600
   enable_pre_call_checks: true
   model_group_alias:
-    "qwen2.5-coder-3b": "wolinex-coder-pro"
-    "deepseek-coder-1.3b": "wolinex-coder-lite"
-    "bge-small-en-v1.5": "wolinex-embed"
-    "harrier-oss-v1-0.6b": "wolinex-retriever"
-    "bge-reranker-v2-m3": "wolinex-rerank"
+    "deepseek-coder-instruct": "wolinet-coder"
+    "wolinex-coder": "wolinet-coder"
+    "wolinex-coder-pro": "wolinet-coder"
+    "wolinex-coder-lite": "wolinet-coder"
