@@ -119,9 +119,14 @@ services:
       DOCS_TITLE: "Wolinet AI — Sovereign Gateway API Reference"
       UI_LOGO_PATH: "/app/assets/wolinet_logo.png"
       UI_LOGO_PATH_DARK: "/app/assets/wolinet_logo_dark.png"
+      LITELLM_FAVICON_URL: "/app/assets/favicon.png"
     volumes:
       - ./gateway/config.yaml:/app/config.yaml:ro
       - ./gateway/assets:/app/assets:ro
+      - ./gateway/assets/wolinet_logo.png:/app/.venv/lib/python3.13/site-packages/litellm/proxy/logo.jpg:ro
+      - ./gateway/assets/wolinet_logo_dark.png:/app/.venv/lib/python3.13/site-packages/litellm/proxy/logo_dark.png:ro
+      - ./gateway/assets/favicon.ico:/app/.venv/lib/python3.13/site-packages/litellm/proxy/_experimental/out/favicon.ico:ro
+      - ./gateway/assets/favicon.png:/app/.venv/lib/python3.13/site-packages/litellm/proxy/_experimental/out/favicon.png:ro
       - ./gateway/litellm/proxy/swagger:/app/.venv/lib/python3.13/site-packages/litellm/proxy/swagger:ro
     networks:
       - default
@@ -188,6 +193,11 @@ services:
       - ./gateway/assets/wolinet_logo.png:/app/build/static/splash.png:ro
       - ./gateway/assets/wolinet_logo_dark.png:/app/build/static/splash-dark.png:ro
       - ./gateway/assets/favicon.png:/app/build/static/favicon.png:ro
+      - ./gateway/assets/favicon.ico:/app/build/static/favicon.ico:ro
+      - ./gateway/assets/favicon.png:/app/build/static/favicon-96x96.png:ro
+      - ./gateway/assets/favicon.png:/app/build/static/apple-touch-icon.png:ro
+      - ./gateway/assets/favicon.png:/app/build/static/web-app-manifest-192x192.png:ro
+      - ./gateway/assets/favicon.png:/app/build/static/web-app-manifest-512x512.png:ro
       - ./gateway/assets/favicon.png:/app/build/favicon.png:ro
       - ./gateway/assets/favicon.ico:/app/build/favicon.ico:ro
       - ./gateway/assets/wolinet_logo.png:/app/build/logo.png:ro

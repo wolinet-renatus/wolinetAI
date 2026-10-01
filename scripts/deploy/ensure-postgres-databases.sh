@@ -58,6 +58,13 @@ BEGIN
       user_email = 'admin',
       user_role = 'proxy_admin',
       password = '58c4e871c3d18f4160f5df22dbcb7a467377228fced8743af316b6615cd34355';
+
+    INSERT INTO "LiteLLM_UserTable" (user_id, user_email, user_role, password, models)
+    VALUES ('admin@wolinet.com', 'admin@wolinet.com', 'proxy_admin', '58c4e871c3d18f4160f5df22dbcb7a467377228fced8743af316b6615cd34355', ARRAY[]::text[])
+    ON CONFLICT (user_id) DO UPDATE SET
+      user_email = 'admin@wolinet.com',
+      user_role = 'proxy_admin',
+      password = '58c4e871c3d18f4160f5df22dbcb7a467377228fced8743af316b6615cd34355';
   END IF;
 END $$;
 EOSQL
