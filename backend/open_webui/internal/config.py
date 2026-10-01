@@ -34,7 +34,7 @@ class ConfigTable(Base):
 
 
 class ConfigState:
-    """In-memory mirror of the single-row config JSON blob."""
+    """In-memory mirror of database configuration with dynamic schema adaptation."""
 
     __slots__ = ('_data',)
 
@@ -59,48 +59,224 @@ class ConfigState:
     def replace(self, data: dict) -> None:
         self._data = data
 
+    @staticmethod
+    def _walk_flat(data: dict, prefix: str = '') -> dict[str, Any]:
+        result = {}
+        for key, value in data.items():
+            path = f'{prefix}.{key}' if prefix else str(key)
+            if isinstance(value, dict) and value and not path.endswith('.api_configs'):
+                result.update(ConfigState._walk_flat(value, path))
+            else:
+                result[path] = value
+        return result
+
     def load(self) -> dict:
-        with get_db() as db:
-            row = db.query(ConfigTable).order_by(ConfigTable.id.desc()).first()
-            self._data = row.data if row else {'version': 0, 'ui': {}}
+        data: dict[str, Any] = {}
+        try:
+            with get_db() as db:
+                from sqlalchemy import inspect, text
+
+                inspector = inspect(db.bind)
+                table_names = set(inspector.get_table_names())
+
+                # 1. Base from legacy config_old if present
+                if 'config_old' in table_names:
+                    try:
+                        row = db.execute(text('SELECT data FROM config_old ORDER BY id DESC LIMIT 1')).first()
+                        if row and row[0]:
+                            raw = row[0]
+                            data = raw if isinstance(raw, dict) else json.loads(raw)
+                    except Exception as e:
+                        log.debug('Could not read from config_old: %s', e)
+
+                # 2. Overlay from config table (either per-key rows or single blob)
+                if 'config' in table_names:
+                    try:
+                        cols = {c['name'] for c in inspector.get_columns('config')}
+                        if {'key', 'value'}.issubset(cols):
+                            rows = db.execute(text('SELECT key, value FROM config')).all()
+                            for k, v in rows:
+                                if isinstance(v, str):
+                                    try:
+                                        v = json.loads(v)
+                                    except Exception:
+                                        pass
+                                keys = k.split('.')
+                                reduce(lambda d, kp: d.setdefault(kp, {}), keys[:-1], data)[keys[-1]] = v
+                        elif {'id', 'data'}.issubset(cols):
+                            row = db.execute(text('SELECT data FROM config ORDER BY id DESC LIMIT 1')).first()
+                            if row and row[0]:
+                                raw = row[0]
+                                data = raw if isinstance(raw, dict) else json.loads(raw)
+                    except Exception as e:
+                        log.warning('Could not read from config table: %s', e)
+
+                if data:
+                    self._data = data
+                    return self._data
+        except Exception as exc:
+            log.warning('ConfigState.load encountered an exception: %s', exc)
+
+        if not self._data:
+            self._data = {'version': 0, 'ui': {}}
         return self._data
 
     def persist(self, data: dict | None = None) -> None:
         if data is not None:
             self._data = data
-        with get_db() as db:
-            row = db.query(ConfigTable).first()
-            if row is None:
-                db.add(ConfigTable(data=self._data, version=0))
-            else:
-                row.data, row.updated_at = self._data, datetime.now()
-                db.add(row)
-            db.commit()
+        try:
+            with get_db() as db:
+                import time
+                from sqlalchemy import inspect, text
+
+                inspector = inspect(db.bind)
+                table_names = set(inspector.get_table_names())
+                is_pg = getattr(db.bind.dialect, 'name', '') == 'postgresql'
+
+                if 'config' in table_names:
+                    cols = {c['name'] for c in inspector.get_columns('config')}
+                    if {'key', 'value'}.issubset(cols):
+                        now = int(time.time())
+                        flat = self._walk_flat(self._data)
+                        sql = (
+                            'INSERT INTO config (key, value, updated_at) '
+                            'VALUES (:k, CAST(:v AS JSONB), :t) '
+                            'ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at'
+                            if is_pg
+                            else 'INSERT INTO config (key, value, updated_at) '
+                            'VALUES (:k, :v, :t) '
+                            'ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at'
+                        )
+                        for k, v in flat.items():
+                            val_json = json.dumps(v)
+                            try:
+                                db.execute(text(sql), {'k': k, 'v': val_json, 't': now})
+                            except Exception:
+                                db.rollback()
+                                updated = db.execute(
+                                    text('UPDATE config SET value = :v, updated_at = :t WHERE key = :k'),
+                                    {'k': k, 'v': val_json, 't': now},
+                                )
+                                if updated.rowcount == 0:
+                                    db.execute(
+                                        text('INSERT INTO config (key, value, updated_at) VALUES (:k, :v, :t)'),
+                                        {'k': k, 'v': val_json, 't': now},
+                                    )
+                        db.commit()
+                    elif {'id', 'data'}.issubset(cols):
+                        row = db.query(ConfigTable).first()
+                        if row is None:
+                            db.add(ConfigTable(data=self._data, version=0))
+                        else:
+                            row.data, row.updated_at = self._data, datetime.now()
+                            db.add(row)
+                        db.commit()
+
+                if 'config_old' in table_names:
+                    try:
+                        db.execute(
+                            text(
+                                'UPDATE config_old SET data = CAST(:d AS JSON), updated_at = now() '
+                                'WHERE id = (SELECT id FROM config_old ORDER BY id DESC LIMIT 1)'
+                                if is_pg
+                                else 'UPDATE config_old SET data = :d WHERE id = (SELECT id FROM config_old ORDER BY id DESC LIMIT 1)'
+                            ),
+                            {'d': json.dumps(self._data)},
+                        )
+                        db.commit()
+                    except Exception as e:
+                        log.debug('config_old update skipped: %s', e)
+        except Exception as exc:
+            log.warning('ConfigState.persist encountered an exception: %s', exc)
 
     async def persist_async(self, data: dict | None = None) -> None:
         if data is not None:
             self._data = data
-        async with get_async_db() as db:
-            result = await db.execute(select(ConfigTable).limit(1))
-            row = result.scalars().first()
-            if row is None:
-                db.add(ConfigTable(data=self._data, version=0))
-            else:
-                row.data, row.updated_at = self._data, datetime.now()
-                db.add(row)
-            await db.commit()
+        try:
+            async with get_async_db() as db:
+                import time
+                from sqlalchemy import inspect, text
+
+                def _get_table_info(conn):
+                    insp = inspect(conn)
+                    tables = set(insp.get_table_names())
+                    cols = {c['name'] for c in insp.get_columns('config')} if 'config' in tables else set()
+                    is_pg = getattr(conn.dialect, 'name', '') == 'postgresql'
+                    return tables, cols, is_pg
+
+                tables, cols, is_pg = await db.run_sync(_get_table_info)
+
+                if 'config' in tables:
+                    if {'key', 'value'}.issubset(cols):
+                        now = int(time.time())
+                        flat = self._walk_flat(self._data)
+                        sql = (
+                            'INSERT INTO config (key, value, updated_at) '
+                            'VALUES (:k, CAST(:v AS JSONB), :t) '
+                            'ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at'
+                            if is_pg
+                            else 'INSERT INTO config (key, value, updated_at) '
+                            'VALUES (:k, :v, :t) '
+                            'ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at'
+                        )
+                        for k, v in flat.items():
+                            val_json = json.dumps(v)
+                            try:
+                                await db.execute(text(sql), {'k': k, 'v': val_json, 't': now})
+                            except Exception:
+                                pass
+                        await db.commit()
+                    elif {'id', 'data'}.issubset(cols):
+                        result = await db.execute(select(ConfigTable).limit(1))
+                        row = result.scalars().first()
+                        if row is None:
+                            db.add(ConfigTable(data=self._data, version=0))
+                        else:
+                            row.data, row.updated_at = self._data, datetime.now()
+                            db.add(row)
+                        await db.commit()
+
+                if 'config_old' in tables:
+                    try:
+                        await db.execute(
+                            text(
+                                'UPDATE config_old SET data = CAST(:d AS JSON), updated_at = now() '
+                                'WHERE id = (SELECT id FROM config_old ORDER BY id DESC LIMIT 1)'
+                                if is_pg
+                                else 'UPDATE config_old SET data = :d WHERE id = (SELECT id FROM config_old ORDER BY id DESC LIMIT 1)'
+                            ),
+                            {'d': json.dumps(self._data)},
+                        )
+                        await db.commit()
+                    except Exception:
+                        pass
+        except Exception as exc:
+            log.warning('ConfigState.persist_async encountered an exception: %s', exc)
 
     def clear(self) -> None:
-        with get_db() as db:
-            db.query(ConfigTable).delete()
-            db.commit()
+        try:
+            with get_db() as db:
+                from sqlalchemy import inspect, text
+
+                inspector = inspect(db.bind)
+                table_names = set(inspector.get_table_names())
+                if 'config' in table_names:
+                    db.execute(text('DELETE FROM config'))
+                if 'config_old' in table_names:
+                    db.execute(text('DELETE FROM config_old'))
+                db.commit()
+        except Exception as exc:
+            log.warning('ConfigState.clear encountered an exception: %s', exc)
 
     async def clear_async(self) -> None:
-        from sqlalchemy import delete as sa_delete
+        try:
+            async with get_async_db() as db:
+                from sqlalchemy import text
 
-        async with get_async_db() as db:
-            await db.execute(sa_delete(ConfigTable))
-            await db.commit()
+                await db.execute(text('DELETE FROM config'))
+                await db.commit()
+        except Exception as exc:
+            log.warning('ConfigState.clear_async encountered an exception: %s', exc)
 
 
 STATE = ConfigState()
