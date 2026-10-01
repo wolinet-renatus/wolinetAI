@@ -4,7 +4,7 @@ general_settings:
   database_connection_timeout: 30        # seconds before pool acquisition fails
   forward_client_headers_to_llm_api: true
   forward_llm_provider_auth_headers: true
-  master_key: os.environ/WOLINET_GATEWAY_MASTER_KEY
+  master_key: os.environ/LITELLM_MASTER_KEY
   pass_through_endpoints:
   - path: /v1/images/*
     target: os.environ/WOLINET_INFERENCE_URL
@@ -21,7 +21,7 @@ general_settings:
   - path: /v1/videos/*
     target: os.environ/WOLINET_INFERENCE_URL
   store_model_in_db: false
-  disable_env_credential_login: true
+  disable_env_credential_login: false
   user_header_mappings:
     - header_name: X-OpenWebUI-User-Id
       litellm_user_role: internal_user
