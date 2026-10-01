@@ -81,16 +81,15 @@ echo "==> [mitambo] Verified UI static assets: ${UI_COUNT} files in /ui"
 (
   echo "==> [mitambo-init] Starting background initialization daemon..."
   for attempt in $(seq 1 60); do
+    sleep 4
     if python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9997/status', timeout=3)" >/dev/null 2>&1; then
-      python3 -c "
+      if python3 -c "
 import os, sys, time, json, urllib.request, hashlib, sqlite3
 
 endpoint = 'http://127.0.0.1:9997'
 admin_user = os.environ.get('XINFERENCE_ADMIN_USER', 'admin')
 admin_pass = os.environ.get('XINFERENCE_ADMIN_PASSWORD', 'Woli@1211')
 gateway_key = os.environ.get('XINFERENCE_API_KEY', 'sk-XvKFiwDoOtOe8i4lwbzb8Q')
-
-print('==> [mitambo-init] Inference endpoint is online. Securing and initializing...')
 
 # 1. Setup Admin Account if needed
 try:
@@ -104,7 +103,7 @@ try:
         with urllib.request.urlopen(sreq, timeout=5) as sresp:
             print('==> [mitambo-init] Admin account initialized successfully.')
 except Exception as e:
-    print(f'==> [mitambo-init] Setup check note: {e}')
+    print(f'==> [mitambo-init] Setup note: {e}')
 
 # 2. Pre-seed Gateway API Key in auth.db
 try:
@@ -136,15 +135,11 @@ try:
 except Exception as e:
     print(f'==> [mitambo-init] API key seeding note: {e}')
 
-# 3. Connect via RESTfulClient, login, and ensure Wolinet Coder is launched
+# 3. Connect via RESTfulClient, login, and verify/launch model
 try:
     from xinference.client import RESTfulClient
     client = RESTfulClient(endpoint)
-    try:
-        client.login(admin_user, admin_pass)
-        print('==> [mitambo-init] Logged in as admin.')
-    except Exception as le:
-        print(f'==> [mitambo-init] Login note: {le}')
+    client.login(admin_user, admin_pass)
 
     try:
         token = client._get_token()
@@ -158,7 +153,17 @@ try:
         pass
 
     running_models = client.list_models()
-    print(f'==> [mitambo-init] Active models: {list(running_models.keys())}')
+    print(f'==> [mitambo-init] Current active models: {list(running_models.keys())}')
+
+    # Terminate any unwanted/stale models to free CPU/RAM
+    for uid in list(running_models.keys()):
+        if uid != 'deepseek-coder-instruct':
+            print(f'==> [mitambo-init] Terminating stale model: {uid}')
+            try:
+                client.terminate_model(uid)
+            except Exception:
+                pass
+
     if 'deepseek-coder-instruct' not in running_models:
         print('==> [mitambo-init] Launching Wolinet Coder (deepseek-coder-instruct) on llama.cpp CPU...')
         client.launch_model(
@@ -173,15 +178,24 @@ try:
             n_ctx=2048,
             n_parallel=1,
         )
-        print('==> [mitambo-init] Wolinet Coder launched successfully!')
+        print('==> [mitambo-init] 🎉 SUCCESS! Wolinet Coder (deepseek-coder-instruct) launched!')
+
+    # Verify model is running
+    verified_models = client.list_models()
+    if 'deepseek-coder-instruct' in verified_models:
+        print('==> [mitambo-init] ✅ Wolinet Coder verified and ready for inference!')
+        sys.exit(0)
     else:
-        print('==> [mitambo-init] Wolinet Coder is already running.')
+        print('==> [mitambo-init] Model not yet in list; will retry...')
+        sys.exit(1)
 except Exception as me:
-    print(f'==> [mitambo-init] Model launch check error: {me}')
-" || true
-      break
+    print(f'==> [mitambo-init] Init attempt notice (will retry): {me}')
+    sys.exit(1)
+"; then
+        echo "==> [mitambo-init] Initialization and model launch complete."
+        break
+      fi
     fi
-    sleep 3
   done
 ) &
 

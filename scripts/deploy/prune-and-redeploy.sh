@@ -71,5 +71,8 @@ for svc in lango wolinex; do
   fi
 done
 
-echo "==> [wolinet] Deployment complete! Stack is up, authenticated, and running."
+echo "==> [wolinet] 7/7 Verifying Wolinet Coder (deepseek-coder-instruct) is active and running..."
+bash "${ROOT_DIR}/scripts/models/launch-wolinet-coder.sh" || true
+
+echo "==> [wolinet] Deployment complete! Stack is up, authenticated, model is running."
 
