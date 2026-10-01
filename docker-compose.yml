@@ -87,7 +87,7 @@ services:
           memory: ${XINFERENCE_MEMORY_LIMIT:-8G}
 
   lango:
-    image: ghcr.io/berriai/litellm:v1.74.0-stable
+    image: ${LANGO_IMAGE:-ghcr.io/berriai/litellm:main-latest}
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?Set LITELLM_MASTER_KEY in Dokploy}
       WOLINET_GATEWAY_MASTER_KEY: ${WOLINET_GATEWAY_MASTER_KEY:?Set WOLINET_GATEWAY_MASTER_KEY in Dokploy}
@@ -174,7 +174,6 @@ services:
       DEFAULT_USER_BUDGET: "25.0"
     volumes:
       - webui_data:/app/backend/data
-      - ./apps/web-client/backend/open_webui:/app/backend/open_webui:ro
       - ./gateway/assets/wolinet_logo.png:/app/build/static/logo.png:ro
       - ./gateway/assets/wolinet_logo.png:/app/build/static/splash.png:ro
       - ./gateway/assets/wolinet_logo_dark.png:/app/build/static/splash-dark.png:ro

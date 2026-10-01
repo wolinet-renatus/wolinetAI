@@ -68,6 +68,25 @@ services:
           cpus: "4.0"
           memory: 8G
 
+  db-init:
+    image: postgres:16-alpine
+    container_name: wolinet-db-init
+    restart: "no"
+    networks:
+      - wolinet_internal
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      DB_INIT_VERSION: "3"
+    volumes:
+      - ./scripts/deploy/ensure-postgres-databases.sh:/usr/local/bin/ensure-postgres-databases.sh:ro
+    entrypoint: ["/usr/local/bin/ensure-postgres-databases.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # ==========================================================================
   # 2. Redis — session cache + LiteLLM router coordination
   # ==========================================================================
@@ -140,7 +159,7 @@ services:
   # 4. LiteLLM Gateway  →  lango.wolinet.com + dev.wolinet.com (portal)
   # ==========================================================================
   lango:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-wolinet-renatus}/wolinet-lango:${WOLINET_IMAGE_TAG:-latest}
+    image: ${LANGO_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-wolinet-renatus}/wolinet-lango:${WOLINET_IMAGE_TAG:-latest}}
     restart: unless-stopped
     networks:
       - wolinet_internal
@@ -202,7 +221,7 @@ services:
   # 5. Open WebUI (Wolinex)  →  wolinex.wolinet.com
   # ==========================================================================
   wolinex:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-wolinet-renatus}/wolinet-wolinex:${WOLINET_IMAGE_TAG:-latest}
+    image: ${WOLINEX_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-wolinet-renatus}/wolinet-wolinex:${WOLINET_IMAGE_TAG:-latest}}
     restart: unless-stopped
     networks:
       - wolinet_internal
@@ -251,7 +270,6 @@ services:
       DEFAULT_USER_BUDGET: "25.0"
     volumes:
       - webui_data:/app/backend/data
-      - ./apps/web-client/backend/open_webui:/app/backend/open_webui:ro
       - ./gateway/assets/wolinet_logo.png:/app/build/static/logo.png:ro
       - ./gateway/assets/wolinet_logo.png:/app/build/static/splash.png:ro
       - ./gateway/assets/wolinet_logo_dark.png:/app/build/static/splash-dark.png:ro
