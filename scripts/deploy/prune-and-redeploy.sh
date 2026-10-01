@@ -37,8 +37,10 @@ test -f "${ROOT_DIR}/website/index.html" || {
 chmod -R a+rX "${ROOT_DIR}/website" 2>/dev/null || true
 chmod -R a+rX "${ROOT_DIR}/inference/xinference/ui/web/dist" 2>/dev/null || true
 chmod -R a+rX "${ROOT_DIR}/inference/frontend/out" 2>/dev/null || true
+chmod -R a+rX "${ROOT_DIR}/apps/dev-portal" 2>/dev/null || true
 chmod +x "${ROOT_DIR}/inference/start-mitambo.sh" 2>/dev/null || true
 chmod +x "${ROOT_DIR}/gateway/start-gateway.sh" 2>/dev/null || true
+chmod +x "${ROOT_DIR}/scripts/models/launch-wolinet-coder.sh" 2>/dev/null || true
 
 echo "==> [wolinet] Verified $(find "${ROOT_DIR}/inference/xinference/ui/web/dist" -type f | wc -l) files in xinference UI dist"
 echo "==> [wolinet] Verified $(find "${ROOT_DIR}/website" -type f | wc -l) files in website dist"
@@ -48,6 +50,6 @@ COMPOSE_FILE="docker-compose.yml"
 if [ -f "docker-compose.prod.yml" ] && [ "${1:-}" = "prod" ]; then
   COMPOSE_FILE="docker-compose.prod.yml"
 fi
-docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans
+docker compose -f "${COMPOSE_FILE}" up -d --build --remove-orphans
 
 echo "==> [wolinet] Deployment complete! Stack is up and running."
