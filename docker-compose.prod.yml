@@ -146,7 +146,8 @@ services:
       XINFERENCE_FRONTEND_DIST_DIR: /ui
     volumes:
       - xinference_data:/root/.xinference
-      - ./inference/frontend/out:/ui:ro
+      - ./inference/xinference/ui/web/dist:/ui:ro
+      - ./inference/xinference/ui/web/dist:/opt/inference/xinference/ui/web/dist:ro
     command: >
       xinference-local -H 0.0.0.0 -p 9997
     deploy:

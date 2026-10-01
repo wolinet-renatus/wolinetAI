@@ -69,7 +69,8 @@ services:
     volumes:
       - xinference_data:/root/.xinference
       - ./models:/models:ro
-      - ./inference/frontend/out:/ui:ro
+      - ./inference/xinference/ui/web/dist:/ui:ro
+      - ./inference/xinference/ui/web/dist:/opt/inference/xinference/ui/web/dist:ro
     networks:
       - default
       - wolinet_internal

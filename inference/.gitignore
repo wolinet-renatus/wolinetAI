@@ -177,4 +177,5 @@ xinference/_commit.py
 # frontend
 **/pnpm-lock.yaml
 # staged frontend static export served by the backend
-xinference/ui/web/dist/
+!xinference/ui/web/dist/
+!xinference/ui/web/dist/**
