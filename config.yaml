@@ -54,7 +54,7 @@ search_tools:
 model_list:
   - model_name: wolinet-coder
     litellm_params:
-      model: wolinet_ai/deepseek-coder-instruct
+      model: openai/deepseek-coder-instruct
       api_base: os.environ/WOLINET_API_BASE
       api_key: os.environ/XINFERENCE_API_KEY
       timeout: 600
@@ -63,7 +63,7 @@ model_list:
       name: "Wolinet Coder"
       mode: chat
       provider: "Wolinet AI"
-      litellm_provider: "wolinet_ai"
+      litellm_provider: "openai"
       description: "Wolinet Coder - Sovereign High-Performance AI Coding Engine"
       max_tokens: 2048
       max_input_tokens: 2048
@@ -84,3 +84,5 @@ router_settings:
     "wolinex-coder-pro": "wolinet-coder"
     "wolinex-coder-lite": "wolinet-coder"
     "wolinex-omni": "wolinet-coder"
+    "Wolinet Coder": "wolinet-coder"
+    "wolinet coder": "wolinet-coder"
