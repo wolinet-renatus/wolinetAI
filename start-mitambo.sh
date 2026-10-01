@@ -16,7 +16,7 @@ echo "==> [mitambo] Xinference package detected at: ${PKG_DIR:-unknown}"
 # 2. Prepare UI distribution directory
 # Candidate source locations for the built Wolinet AI UI bundle
 SRC_DIR=""
-for candidate in "/app/dist" "/ui" "${PKG_DIR}/ui/web/dist" "/root/dist"; do
+for candidate in "/app/dist" "/app/out" "/ui" "${PKG_DIR}/ui/web/dist" "/root/dist"; do
   if [ -d "$candidate" ] && [ -f "$candidate/index.html" ]; then
     SRC_DIR="$candidate"
     break
