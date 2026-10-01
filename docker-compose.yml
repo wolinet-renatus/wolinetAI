@@ -117,8 +117,8 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
-      DEFAULT_MODEL: ${DEFAULT_MODEL:-deepseek-coder-instruct}
-      DEFAULT_MODELS: ${DEFAULT_MODELS:-deepseek-coder-instruct}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-wolinet-coder}
+      DEFAULT_MODELS: ${DEFAULT_MODELS:-wolinet-coder}
       STORE_MODEL_IN_DB: "false"
       DOCS_URL: /docs
       ROOT_REDIRECT_URL: /ui
@@ -194,6 +194,9 @@ services:
       DO_NOT_TRACK: "true"
       ANONYMIZED_TELEMETRY: "false"
       DEFAULT_USER_BUDGET: "25.0"
+      DEFAULT_MODELS: "wolinet-coder"
+      ENABLE_MODEL_FILTER: "True"
+      MODEL_FILTER_LIST: "wolinet-coder"
     volumes:
       - webui_data:/app/backend/data
       - ./gateway/assets/wolinet_logo.png:/app/build/static/logo.png:ro

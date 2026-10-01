@@ -204,8 +204,8 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       # Portal
-      DEFAULT_MODEL: ${DEFAULT_MODEL:-deepseek-coder-instruct}
-      DEFAULT_MODELS: ${DEFAULT_MODELS:-deepseek-coder-instruct}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-wolinet-coder}
+      DEFAULT_MODELS: ${DEFAULT_MODELS:-wolinet-coder}
       WOLINET_COOKIE_DOMAIN: ".wolinet.com"
       UI_LOGO_PATH: "/app/assets/wolinet_logo.png"
       UI_LOGO_PATH_DARK: "/app/assets/wolinet_logo_dark.png"
@@ -290,6 +290,9 @@ services:
       CORS_ALLOW_ORIGIN: "https://wolinex.wolinet.com;https://dev.wolinet.com;https://docs.wolinet.com"
       FORWARDED_ALLOW_IPS: "*"
       DEFAULT_USER_BUDGET: "25.0"
+      DEFAULT_MODELS: "wolinet-coder"
+      ENABLE_MODEL_FILTER: "True"
+      MODEL_FILTER_LIST: "wolinet-coder"
     volumes:
       - webui_data:/app/backend/data
       - ./gateway/assets/wolinet_logo.png:/app/build/static/logo.png:ro
