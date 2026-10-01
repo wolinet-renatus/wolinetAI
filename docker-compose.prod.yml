@@ -163,7 +163,7 @@ services:
   # 4. LiteLLM Gateway  →  lango.wolinet.com + dev.wolinet.com (portal)
   # ==========================================================================
   lango:
-    image: ${LANGO_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-wolinet-renatus}/wolinet-lango:${WOLINET_IMAGE_TAG:-latest}}
+    image: ${LANGO_IMAGE:-ghcr.io/berriai/litellm:main-latest}
     restart: unless-stopped
     networks:
       - wolinet_internal
@@ -175,6 +175,9 @@ services:
       LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:-${LITELLM_MASTER_KEY}}
       LITELLM_CONFIG_PATH: /app/config.yaml
       STORE_MODEL_IN_DB: "true"
+      DOCS_URL: /docs
+      ROOT_REDIRECT_URL: /ui
+      DOCS_TITLE: "Wolinet AI — Sovereign Gateway API Reference"
       # Database
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/litellm
       # Redis
@@ -199,8 +202,8 @@ services:
       UI_LOGO_PATH_DARK: "/app/assets/wolinet_logo_dark.png"
     volumes:
       - ./gateway/config.yaml:/app/config.yaml:ro
-      - ./gateway/litellm:/app/.venv/lib/python3.13/site-packages/litellm:ro
       - ./gateway/assets:/app/assets:ro
+      - ./gateway/litellm/proxy/swagger:/app/.venv/lib/python3.13/site-packages/litellm/proxy/swagger:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -209,11 +212,11 @@ services:
     command: >
       --config /app/config.yaml --port 4000 --host 0.0.0.0
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:4000/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness', timeout=5)\" >/dev/null 2>&1"]
       interval: 20s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
+      timeout: 8s
+      retries: 8
+      start_period: 60s
     deploy:
       replicas: 2
       resources:

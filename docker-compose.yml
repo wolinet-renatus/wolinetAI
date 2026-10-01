@@ -114,13 +114,15 @@ services:
       DEFAULT_MODEL: ${DEFAULT_MODEL:-deepseek-coder-instruct}
       DEFAULT_MODELS: ${DEFAULT_MODELS:-deepseek-coder-instruct}
       STORE_MODEL_IN_DB: "false"
+      DOCS_URL: /docs
       ROOT_REDIRECT_URL: /ui
+      DOCS_TITLE: "Wolinet AI — Sovereign Gateway API Reference"
       UI_LOGO_PATH: "/app/assets/wolinet_logo.png"
       UI_LOGO_PATH_DARK: "/app/assets/wolinet_logo_dark.png"
     volumes:
       - ./gateway/config.yaml:/app/config.yaml:ro
-      - ./gateway/litellm:/app/.venv/lib/python3.13/site-packages/litellm:ro
       - ./gateway/assets:/app/assets:ro
+      - ./gateway/litellm/proxy/swagger:/app/.venv/lib/python3.13/site-packages/litellm/proxy/swagger:ro
     networks:
       - default
       - wolinet_internal
