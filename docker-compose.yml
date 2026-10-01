@@ -64,7 +64,10 @@ services:
       XINFERENCE_AUTH_DB_PATH: /root/.xinference/auth/auth.db
       XINFERENCE_MODEL_SRC: modelscope
       XINFERENCE_ENABLE_VIRTUAL_ENV: "0"
-      XINFERENCE_AUTH_ADVANCED: ${XINFERENCE_AUTH_ADVANCED:-false}
+      XINFERENCE_AUTH_ADVANCED: ${XINFERENCE_AUTH_ADVANCED:-true}
+      XINFERENCE_ADMIN_USER: ${XINFERENCE_ADMIN_USER:-admin}
+      XINFERENCE_ADMIN_PASSWORD: ${XINFERENCE_ADMIN_PASSWORD:-Woli@1211}
+      XINFERENCE_API_KEY: ${XINFERENCE_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       XINFERENCE_FRONTEND_DIST_DIR: /ui
     entrypoint: ["/usr/local/bin/start-mitambo.sh"]
     volumes:
@@ -113,7 +116,7 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       WOLINET_API_BASE: http://mitambo:9997/v1
       WOLINET_INFERENCE_URL: http://mitambo:9997
-      XINFERENCE_API_KEY: ${XINFERENCE_API_KEY:-bootstrap-pending}
+      XINFERENCE_API_KEY: ${XINFERENCE_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
@@ -197,6 +200,7 @@ services:
       DEFAULT_MODELS: "wolinet-coder"
       ENABLE_MODEL_FILTER: "True"
       MODEL_FILTER_LIST: "wolinet-coder"
+      OPENAI_API_CONFIGS: '{"0": {"enable": true, "model_ids": ["wolinet-coder"]}}'
     volumes:
       - webui_data:/app/backend/data
       - ./gateway/assets/wolinet_logo.png:/app/build/static/logo.png:ro

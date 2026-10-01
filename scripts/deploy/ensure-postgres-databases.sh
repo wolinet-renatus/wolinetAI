@@ -91,5 +91,31 @@ BEGIN
 END $$;
 EOSQL
 
+# Purge stale models from Open WebUI database so only 'wolinet-coder' ('Wolinet Coder') is displayed
+for db in webui wolinex; do
+  psql --dbname="${db}" <<'EOSQL' 2>/dev/null || true
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'model') THEN
+    DELETE FROM model WHERE id NOT IN ('wolinet-coder');
 
-
+    INSERT INTO model (id, user_id, base_model_id, name, params, meta, is_active, updated_at, created_at)
+    SELECT
+      'wolinet-coder',
+      COALESCE((SELECT id FROM "user" ORDER BY created_at ASC LIMIT 1), 'admin'),
+      NULL,
+      'Wolinet Coder',
+      '{}'::jsonb,
+      '{"description": "Wolinet Coder - Sovereign High-Performance AI Coding Engine", "capabilities": {"vision": false, "tools": true}}'::jsonb,
+      true,
+      extract(epoch from now())::bigint,
+      extract(epoch from now())::bigint
+    ON CONFLICT (id) DO UPDATE SET
+      name = 'Wolinet Coder',
+      base_model_id = NULL,
+      is_active = true,
+      updated_at = extract(epoch from now())::bigint;
+  END IF;
+END $$;
+EOSQL
+done

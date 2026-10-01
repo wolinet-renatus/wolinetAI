@@ -52,4 +52,24 @@ if [ -f "docker-compose.prod.yml" ] && [ "${1:-}" = "prod" ]; then
 fi
 docker compose -f "${COMPOSE_FILE}" up -d --build --remove-orphans
 
-echo "==> [wolinet] Deployment complete! Stack is up and running."
+echo "==> [wolinet] 6/6 Purging stale models from Open WebUI database..."
+sleep 5
+PG_CONTAINER=$(docker ps -q -f name=postgres | head -n 1 || true)
+if [ -n "${PG_CONTAINER}" ]; then
+  for db in webui wolinex; do
+    docker exec "${PG_CONTAINER}" psql -U postgres -d "${db}" -c "DELETE FROM model WHERE id NOT IN ('wolinet-coder');" 2>/dev/null || true
+  done
+  echo "==> [wolinet] Stale models purged from Open WebUI database."
+fi
+
+# Force reload lango and wolinex containers to pick up updated config and models
+for svc in lango wolinex; do
+  C_ID=$(docker ps -q -f name="${svc}" | head -n 1 || true)
+  if [ -n "${C_ID}" ]; then
+    echo "==> [wolinet] Restarting ${svc} container (${C_ID})..."
+    docker restart "${C_ID}" >/dev/null 2>&1 || true
+  fi
+done
+
+echo "==> [wolinet] Deployment complete! Stack is up, authenticated, and running."
+

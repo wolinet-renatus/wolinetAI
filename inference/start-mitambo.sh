@@ -77,6 +77,114 @@ fi
 UI_COUNT=$(find /ui -type f 2>/dev/null | wc -l || echo "0")
 echo "==> [mitambo] Verified UI static assets: ${UI_COUNT} files in /ui"
 
-# 5. Execute CMD
+# 5. Background Auth & Model Auto-Launcher
+(
+  echo "==> [mitambo-init] Starting background initialization daemon..."
+  for attempt in $(seq 1 60); do
+    if python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9997/status', timeout=3)" >/dev/null 2>&1; then
+      python3 -c "
+import os, sys, time, json, urllib.request, hashlib, sqlite3
+
+endpoint = 'http://127.0.0.1:9997'
+admin_user = os.environ.get('XINFERENCE_ADMIN_USER', 'admin')
+admin_pass = os.environ.get('XINFERENCE_ADMIN_PASSWORD', 'Woli@1211')
+gateway_key = os.environ.get('XINFERENCE_API_KEY', 'sk-XvKFiwDoOtOe8i4lwbzb8Q')
+
+print('==> [mitambo-init] Inference endpoint is online. Securing and initializing...')
+
+# 1. Setup Admin Account if needed
+try:
+    req = urllib.request.Request(f'{endpoint}/v1/admin/setup/status')
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        status_data = json.loads(resp.read().decode())
+    if status_data.get('needs_setup'):
+        print('==> [mitambo-init] Performing first-run admin setup...')
+        payload = json.dumps({'username': admin_user, 'password': admin_pass}).encode('utf-8')
+        sreq = urllib.request.Request(f'{endpoint}/v1/admin/setup', data=payload, headers={'Content-Type': 'application/json'}, method='POST')
+        with urllib.request.urlopen(sreq, timeout=5) as sresp:
+            print('==> [mitambo-init] Admin account initialized successfully.')
+except Exception as e:
+    print(f'==> [mitambo-init] Setup check note: {e}')
+
+# 2. Pre-seed Gateway API Key in auth.db
+try:
+    db_path = os.environ.get('XINFERENCE_AUTH_DB_PATH', '/root/.xinference/auth/auth.db')
+    if os.path.exists(db_path):
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute('SELECT id FROM users WHERE username = ?', (admin_user,))
+        user_row = cur.fetchone()
+        if user_row:
+            uid = user_row[0]
+            key_hash = hashlib.sha256(gateway_key.encode('utf-8')).hexdigest()
+            key_prefix = gateway_key[:7]
+            cur.execute('SELECT id FROM api_keys WHERE key_hash = ?', (key_hash,))
+            krow = cur.fetchone()
+            if not krow:
+                cur.execute('''
+                    INSERT INTO api_keys (user_id, key_hash, key_encrypted, key_prefix, name, enabled)
+                    VALUES (?, ?, ?, ?, ?, 1)
+                ''', (uid, key_hash, 'gateway_key_direct', key_prefix, 'lango-gateway'))
+                kid = cur.lastrowid
+                cur.execute('''
+                    INSERT INTO api_key_model_permissions (api_key_id, permission_type, permission_value)
+                    VALUES (?, 'all', NULL)
+                ''', (kid,))
+                conn.commit()
+                print(f'==> [mitambo-init] Registered gateway API key ({key_prefix}...) into auth.db')
+        conn.close()
+except Exception as e:
+    print(f'==> [mitambo-init] API key seeding note: {e}')
+
+# 3. Connect via RESTfulClient, login, and ensure Wolinet Coder is launched
+try:
+    from xinference.client import RESTfulClient
+    client = RESTfulClient(endpoint)
+    try:
+        client.login(admin_user, admin_pass)
+        print('==> [mitambo-init] Logged in as admin.')
+    except Exception as le:
+        print(f'==> [mitambo-init] Login note: {le}')
+
+    try:
+        token = client._get_token()
+        if token:
+            hashed_ep = hashlib.sha256(endpoint.encode('utf-8')).hexdigest()
+            auth_dir = '/root/.xinference/auth'
+            os.makedirs(auth_dir, exist_ok=True)
+            with open(os.path.join(auth_dir, hashed_ep), 'w') as f:
+                f.write(token)
+    except Exception:
+        pass
+
+    running_models = client.list_models()
+    print(f'==> [mitambo-init] Active models: {list(running_models.keys())}')
+    if 'deepseek-coder-instruct' not in running_models:
+        print('==> [mitambo-init] Launching Wolinet Coder (deepseek-coder-instruct) on llama.cpp CPU...')
+        client.launch_model(
+            model_name='deepseek-coder-instruct',
+            model_uid='deepseek-coder-instruct',
+            model_engine='llama.cpp',
+            model_format='ggufv2',
+            model_size_in_billions='1_3',
+            quantization='Q4_K_M',
+            n_gpu=None,
+            n_gpu_layers=0,
+            n_ctx=2048,
+            n_parallel=1,
+        )
+        print('==> [mitambo-init] Wolinet Coder launched successfully!')
+    else:
+        print('==> [mitambo-init] Wolinet Coder is already running.')
+except Exception as me:
+    print(f'==> [mitambo-init] Model launch check error: {me}')
+" || true
+      break
+    fi
+    sleep 3
+  done
+) &
+
+# 6. Execute CMD
 echo "==> [mitambo] Starting Xinference local daemon..."
 exec "$@"
