@@ -22,6 +22,7 @@ general_settings:
     target: os.environ/WOLINET_INFERENCE_URL
   store_model_in_db: false
   disable_env_credential_login: false
+  hide_default_credentials_hint: true
   user_header_mappings:
     - header_name: X-OpenWebUI-User-Id
       litellm_user_role: internal_user
