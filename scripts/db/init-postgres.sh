@@ -25,6 +25,14 @@ if [ -d "${SCHEMA_DIR}" ]; then
         -f "${SCHEMA_DIR}/01_litellm_core.sql"
   fi
 
+  if [ -f "${SCHEMA_DIR}/02_webui_core.sql" ]; then
+    echo "==> [init-postgres] Applying WebUI PostgreSQL schema to '${WEBUI_DB}' and 'wolinex'"
+    psql -v ON_ERROR_STOP=1 --username "${PG_USER}" --dbname "${WEBUI_DB}" \
+        -f "${SCHEMA_DIR}/02_webui_core.sql" || true
+    psql -v ON_ERROR_STOP=1 --username "${PG_USER}" --dbname "wolinex" \
+        -f "${SCHEMA_DIR}/02_webui_core.sql" || true
+  fi
+
   if [ -f "${SCHEMA_DIR}/03_indexes.sql" ]; then
     echo "==> [init-postgres] Creating rolling spend-log partitions and indexes"
     psql -v ON_ERROR_STOP=1 --username "${PG_USER}" --dbname "${PRIMARY_DB}" \

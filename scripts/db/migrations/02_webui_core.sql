@@ -323,3 +323,20 @@ CREATE TABLE IF NOT EXISTS tag (
 );
 
 CREATE INDEX IF NOT EXISTS idx_tag_user ON tag (user_id);
+
+-- ---------------------------------------------------------------------------
+-- Config (Key-Value configuration store + legacy backup)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS config (
+    key         TEXT            PRIMARY KEY,
+    value       JSONB           NOT NULL,
+    updated_at  BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS config_old (
+    id          SERIAL          PRIMARY KEY,
+    data        JSONB           NOT NULL,
+    version     INTEGER         NOT NULL DEFAULT 0,
+    created_at  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ     DEFAULT NOW()
+);

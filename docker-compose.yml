@@ -175,9 +175,13 @@ services:
     volumes:
       - webui_data:/app/backend/data
       - ./apps/web-client/backend/open_webui:/app/backend/open_webui:ro
-      - ./gateway/assets/wolinet_logo.png:/app/build/logo.png:ro
+      - ./gateway/assets/wolinet_logo.png:/app/build/static/logo.png:ro
+      - ./gateway/assets/wolinet_logo.png:/app/build/static/splash.png:ro
+      - ./gateway/assets/wolinet_logo_dark.png:/app/build/static/splash-dark.png:ro
+      - ./gateway/assets/favicon.png:/app/build/static/favicon.png:ro
       - ./gateway/assets/favicon.png:/app/build/favicon.png:ro
       - ./gateway/assets/favicon.ico:/app/build/favicon.ico:ro
+      - ./gateway/assets/wolinet_logo.png:/app/build/logo.png:ro
       - ./gateway/assets/wolinet_logo.png:/app/build/splash.png:ro
       - ./gateway/assets/wolinet_logo_dark.png:/app/build/splash-dark.png:ro
     networks: [wolinet_internal]
