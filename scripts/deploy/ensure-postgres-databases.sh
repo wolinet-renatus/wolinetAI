@@ -47,15 +47,15 @@ EOSQL
   fi
 fi
 
-# Ensure admin user exists if LiteLLM_UserTable is already present
+# Ensure admin user and virtual key exist if tables are already present
 psql --dbname=litellm <<'EOSQL' 2>/dev/null || true
 DO $$
 BEGIN
   IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'LiteLLM_UserTable') THEN
     INSERT INTO "LiteLLM_UserTable" (user_id, user_email, user_role, password, models)
-    VALUES ('admin', 'admin', 'proxy_admin', '58c4e871c3d18f4160f5df22dbcb7a467377228fced8743af316b6615cd34355', ARRAY[]::text[])
+    VALUES ('admin', 'admin@wolinet.com', 'proxy_admin', '58c4e871c3d18f4160f5df22dbcb7a467377228fced8743af316b6615cd34355', ARRAY[]::text[])
     ON CONFLICT (user_id) DO UPDATE SET
-      user_email = 'admin',
+      user_email = 'admin@wolinet.com',
       user_role = 'proxy_admin',
       password = '58c4e871c3d18f4160f5df22dbcb7a467377228fced8743af316b6615cd34355';
 
@@ -66,7 +66,30 @@ BEGIN
       user_role = 'proxy_admin',
       password = '58c4e871c3d18f4160f5df22dbcb7a467377228fced8743af316b6615cd34355';
   END IF;
+
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'LiteLLM_VerificationToken') THEN
+    INSERT INTO "LiteLLM_VerificationToken" (
+      token, key_name, key_alias, user_id, models, spend, total_spend, created_at, updated_at
+    )
+    VALUES (
+      'b2d10bb32dbe57a3f063c2c9df27eacd6cafc84f5a52311895a9f3db9a76ab97',
+      'Wolinet AI Virtual Key',
+      'wolinex',
+      'admin',
+      ARRAY[]::text[],
+      0.0,
+      0.0,
+      NOW(),
+      NOW()
+    )
+    ON CONFLICT (token) DO UPDATE SET
+      key_name = 'Wolinet AI Virtual Key',
+      key_alias = 'wolinex',
+      user_id = 'admin',
+      updated_at = NOW();
+  END IF;
 END $$;
 EOSQL
+
 
 

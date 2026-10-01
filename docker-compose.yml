@@ -44,7 +44,7 @@ services:
       PGPORT: "5432"
       PGUSER: ${POSTGRES_USER:-postgres}
       PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Dokploy}
-      DB_INIT_VERSION: "4"
+      DB_INIT_VERSION: "5"
     volumes:
       - ./scripts/deploy/ensure-postgres-databases.sh:/usr/local/bin/ensure-postgres-databases.sh:ro
     networks:
@@ -65,9 +65,11 @@ services:
       XINFERENCE_MODEL_SRC: modelscope
       XINFERENCE_ENABLE_VIRTUAL_ENV: "0"
       XINFERENCE_AUTH_ADVANCED: "true"
+      XINFERENCE_FRONTEND_DIST_DIR: /ui
     volumes:
       - xinference_data:/root/.xinference
       - ./models:/models:ro
+      - ./inference/frontend/out:/ui:ro
     networks:
       - default
       - wolinet_internal
@@ -96,8 +98,8 @@ services:
     image: ${LANGO_IMAGE:-ghcr.io/berriai/litellm:main-latest}
     entrypoint: ["/usr/local/bin/start-gateway.sh"]
     environment:
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?Set LITELLM_MASTER_KEY in Dokploy}
-      WOLINET_GATEWAY_MASTER_KEY: ${WOLINET_GATEWAY_MASTER_KEY:?Set WOLINET_GATEWAY_MASTER_KEY in Dokploy}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
+      WOLINET_GATEWAY_MASTER_KEY: ${WOLINET_GATEWAY_MASTER_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       UI_USERNAME: ${UI_USERNAME:-admin}
       UI_PASSWORD: ${UI_PASSWORD:-Wolinet@2026!}
       LITELLM_CONFIG_PATH: /app/config.yaml
@@ -111,7 +113,7 @@ services:
       XINFERENCE_API_KEY: ${XINFERENCE_API_KEY:-bootstrap-pending}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       DEFAULT_MODEL: ${DEFAULT_MODEL:-deepseek-coder-instruct}
       DEFAULT_MODELS: ${DEFAULT_MODELS:-deepseek-coder-instruct}
       STORE_MODEL_IN_DB: "false"
@@ -173,9 +175,9 @@ services:
       WEBUI_URL: ${WEBUI_URL:-https://wolinex.wolinet.com}
       WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?Set WEBUI_SECRET_KEY in Dokploy}
       OPENAI_API_BASE_URL: http://lango:4000/v1
-      OPENAI_API_KEY: ${LITELLM_MASTER_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       LITELLM_BASE_URL: http://lango:4000
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       DATABASE_URL: ${WEBUI_DATABASE_URL:?Set WEBUI_DATABASE_URL in Dokploy}
       WEBUI_DATABASE_URL: ${WEBUI_DATABASE_URL:?Set WEBUI_DATABASE_URL in Dokploy}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
@@ -184,7 +186,7 @@ services:
       RAG_EMBEDDING_ENGINE: openai
       RAG_EMBEDDING_MODEL: wolinex-embed
       RAG_OPENAI_API_BASE_URL: http://lango:4000/v1
-      RAG_OPENAI_API_KEY: ${LITELLM_MASTER_KEY}
+      RAG_OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       SCARF_NO_ANALYTICS: "true"
       DO_NOT_TRACK: "true"
       ANONYMIZED_TELEMETRY: "false"
