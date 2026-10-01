@@ -83,7 +83,7 @@ services:
       PGPORT: "5432"
       PGUSER: ${POSTGRES_USER:-postgres}
       PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      DB_INIT_VERSION: "3"
+      DB_INIT_VERSION: "4"
     volumes:
       - ./scripts/deploy/ensure-postgres-databases.sh:/usr/local/bin/ensure-postgres-databases.sh:ro
     entrypoint: ["/usr/local/bin/ensure-postgres-databases.sh"]

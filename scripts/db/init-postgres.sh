@@ -19,13 +19,16 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wolinex')
 EOSQL
 
 if [ -d "${SCHEMA_DIR}" ]; then
-  if [ -f "${SCHEMA_DIR}/01_litellm_core.sql" ]; then
+  # LiteLLM manages its schema natively via Prisma (192 migrations).
+  # Raw DDL from 01_litellm_core.sql is guarded to prevent Prisma baseline conflicts.
+  if [ -f "${SCHEMA_DIR}/01_litellm_core.sql" ] && [ "${APPLY_MANUAL_LITELLM_DDL:-false}" = "true" ]; then
     echo "==> [init-postgres] Applying LiteLLM PostgreSQL schema"
     psql -v ON_ERROR_STOP=1 --username "${PG_USER}" --dbname "${PRIMARY_DB}" \
         -f "${SCHEMA_DIR}/01_litellm_core.sql"
   fi
 
-  if [ -f "${SCHEMA_DIR}/02_webui_core.sql" ]; then
+  # Open WebUI manages its schema natively via Alembic migrations.
+  if [ -f "${SCHEMA_DIR}/02_webui_core.sql" ] && [ "${APPLY_MANUAL_WEBUI_DDL:-false}" = "true" ]; then
     echo "==> [init-postgres] Applying WebUI PostgreSQL schema to '${WEBUI_DB}' and 'wolinex'"
     psql -v ON_ERROR_STOP=1 --username "${PG_USER}" --dbname "${WEBUI_DB}" \
         -f "${SCHEMA_DIR}/02_webui_core.sql" || true
@@ -33,7 +36,8 @@ if [ -d "${SCHEMA_DIR}" ]; then
         -f "${SCHEMA_DIR}/02_webui_core.sql" || true
   fi
 
-  if [ -f "${SCHEMA_DIR}/03_indexes.sql" ]; then
+  # Performance indexes and partitioning are applied after Prisma migrations
+  if [ -f "${SCHEMA_DIR}/03_indexes.sql" ] && [ "${APPLY_MANUAL_LITELLM_DDL:-false}" = "true" ]; then
     echo "==> [init-postgres] Creating rolling spend-log partitions and indexes"
     psql -v ON_ERROR_STOP=1 --username "${PG_USER}" --dbname "${PRIMARY_DB}" \
         -f "${SCHEMA_DIR}/03_indexes.sql"
