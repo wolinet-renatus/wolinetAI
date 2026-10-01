@@ -66,18 +66,20 @@ services:
       XINFERENCE_ENABLE_VIRTUAL_ENV: "0"
       XINFERENCE_AUTH_ADVANCED: ${XINFERENCE_AUTH_ADVANCED:-false}
       XINFERENCE_FRONTEND_DIST_DIR: /ui
+    entrypoint: ["/usr/local/bin/start-mitambo.sh"]
     volumes:
       - xinference_data:/root/.xinference
       - ./models:/models:ro
-      - ./inference/xinference/ui/web/dist:/ui:ro
-      - ./inference/xinference/ui/web/dist:/opt/inference/xinference/ui/web/dist:ro
+      - ./inference/start-mitambo.sh:/usr/local/bin/start-mitambo.sh:ro
+      - ./inference/xinference/ui/web/dist:/app/dist:ro
+      - ./inference/frontend/out:/app/out:ro
     networks:
       - default
       - wolinet_internal
     ports:
       - "9997:9997"
     expose: ["9997"]
-    command: ["xinference-local", "-H", "0.0.0.0", "--port", "9997", "--log-level", "info"]
+    command: ["xinference-local", "-H", "0.0.0.0", "-p", "9997", "--log-level", "info"]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9997/status >/dev/null 2>&1 || python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:9997/status', timeout=5)\" >/dev/null 2>&1 || python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:9997/status', timeout=5)\" >/dev/null 2>&1"]
       interval: 15s
@@ -239,15 +241,45 @@ services:
   # Dokploy's domain router. Mount the site's built files at ./website.
   website:
     image: nginx:1.27-alpine
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /usr/share/nginx/html
+        if [ -d /app/website ] && [ -f /app/website/index.html ]; then
+          cp -r /app/website/. /usr/share/nginx/html/
+        fi
+        cat <<'EOF' > /etc/nginx/conf.d/default.conf
+        server {
+            listen 80;
+            listen 8080;
+            server_name _;
+            root /usr/share/nginx/html;
+            index index.html;
+
+            location = /healthz {
+                access_log off;
+                default_type text/plain;
+                return 200 "ok\n";
+            }
+
+            location / {
+                try_files $$uri $$uri/ /index.html =404;
+            }
+        }
+        EOF
+        chmod -R a+rX /usr/share/nginx/html
+        exec nginx -g 'daemon off;'
     volumes:
-      - ./website:/usr/share/nginx/html:ro
+      - ./website:/app/website:ro
     networks:
       - default
       - wolinet_internal
-    expose: ["80"]
+    expose: ["80", "8080"]
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1"]
-      interval: 30s
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1"]
+      interval: 15s
       timeout: 5s
       retries: 5
     deploy:

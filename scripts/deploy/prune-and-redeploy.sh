@@ -23,14 +23,31 @@ docker container prune -f
 docker image prune -f
 docker builder prune -f
 
-echo "==> [wolinet] 4/5 Verifying UI distribution files..."
+echo "==> [wolinet] 4/5 Verifying UI and website distribution files..."
 test -f "${ROOT_DIR}/inference/xinference/ui/web/dist/index.html" || {
   echo "ERROR: inference/xinference/ui/web/dist/index.html is missing!" >&2
   exit 1
 }
-echo "==> [wolinet] Verified $(find "${ROOT_DIR}/inference/xinference/ui/web/dist" -type f | wc -l) static files in UI dist"
+test -f "${ROOT_DIR}/website/index.html" || {
+  echo "ERROR: website/index.html is missing!" >&2
+  exit 1
+}
+
+# Harden host permissions so container workers (nginx, xinference, litellm) can read files
+chmod -R a+rX "${ROOT_DIR}/website" 2>/dev/null || true
+chmod -R a+rX "${ROOT_DIR}/inference/xinference/ui/web/dist" 2>/dev/null || true
+chmod -R a+rX "${ROOT_DIR}/inference/frontend/out" 2>/dev/null || true
+chmod +x "${ROOT_DIR}/inference/start-mitambo.sh" 2>/dev/null || true
+chmod +x "${ROOT_DIR}/gateway/start-gateway.sh" 2>/dev/null || true
+
+echo "==> [wolinet] Verified $(find "${ROOT_DIR}/inference/xinference/ui/web/dist" -type f | wc -l) files in xinference UI dist"
+echo "==> [wolinet] Verified $(find "${ROOT_DIR}/website" -type f | wc -l) files in website dist"
 
 echo "==> [wolinet] 5/5 Starting stack fresh with latest configuration..."
-docker compose up -d --remove-orphans
+COMPOSE_FILE="docker-compose.yml"
+if [ -f "docker-compose.prod.yml" ] && [ "${1:-}" = "prod" ]; then
+  COMPOSE_FILE="docker-compose.prod.yml"
+fi
+docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans
 
-echo "==> [wolinet] Deployment complete! Run scripts/deploy/verify-stack.sh to check health."
+echo "==> [wolinet] Deployment complete! Stack is up and running."

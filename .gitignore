@@ -91,15 +91,13 @@ pnpm-debug.log*
 coverage/
 .npm-logs/
 
-# Temporary UI Build Output (Exclude intermediate next export out)
-gateway/ui/litellm-dashboard/out/
-inference/frontend/out/
-
-# Preserve Essential Embedded Production Distribution Bundles
+# Preserved Embedded Production Distribution Bundles & Static Exports
 !gateway/litellm/proxy/_experimental/out/
 !gateway/litellm/proxy/_experimental/out/**
 !inference/xinference/ui/web/dist/
 !inference/xinference/ui/web/dist/**
+!inference/frontend/out/
+!inference/frontend/out/**
 !apps/web-client/dist/
 !apps/web-client/dist/**
 !packages/wolinet-sdk/dist/

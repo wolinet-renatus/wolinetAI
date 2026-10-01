@@ -144,23 +144,28 @@ services:
       HF_TOKEN: ${HF_TOKEN:-}
       HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN:-}
       XINFERENCE_FRONTEND_DIST_DIR: /ui
+    entrypoint: ["/usr/local/bin/start-mitambo.sh"]
     volumes:
       - xinference_data:/root/.xinference
-      - ./inference/xinference/ui/web/dist:/ui:ro
-      - ./inference/xinference/ui/web/dist:/opt/inference/xinference/ui/web/dist:ro
+      - ./inference/start-mitambo.sh:/usr/local/bin/start-mitambo.sh:ro
+      - ./inference/xinference/ui/web/dist:/app/dist:ro
+      - ./inference/frontend/out:/app/out:ro
     command: >
-      xinference-local -H 0.0.0.0 -p 9997
+      xinference-local -H 0.0.0.0 -p 9997 --log-level info
     deploy:
       resources:
         limits:
           cpus: "12.0"
           memory: 28G
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9997/status || exit 1"]
-      interval: 30s
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:9997/status >/dev/null 2>&1 || python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:9997/status', timeout=5)\" >/dev/null 2>&1"
+        ]
+      interval: 15s
       timeout: 10s
-      retries: 3
-      start_period: 60s
+      start_period: 45s
 
   # ==========================================================================
   # 4. LiteLLM Gateway  →  lango.wolinet.com + dev.wolinet.com (portal)
@@ -238,7 +243,7 @@ services:
   # 5. Open WebUI (Wolinex)  →  wolinex.wolinet.com
   # ==========================================================================
   wolinex:
-    image: ${WOLINEX_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-wolinet-renatus}/wolinet-wolinex:${WOLINET_IMAGE_TAG:-latest}}
+    image: ${WOLINEX_IMAGE:-ghcr.io/open-webui/open-webui:main}
     restart: unless-stopped
     networks:
       - wolinet_internal
@@ -323,18 +328,50 @@ services:
   # 6. Marketing Website  →  ai.wolinet.com
   # ==========================================================================
   website:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-wolinet-renatus}/wolinet-homepage:${WOLINET_IMAGE_TAG:-latest}
+    image: ${WEBSITE_IMAGE:-nginx:1.27-alpine}
     restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /usr/share/nginx/html
+        if [ -d /app/website ] && [ -f /app/website/index.html ]; then
+          cp -r /app/website/. /usr/share/nginx/html/
+        fi
+        cat <<'EOF' > /etc/nginx/conf.d/default.conf
+        server {
+            listen 80;
+            listen 8080;
+            server_name _;
+            root /usr/share/nginx/html;
+            index index.html;
+
+            location = /healthz {
+                access_log off;
+                default_type text/plain;
+                return 200 "ok\n";
+            }
+
+            location / {
+                try_files $$uri $$uri/ /index.html =404;
+            }
+        }
+        EOF
+        chmod -R a+rX /usr/share/nginx/html
+        exec nginx -g 'daemon off;'
+    volumes:
+      - ./website:/app/website:ro
     networks:
       - wolinet_internal
+    expose: ["80", "8080"]
     healthcheck:
       test:
-        ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz >/dev/null 2>&1"]
-      interval: 30s
+        ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1"]
+      interval: 15s
       timeout: 5s
-      retries: 3
+      retries: 5
     deploy:
-      replicas: 2
+      replicas: 1
       resources:
         limits:
           cpus: "0.5"
@@ -375,10 +412,28 @@ services:
       retries: 3
 
   devportal:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-wolinet-renatus}/wolinet-devportal:${WOLINET_IMAGE_TAG:-latest}
+    image: ${DEVPORTAL_IMAGE:-nginx:1.27-alpine}
     restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /usr/share/nginx/html
+        if [ -d /app/dev-portal ]; then
+          cp -r /app/dev-portal/index.html /usr/share/nginx/html/ 2>/dev/null || true
+          cp -r /app/dev-portal/styles.css /usr/share/nginx/html/ 2>/dev/null || true
+          cp -r /app/dev-portal/app.js /usr/share/nginx/html/ 2>/dev/null || true
+        fi
+        if [ -f /app/dev-portal/nginx.conf ]; then
+          cp /app/dev-portal/nginx.conf /etc/nginx/conf.d/default.conf
+        fi
+        chmod -R a+rX /usr/share/nginx/html
+        exec nginx -g 'daemon off;'
+    volumes:
+      - ./apps/dev-portal:/app/dev-portal:ro
     networks:
       - wolinet_internal
+    expose: ["8080"]
     depends_on:
       wolinex:
         condition: service_healthy
@@ -392,7 +447,7 @@ services:
       retries: 5
       start_period: 10s
     deploy:
-      replicas: 2
+      replicas: 1
       resources:
         limits:
           cpus: "0.5"
