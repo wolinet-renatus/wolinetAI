@@ -54,7 +54,7 @@ search_tools:
 model_list:
   - model_name: wolinet-coder
     litellm_params:
-      model: openai/deepseek-coder-instruct
+      model: wolinet_ai/deepseek-coder-instruct
       api_base: os.environ/WOLINET_API_BASE
       api_key: os.environ/XINFERENCE_API_KEY
       timeout: 600
@@ -77,7 +77,10 @@ router_settings:
   timeout: 600
   enable_pre_call_checks: true
   model_group_alias:
+    "deepseek-coder-1.3b": "wolinet-coder"
     "deepseek-coder-instruct": "wolinet-coder"
+    "deepseek-coder": "wolinet-coder"
     "wolinex-coder": "wolinet-coder"
     "wolinex-coder-pro": "wolinet-coder"
     "wolinex-coder-lite": "wolinet-coder"
+    "wolinex-omni": "wolinet-coder"
