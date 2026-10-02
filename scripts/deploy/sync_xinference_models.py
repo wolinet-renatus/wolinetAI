@@ -76,13 +76,11 @@ def _is_managed(entry: dict[str, Any], inference_url: str) -> bool:
     if isinstance(metadata, dict) and metadata.get("wolinet_sync_source") == MANAGED_SOURCE:
         return True
 
-    litellm_params = entry.get("litellm_params")
     model_name = str(entry.get("model_name", ""))
-    return (
-        model_name in LEGACY_MODEL_NAMES
-        and isinstance(litellm_params, dict)
-        and str(litellm_params.get("api_base", "")).rstrip("/") == f"{inference_url.rstrip('/')}/v1"
-    )
+    # These exact names were emitted by previous versions of our sync and
+    # static config. Their api_base may refer to an old hostname, so requiring
+    # it to match today's endpoint leaves stale deployments visible forever.
+    return model_name in LEGACY_MODEL_NAMES
 
 
 def _request_json(url: str, api_key: str, method: str = "GET", body: dict[str, Any] | None = None) -> Any:
