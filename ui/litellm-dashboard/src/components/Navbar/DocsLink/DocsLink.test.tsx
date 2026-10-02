@@ -9,8 +9,8 @@ describe("DocsLink", () => {
   it("opens the docs in a new tab without leaking the opener", () => {
     render(<DocsLink />);
 
-    const link = screen.getByRole("link", { name: "Docs" });
-    expect(link).toHaveAttribute("href", "https://docs.litellm.ai/docs/");
+    const link = screen.getByRole("link", { name: "Wolinet Docs" });
+    expect(link).toHaveAttribute("href", "https://dev.wolinet.com");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
@@ -18,7 +18,7 @@ describe("DocsLink", () => {
   it("carries the same product-link styling as the Blog trigger, so the two never drift apart", () => {
     render(<DocsLink />);
 
-    const link = screen.getByRole("link", { name: "Docs" });
+    const link = screen.getByRole("link", { name: "Wolinet Docs" });
     for (const cls of sharedClasses) {
       expect(link).toHaveClass(cls);
     }
@@ -28,7 +28,7 @@ describe("DocsLink", () => {
   it("carries a focus ring, so tabbing to Docs looks like tabbing to Blog", () => {
     render(<DocsLink />);
 
-    const link = screen.getByRole("link", { name: "Docs" });
+    const link = screen.getByRole("link", { name: "Wolinet Docs" });
     expect(link).toHaveClass("focus-visible:ring-3");
     expect(link).toHaveClass("focus-visible:ring-ring/50");
   });
@@ -36,7 +36,7 @@ describe("DocsLink", () => {
   it("stays a link rather than being relabelled as a button by the Button primitive", () => {
     render(<DocsLink />);
 
-    expect(screen.getByRole("link", { name: "Docs" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Docs" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Wolinet Docs" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Wolinet Docs" })).not.toBeInTheDocument();
   });
 });

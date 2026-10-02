@@ -12,9 +12,9 @@ import { Toaster } from "@/components/ui/sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "LiteLLM Dashboard",
-  description: "LiteLLM Proxy Admin UI",
-  icons: { icon: "/get_favicon" },
+  title: "Wolinet AI Gateway",
+  description: "Manage Wolinet AI models, providers, API keys, routing, and usage.",
+  icons: { icon: "/assets/logos/wolinet_64.png" },
 };
 
 export default function RootLayout({
