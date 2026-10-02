@@ -138,7 +138,10 @@ services:
     container_name: wolinet-mitambo
     restart: unless-stopped
     networks:
-      - wolinet_internal
+      wolinet_internal:
+        aliases:
+          - mitambo
+          - wolinet-mitambo
     environment:
       XINFERENCE_HOME: /root/.xinference
       XINFERENCE_AUTH_ADVANCED: ${XINFERENCE_AUTH_ADVANCED:-true}
@@ -177,7 +180,10 @@ services:
   # 4. LiteLLM Gateway  →  lango.wolinet.com + dev.wolinet.com (portal)
   # ==========================================================================
   lango:
-    image: ${LANGO_IMAGE:-ghcr.io/berriai/litellm:main-latest}
+    image: ${LANGO_IMAGE:-wolinet/litellm:gateway}
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
     restart: unless-stopped
     entrypoint: ["/usr/local/bin/start-gateway.sh"]
     networks:
@@ -204,6 +210,7 @@ services:
       LAGO_API_KEY: ${LAGO_API_KEY:-}
       LAGO_API_EVENT_CODE: ${LAGO_API_EVENT_CODE:-openai_tokens}
       LAGO_API_CHARGE_BY: ${LAGO_API_CHARGE_BY:-team_id}
+      WOLINET_FALLBACK_MODELS: ${WOLINET_FALLBACK_MODELS:-}
       LITELLM_DISABLE_NO_REDIS_WARNING: "true"
       # Inference engine (internal bridge)
       WOLINET_API_BASE: http://mitambo:9997/v1
@@ -213,6 +220,7 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
+      XAI_API_KEY: ${XAI_API_KEY:-}
       # Portal
       WOLINET_COOKIE_DOMAIN: ".wolinet.com"
       UI_LOGO_PATH: "/app/assets/wolinet_logo.png"
@@ -248,14 +256,19 @@ services:
           memory: 6G
 
   model-sync:
-    image: ${LANGO_IMAGE:-ghcr.io/berriai/litellm:main-latest}
+    image: ${LANGO_IMAGE:-wolinet/litellm:gateway}
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
     entrypoint: ["python3", "/usr/local/bin/sync_xinference_models.py", "--watch"]
     networks:
       - wolinet_internal
     environment:
       LITELLM_BASE_URL: http://lango:4000
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
-      XINFERENCE_BASE_URL: http://mitambo:9997
+      XINFERENCE_BASE_URL: ${XINFERENCE_BASE_URL:-http://mitambo:9997}
+      XINFERENCE_FALLBACK_URLS: ${XINFERENCE_FALLBACK_URLS:-}
+      XINFERENCE_DEFAULT_MODEL_UID: ${XINFERENCE_DEFAULT_MODEL_UID:-}
       XINFERENCE_API_KEY: ${XINFERENCE_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       XINFERENCE_MODEL_SYNC_INTERVAL: ${XINFERENCE_MODEL_SYNC_INTERVAL:-30}
     volumes:

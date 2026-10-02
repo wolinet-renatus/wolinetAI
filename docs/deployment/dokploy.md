@@ -10,7 +10,11 @@ For the first Xinference deployment, leave `XINFERENCE_API_KEY` unset or set it 
 
 Xinference 3.x stores auth users, API keys, and refresh tokens in SQLite under `XINFERENCE_HOME`; the configured auth DB path is `/root/.xinference/auth/auth.db`. The `xinference_data` volume persists that database and the model cache. Xinference does not support a PostgreSQL auth connection URL. PostgreSQL remains shared by LiteLLM and WebUI, with distinct `litellm` and `webui` databases.
 
-LiteLLM's `model_name: "*"` route forwards arbitrary requested chat model UIDs to Xinference as `openai/<requested-uid>`, using the configured `XINFERENCE_API_KEY`. Start the model in Xinference before sending requests. The wildcard enables direct calls by a known UID; it does not populate a UI model picker or make Xinference's model listing dynamic through LiteLLM. Exact named LiteLLM routes remain available for the branded Wolinex aliases.
+The `model-sync` service and `mitambo` must share a Docker network. The Compose file assigns the explicit `mitambo` network alias; sync registers currently running Xinference chat models under their live UIDs and maintains the public `Wolinet Coder` alias. Set `XINFERENCE_DEFAULT_MODEL_UID` if a particular active model should back that alias. Stopped models are removed on the next sync cycle. Open WebUI gets its model list from LiteLLM, and the database initializer removes the old hard-coded `wolinet-coder` entry.
+
+If inference runs in another Dokploy application, attach the services to a shared network or set `XINFERENCE_FALLBACK_URLS` to a reachable Xinference base URL. The URL must serve `/v1/models` with the configured bearer key. A plain `404 page not found` at `https://mitambo.wolinet.com/status` or `/v1/models` means Dokploy has not routed that domain to the Xinference service: configure the domain target to `mitambo:9997` (or the Nginx proxy service on the same network) before using it as a fallback.
+
+To configure cloud fallbacks, add OpenAI, xAI/Grok, or other provider models and credentials in LiteLLM, then set `WOLINET_FALLBACK_MODELS` to the exact comma-separated model IDs shown by LiteLLM. Requests for `Wolinet Coder` will try those enabled models if the local route fails.
 
 Xinference requires `model_engine` when an LLM is launched. LiteLLM's model mapping selects the already-launched model UID and cannot choose or launch its Xinference engine. To launch the CPU GGUF profile after admin setup, run the following on the deployment host with an operator API key in `XINFERENCE_ADMIN_API_KEY`:
 

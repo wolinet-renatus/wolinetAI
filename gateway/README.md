@@ -5,7 +5,7 @@ The AI Gateway provides a unified, production-grade reverse proxy layer sitting 
 ## Key Responsibilities
 1. **Single Unified Endpoint**: All clients connect to `http://localhost:4000/v1` (or `https://api.wolinet.tech/v1`) using standard OpenAI SDKs or HTTP requests.
 2. **Hybrid Routing (80/20 Rule)**:
-   - Routine code editing, file reading, autocomplete, and basic tool calls are directed to local Xinference models (`wolinex-coder`, `qwen2.5-omni`) at **$0 per token**.
+   - Running Xinference chat models are discovered from Mitambo and synchronized to LiteLLM. The public `Wolinet Coder` model routes to the selected active local model; additional active local models appear by their live IDs.
    - Complex reasoning queries, large architectural planning, or media requests are routed to Cloud APIs (DeepSeek-R1, Claude 3.5 Sonnet, GPT-4o, Kling Video).
 3. **Resilience & Fallbacks**: If the local engine is temporarily saturated or offline, requests automatically fall back to cloud providers (e.g. `deepseek-v3` or `gpt-4o-mini`).
 4. **Budget Guardrails & Cost Tracking**: LiteLLM tracks per-key and per-user token usage and enforces monthly spend caps.

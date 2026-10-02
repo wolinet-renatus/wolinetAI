@@ -55,6 +55,9 @@ No model weights or GGUF files are bundled into container images or manually cop
 * Xinference runs with `xinference_data` volume mounted to `/root/.xinference`.
 * Models are launched dynamically on-demand from **Hugging Face** or **ModelScope** via Xinference's native Model Launch API or Web UI.
 * The gateway model catalog is synchronized from running Xinference chat/generation models. The WebUI reads its available model list from LiteLLM, so a stopped model disappears after the next sync interval.
+* LiteLLM is built from the repository's `gateway/` source so the dashboard and backend expose one **Wolinet AI** provider. The sync service registers only active Xinference chat models under their live UIDs and maintains a stable **Wolinet Coder** route to the selected active UID. Set `XINFERENCE_DEFAULT_MODEL_UID` to choose that route; otherwise it selects the first active UID in sorted order.
+* The sync service uses the Docker service alias `mitambo`. For deployments where inference runs in a separate Dokploy stack, set `XINFERENCE_FALLBACK_URLS` to a reachable Xinference base URL after the domain route is configured; the fallback must serve `/v1/models` directly.
+* To enable cloud fallback after the local `Wolinet Coder` route fails, set `WOLINET_FALLBACK_MODELS` to comma-separated model IDs that are already enabled in LiteLLM (for example, the exact OpenAI or xAI/Grok IDs configured in the gateway UI). This keeps fallback targets aligned with configured credentials and available models.
 
 ## Lago usage billing
 

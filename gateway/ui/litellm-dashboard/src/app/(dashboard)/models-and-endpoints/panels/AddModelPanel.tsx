@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import AddModelForm from "@/components/add_model/AddModelForm";
@@ -12,6 +12,7 @@ import {
 } from "@/components/common_components/MountedFormField";
 import { Providers, getPlaceholder, getProviderModels } from "@/components/provider_info_helpers";
 import { useModelCostMap } from "@/app/(dashboard)/hooks/models/useModelCostMap";
+import { useModelsInfo } from "@/app/(dashboard)/hooks/models/useModels";
 import { useCredentials } from "@/app/(dashboard)/hooks/credentials/useCredentials";
 import { useTeams } from "@/app/(dashboard)/hooks/teams/useTeams";
 import useAuthorized from "@/app/(dashboard)/hooks/useAuthorized";
@@ -24,11 +25,26 @@ export default function AddModelPanel() {
   const registry = useMountRegistry();
   const queryClient = useQueryClient();
   const { data: modelCostMapData } = useModelCostMap();
+  const { data: gatewayModels } = useModelsInfo(1, 1000);
   const { data: credentialsResponse } = useCredentials();
   const { data: teams } = useTeams();
   const [selectedProvider, setSelectedProvider] = useState<string | null>(Providers.Anthropic);
   const [providerModels, setProviderModels] = useState<string[]>([]);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const activeWolinetModels = useMemo(
+    () =>
+      (gatewayModels?.data ?? [])
+        .filter((model: any) => String(model?.litellm_params?.model ?? "").startsWith("wolinet_ai/"))
+        .map((model: any) => model.model_name)
+        .filter((name: unknown): name is string => typeof name === "string" && name.length > 0),
+    [gatewayModels?.data],
+  );
+
+  useEffect(() => {
+    if (selectedProvider === Providers.Wolinet_AI) {
+      setProviderModels(activeWolinetModels);
+    }
+  }, [selectedProvider, activeWolinetModels]);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["models", "list"] });
 
@@ -57,9 +73,17 @@ export default function AddModelPanel() {
       selectedProvider={selectedProvider}
       setSelectedProvider={setSelectedProvider}
       providerModels={providerModels}
-      setProviderModelsFn={(provider) =>
-        setProviderModels(provider === null ? [] : getProviderModels(provider, modelCostMapData))
-      }
+      setProviderModelsFn={(provider) => {
+        if (provider === null) {
+          setProviderModels([]);
+          return;
+        }
+        if (provider === Providers.Wolinet_AI) {
+          setProviderModels(activeWolinetModels);
+          return;
+        }
+        setProviderModels(getProviderModels(provider, modelCostMapData));
+      }}
       getPlaceholder={getPlaceholder}
       showAdvancedSettings={showAdvancedSettings}
       setShowAdvancedSettings={setShowAdvancedSettings}

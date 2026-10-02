@@ -130,7 +130,7 @@ chatForm.addEventListener("submit", async (event) => {
         Authorization: `Bearer ${session.api_key}`,
       },
       body: JSON.stringify({
-        model: "wolinet-coder",
+        model: "Wolinet Coder",
         stream: true,
         messages: [{ role: "user", content }],
       }),

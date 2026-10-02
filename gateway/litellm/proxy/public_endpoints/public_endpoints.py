@@ -416,12 +416,12 @@ async def get_provider_fields() -> list[ProviderCreateInfo]:
                     ProviderCredentialField(
                         key="api_base",
                         label="API Base",
-                        placeholder="http://127.0.0.1:9997/v1",
-                        tooltip="The base URL for Wolinet AI inference engine. Defaults to http://127.0.0.1:9997/v1 if not specified.",
+                        placeholder=os.getenv("WOLINET_API_BASE", "http://mitambo:9997/v1"),
+                        tooltip="The base URL for the Mitambo Xinference service on the shared Docker network.",
                         required=False,
                         field_type="text",
                         options=None,
-                        default_value="http://127.0.0.1:9997/v1",
+                        default_value=os.getenv("WOLINET_API_BASE", "http://mitambo:9997/v1"),
                     ),
                     ProviderCredentialField(
                         key="api_key",
@@ -434,7 +434,7 @@ async def get_provider_fields() -> list[ProviderCreateInfo]:
                         default_value=None,
                     ),
                 ],
-                default_model_placeholder="wolinet/wolinex-coder",
+                default_model_placeholder="Wolinet Coder or an active Xinference model ID",
             )
         )
 

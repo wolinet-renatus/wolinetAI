@@ -280,30 +280,45 @@ import threading
 threading.Thread(target=seed_db, daemon=True).start()
 " || true
 
-# 8. Enable Lago usage events when credentials are configured
-CONFIG_PATH=/app/config.yaml
-if [ -n "${LAGO_API_KEY:-}" ]; then
-  if [ -z "${LAGO_API_BASE:-}" ] || [ -z "${LAGO_API_EVENT_CODE:-}" ]; then
-    echo "FATAL: LAGO_API_BASE and LAGO_API_EVENT_CODE are required with LAGO_API_KEY" >&2
-    exit 1
-  fi
-  CONFIG_PATH=/tmp/wolinet-litellm-config.yaml
-  python3 - "$CONFIG_PATH" <<'PY'
+# 8. Apply optional Lago billing and cloud fallback settings.
+CONFIG_PATH=/tmp/wolinet-litellm-config.yaml
+python3 - "$CONFIG_PATH" <<'PY'
+import os
 import sys
 import yaml
 
 with open("/app/config.yaml", encoding="utf-8") as source:
     config = yaml.safe_load(source) or {}
-settings = config.setdefault("litellm_settings", {})
-callbacks = settings.setdefault("callbacks", [])
-if "lago" not in callbacks:
-    callbacks.append("lago")
+if os.getenv("LAGO_API_KEY"):
+    if not os.getenv("LAGO_API_BASE") or not os.getenv("LAGO_API_EVENT_CODE"):
+        raise SystemExit("LAGO_API_BASE and LAGO_API_EVENT_CODE are required with LAGO_API_KEY")
+    callbacks = config.setdefault("litellm_settings", {}).setdefault("callbacks", [])
+    if "lago" not in callbacks:
+        callbacks.append("lago")
+
+# Fallback targets are model IDs already registered in LiteLLM. Keeping them
+# in deployment configuration lets operators switch providers without code
+# changes and avoids assuming that a provider credential/model is enabled.
+fallback_models = [name.strip() for name in os.getenv("WOLINET_FALLBACK_MODELS", "").split(",") if name.strip()]
+if fallback_models:
+    router = config.setdefault("router_settings", {})
+    fallbacks = router.setdefault("fallbacks", [])
+    fallbacks = [item for item in fallbacks if not (isinstance(item, dict) and "Wolinet Coder" in item)]
+    fallbacks.append({"Wolinet Coder": fallback_models})
+    router["fallbacks"] = fallbacks
+
 with open(sys.argv[1], "w", encoding="utf-8") as target:
     yaml.safe_dump(config, target, sort_keys=False)
 PY
+if [ -n "${LAGO_API_KEY:-}" ]; then
   echo "==> [lango] Lago usage billing callback enabled"
 else
   echo "==> [lango] Lago billing is not configured; set LAGO_API_KEY to enable usage events"
+fi
+if [ -n "${WOLINET_FALLBACK_MODELS:-}" ]; then
+  echo "==> [lango] Configured Wolinet Coder cloud fallbacks: ${WOLINET_FALLBACK_MODELS}"
+else
+  echo "==> [lango] No cloud fallback model IDs configured"
 fi
 
 # 9. Hand over to LiteLLM entrypoint

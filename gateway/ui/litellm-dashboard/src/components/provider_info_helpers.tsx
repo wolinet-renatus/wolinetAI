@@ -468,7 +468,7 @@ const providerPlaceholderMap: Partial<Record<Providers, string>> = {
   [Providers.VolcEngine]: "volcengine/<any-model-on-volcengine>",
   [Providers.Voyage]: "voyage/",
   [Providers.WATSONX]: "watsonx/ibm/granite-3-3-8b-instruct",
-  [Providers.Wolinet_AI]: "wolinet/wolinex-coder",
+  [Providers.Wolinet_AI]: "Wolinet Coder or an active Xinference model ID",
   [Providers.ZAI]: "zai/glm-4.5",
 };
 
@@ -529,30 +529,6 @@ export const getProviderModels = (provider: string, modelMap: any): Array<string
       });
     }
 
-    // Special case for Wolinet AI sovereign models
-    if (
-      providerKey === Providers.Wolinet_AI ||
-      providerKey === "Wolinet_AI" ||
-      providerKey === "Wolinet" ||
-      providerKey === "wolinet" ||
-      providerKey === "wolinet_ai" ||
-      providerKey === "Wolinet AI"
-    ) {
-      const sovereignModels = [
-        "wolinex-coder",
-        "wolinex-coder-pro",
-        "wolinex-coder-lite",
-        "wolinex-omni",
-        "wolinex-embed",
-        "wolinex-retriever",
-        "wolinex-rerank",
-      ];
-      for (const m of sovereignModels) {
-        if (!providerModels.includes(m)) {
-          providerModels.push(m);
-        }
-      }
-    }
   }
 
   return providerModels;
