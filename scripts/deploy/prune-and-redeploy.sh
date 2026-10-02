@@ -17,11 +17,18 @@ git reset --hard origin/main
 echo "==> [wolinet] 2/5 Stopping existing stack containers..."
 docker compose down --remove-orphans || true
 
-echo "==> [wolinet] 3/5 Pruning stale Docker images and builder caches..."
-# Remove stopped/dangling containers and untagged images without deleting named volumes
+echo "==> [wolinet] 3/5 Pruning stale Docker logs, builder caches, and unused images..."
+# 1. Truncate bloated container log files if accessible
+truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null || true
+
+# 2. Prune stopped containers
 docker container prune -f
+
+# 3. Aggressively prune BuildKit build cache (frees tens of gigabytes)
+docker builder prune -a -f
+
+# 4. Prune unused images not used by running containers
 docker image prune -f
-docker builder prune -f
 
 echo "==> [wolinet] 4/5 Verifying UI and website distribution files..."
 test -f "${ROOT_DIR}/inference/xinference/ui/web/dist/index.html" || {
@@ -44,12 +51,15 @@ chmod +x "${ROOT_DIR}/gateway/start-gateway.sh" 2>/dev/null || true
 echo "==> [wolinet] Verified $(find "${ROOT_DIR}/inference/xinference/ui/web/dist" -type f | wc -l) files in xinference UI dist"
 echo "==> [wolinet] Verified $(find "${ROOT_DIR}/website" -type f | wc -l) files in website dist"
 
-echo "==> [wolinet] 5/5 Starting stack fresh with latest configuration..."
+echo "==> [wolinet] 5/5 Pulling pre-built images and starting stack fresh..."
 COMPOSE_FILE="docker-compose.yml"
 if [ -f "docker-compose.prod.yml" ] && [ "${1:-}" = "prod" ]; then
   COMPOSE_FILE="docker-compose.prod.yml"
 fi
-docker compose -f "${COMPOSE_FILE}" up -d --build --remove-orphans
+
+# Pull latest pre-built images from GHCR — NEVER build directly on host
+docker compose -f "${COMPOSE_FILE}" pull --quiet || docker compose -f "${COMPOSE_FILE}" pull
+docker compose -f "${COMPOSE_FILE}" up -d --no-build --remove-orphans
 
 # Force reload lango and wolinex containers to pick up updated config and models
 for svc in lango wolinex; do
