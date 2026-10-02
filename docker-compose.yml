@@ -193,6 +193,8 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       ENABLE_OLLAMA_API: "False"
       ENABLE_OPENAI_API: "True"
+      DEFAULT_MODELS: ${DEFAULT_MODELS:-Wolinet Coder}
+      BYPASS_MODEL_ACCESS_CONTROL: "True"
       RAG_EMBEDDING_ENGINE: openai
       RAG_OPENAI_API_BASE_URL: http://lango:4000/v1
       RAG_OPENAI_API_KEY: ${LITELLM_MASTER_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
