@@ -344,7 +344,7 @@ export function Sidebar() {
             Extra: SquareArrowOutUpRight,
           },
           {
-            path: 'https://github.com/wolinet-renatus/wolinetAI',
+            path: XINFERENCE_GITHUB,
             name: 'Wolinet AI on GitHub',
             target: '_blank',
             Icon: FaGithub as IconComponent,
