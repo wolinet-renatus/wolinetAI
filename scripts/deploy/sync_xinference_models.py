@@ -83,7 +83,13 @@ def _is_managed(entry: dict[str, Any], inference_url: str) -> bool:
     return model_name in LEGACY_MODEL_NAMES
 
 
-def _request_json(url: str, api_key: str, method: str = "GET", body: dict[str, Any] | None = None) -> Any:
+def _request_json(
+    url: str,
+    api_key: str,
+    method: str = "GET",
+    body: dict[str, Any] | None = None,
+    timeout: float = 20,
+) -> Any:
     data = json.dumps(body).encode() if body is not None else None
     request = urllib.request.Request(
         url,
@@ -95,32 +101,71 @@ def _request_json(url: str, api_key: str, method: str = "GET", body: dict[str, A
             "Accept": "application/json",
         },
     )
-    with urllib.request.urlopen(request, timeout=20) as response:
+    with urllib.request.urlopen(request, timeout=timeout) as response:
         payload = response.read()
         return json.loads(payload) if payload else {}
 
 
-def _fetch_active_models(inference_url: str, api_key: str) -> dict[str, dict[str, Any]]:
-    response = _request_json(f"{inference_url.rstrip('/')}/v1/models", api_key)
+def _fetch_active_models(inference_url: str, api_key: str, timeout: float = 10) -> dict[str, dict[str, Any]]:
+    response = _request_json(f"{inference_url.rstrip('/')}/v1/models", api_key, timeout=timeout)
     return active_chat_models(response)
 
 
+class XinferenceUnavailableError(Exception):
+    """Raised when none of the configured or fallback Xinference endpoints are reachable."""
+
+
 def _inference_urls() -> list[str]:
-    """Return the internal endpoint first, then configured cross-stack URLs."""
-    urls = [os.environ.get("XINFERENCE_BASE_URL", "http://mitambo:9997")]
-    urls.extend(os.environ.get("XINFERENCE_FALLBACK_URLS", "").split(","))
-    return list(dict.fromkeys(url.strip().rstrip("/") for url in urls if url.strip()))
+    """Return the internal endpoint first, followed by common aliases and fallback URLs."""
+    primary = os.environ.get("XINFERENCE_BASE_URL", "http://mitambo:9997").strip().rstrip("/")
+    candidates = [primary]
+
+    # Add common local container and Swarm service/task aliases if not already included
+    for alias in (
+        "http://mitambo:9997",
+        "http://wolinet-mitambo:9997",
+        "http://wolinet_mitambo:9997",
+        "http://tasks.mitambo:9997",
+        "http://tasks.wolinet-mitambo:9997",
+        "http://tasks.wolinet_mitambo:9997",
+    ):
+        if alias not in candidates:
+            candidates.append(alias)
+
+    project_name = os.environ.get("COMPOSE_PROJECT_NAME") or os.environ.get("STACK_NAME")
+    if project_name:
+        for fmt in (
+            f"http://{project_name}-mitambo:9997",
+            f"http://{project_name}_mitambo:9997",
+            f"http://tasks.{project_name}_mitambo:9997",
+        ):
+            if fmt not in candidates:
+                candidates.append(fmt)
+
+    fallback_env = os.environ.get("XINFERENCE_FALLBACK_URLS", "").strip()
+    if fallback_env:
+        for item in fallback_env.split(","):
+            url = item.strip().rstrip("/")
+            if url and url not in candidates:
+                candidates.append(url)
+    else:
+        # Default public fallback if internal resolution is still initializing
+        public_url = "https://mitambo.wolinet.com"
+        if public_url not in candidates:
+            candidates.append(public_url)
+
+    return candidates
 
 
 def _fetch_active_models_from_urls(api_key: str) -> tuple[str, dict[str, dict[str, Any]]]:
     failures: list[str] = []
     for inference_url in _inference_urls():
         try:
-            return inference_url, _fetch_active_models(inference_url, api_key)
+            return inference_url, _fetch_active_models(inference_url, api_key, timeout=8)
         except Exception as exc:
             failures.append(f"{inference_url}: {exc}")
-            log.warning("Xinference endpoint unavailable at %s: %s", inference_url, exc)
-    raise RuntimeError("All Xinference endpoints failed: " + "; ".join(failures))
+            log.debug("Xinference endpoint probe failed for %s: %s", inference_url, exc)
+    raise XinferenceUnavailableError("; ".join(failures))
 
 
 def _upsert_model(gateway_url: str, gateway_key: str, model_name: str, model_uid: str,
@@ -238,6 +283,8 @@ def main() -> None:
     while True:
         try:
             sync_once()
+        except XinferenceUnavailableError as exc:
+            log.warning("Xinference endpoints currently unreachable (%s); retrying in %ds", exc, interval)
         except Exception:
             log.exception("Model catalog sync failed; it will retry")
         if not args.watch:
