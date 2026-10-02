@@ -711,6 +711,7 @@ from litellm.proxy.middleware.admission_control_middleware import (
 from litellm.proxy.middleware.in_flight_requests_middleware import (
     InFlightRequestsMiddleware,
 )
+from litellm.proxy.middleware.inference_error_sanitizer import InferenceErrorSanitizerMiddleware
 from litellm.proxy.middleware.per_request_root_path_middleware import (
     PerRequestRootPathMiddleware,
     get_server_root_paths,
@@ -2441,6 +2442,7 @@ app.add_middleware(
 )
 
 app.add_middleware(PrometheusAuthMiddleware)
+app.add_middleware(InferenceErrorSanitizerMiddleware)
 # Added before InFlightRequestsMiddleware so it nests *inside* it: Starlette
 # makes the last-added middleware outermost. The billable count is recorded
 # after the inner app returns, so if this sat outside the in-flight tracker a

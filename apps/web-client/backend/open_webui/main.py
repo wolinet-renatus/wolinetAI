@@ -606,8 +606,46 @@ RETIRED_LOCAL_MODEL_IDS = frozenset(
         'wolinex-coder-lite',
         'wolinex-omni',
         'wolinet-coder',
+        'wolinet coder',
     }
 )
+PUBLIC_MODEL_UNAVAILABLE_MESSAGE = 'Sorry, our AI service is temporarily unavailable. Please try again later.'
+INFERENCE_UNAVAILABLE_MARKERS = (
+    'no deployments available',
+    'no healthy deployment available',
+    'all deployments for selected model are in cooldown',
+    'all deployments exhausted',
+    'model not found in the model list',
+    'no models configured on proxy',
+    'model_unavailable',
+    'service is temporarily unavailable',
+    'service unavailable',
+    'connection refused',
+    'connection reset by peer',
+    'timed out',
+    'http 429',
+    'http 502',
+    'http 503',
+)
+
+
+def _public_chat_error(message: str, status_code: int | None = None) -> tuple[int, str]:
+    lowered = str(message).casefold()
+    if any(marker in lowered for marker in INFERENCE_UNAVAILABLE_MARKERS):
+        return status.HTTP_503_SERVICE_UNAVAILABLE, PUBLIC_MODEL_UNAVAILABLE_MESSAGE
+    if 'model not found' in lowered:
+        return (
+            status.HTTP_404_NOT_FOUND,
+            'That model is no longer available. Please choose an available model and try again.',
+        )
+    if status_code in (status.HTTP_429_TOO_MANY_REQUESTS, status.HTTP_502_BAD_GATEWAY,
+                       status.HTTP_503_SERVICE_UNAVAILABLE, status.HTTP_504_GATEWAY_TIMEOUT):
+        return status.HTTP_503_SERVICE_UNAVAILABLE, PUBLIC_MODEL_UNAVAILABLE_MESSAGE
+    if status_code == status.HTTP_403_FORBIDDEN:
+        return status_code, 'You do not have permission to use this model.'
+    if status_code is not None and 400 <= status_code < 500:
+        return status_code, 'We could not process that request. Please check your input and try again.'
+    return status.HTTP_500_INTERNAL_SERVER_ERROR, 'Sorry, we could not complete your request. Please try again later.'
 
 
 class SPAStaticFiles(StaticFiles):
@@ -1778,6 +1816,11 @@ async def chat_completion(
         model_info = None
         if not model_item.get('direct', False):
             if model_id not in request.app.state.MODELS:
+                if not request.app.state.MODELS:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail=PUBLIC_MODEL_UNAVAILABLE_MESSAGE,
+                    )
                 fallback_model = next(
                     (
                         available_model
@@ -1787,7 +1830,11 @@ async def chat_completion(
                     ),
                     None,
                 )
-                if isinstance(model_id, str) and model_id in RETIRED_LOCAL_MODEL_IDS and fallback_model:
+                if (
+                    isinstance(model_id, str)
+                    and model_id.casefold() in RETIRED_LOCAL_MODEL_IDS
+                    and fallback_model
+                ):
                     fallback_model_id = str(fallback_model['id'])
                     log.warning(
                         'Routing retired local model selection %s to active gateway model %s',
@@ -1796,8 +1843,18 @@ async def chat_completion(
                     )
                     model_id = fallback_model_id
                     form_data['model'] = fallback_model_id
+                elif isinstance(model_id, str) and model_id.casefold() in RETIRED_LOCAL_MODEL_IDS:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail=PUBLIC_MODEL_UNAVAILABLE_MESSAGE,
+                    )
                 else:
-                    raise Exception('Model not found')
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=(
+                            'That model is no longer available. Please choose an available model and try again.'
+                        ),
+                    )
 
             model = request.app.state.MODELS[model_id]
             model_info = await Models.get_model_by_id(model_id)
@@ -2173,6 +2230,10 @@ async def chat_completion(
         except Exception as e:
             error_detail = e.detail if isinstance(e, HTTPException) else str(e)
             log.error('Error processing chat payload: %s', error_detail)
+            public_status, public_error = _public_chat_error(
+                error_detail,
+                e.status_code if isinstance(e, HTTPException) else None,
+            )
             if metadata.get('chat_id') and metadata.get('message_id'):
                 # Update the chat message with the error
                 try:
@@ -2184,7 +2245,7 @@ async def chat_completion(
                             metadata['message_id'],
                             {
                                 'parentId': metadata.get('user_message_id', None),
-                                'error': {'content': error_detail},
+                                'error': {'content': public_error},
                             },
                         )
 
@@ -2193,7 +2254,7 @@ async def chat_completion(
                         await event_emitter(
                             {
                                 'type': 'chat:message:error',
-                                'data': {'error': {'content': error_detail}},
+                                'data': {'error': {'content': public_error}},
                             }
                         )
                         await event_emitter(
@@ -2208,8 +2269,8 @@ async def chat_completion(
                 # a proper HTTP response; without this the function would
                 # return None which FastAPI serializes as null.  #23924
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=error_detail,
+                    status_code=public_status,
+                    detail=public_error,
                 )
         finally:
             # Clean up MCP clients.  Each client is isolated so one
