@@ -74,7 +74,7 @@ describe("DashboardHeader breadcrumb", () => {
   it("styles Docs with the shared product-link class instead of a muted toolbar button", () => {
     render(<DashboardHeader />);
 
-    const docs = screen.getByRole("link", { name: "Docs" });
+    const docs = screen.getByRole("link", { name: "Wolinet Docs" });
     for (const cls of NAV_PRODUCT_LINK_CLASS.trim().split(/\s+/)) {
       expect(docs).toHaveClass(cls);
     }

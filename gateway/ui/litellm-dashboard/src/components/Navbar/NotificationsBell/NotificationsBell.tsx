@@ -12,7 +12,7 @@ import { cn } from "@/lib/cva.config";
 import { Bell } from "lucide-react";
 import React, { useState } from "react";
 
-export const AUTO_ROUTER_DOCS_URL = "https://docs.litellm.ai/docs/proxy/auto_routing";
+export const AUTO_ROUTER_DOCS_URL = "https://dev.wolinet.com";
 
 export const NotificationsBell: React.FC = () => {
   const hidden = useHideAutoRouterAnnouncement();
@@ -27,7 +27,7 @@ export const NotificationsBell: React.FC = () => {
 
   const content = (
     <div className="max-w-[280px]">
-      <PopoverTitle className="mt-0! mb-2!">LiteLLM Auto Router</PopoverTitle>
+      <PopoverTitle className="mt-0! mb-2!">Wolinet AI Auto Router</PopoverTitle>
       <PopoverDescription className="mb-3! text-sm leading-snug">
         Route every request to the cheapest model that can handle it, no prompt changes needed.
       </PopoverDescription>

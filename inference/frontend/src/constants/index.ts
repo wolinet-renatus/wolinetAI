@@ -1,9 +1,9 @@
-export const XINFERENCE_DOCS_URL = 'https://github.com/wolinet-renatus/inference#readme';
-export const XINFERENCE_BASE_URL = 'https://wolinet.ai';
-export const XINFERENCE_CN_URL = 'https://wolinet.ai';
-export const XINFERENCE_GITHUB = 'https://github.com/wolinet-renatus/inference';
+export const XINFERENCE_DOCS_URL = 'https://dev.wolinet.com';
+export const XINFERENCE_BASE_URL = 'https://ai.wolinet.com';
+export const XINFERENCE_CN_URL = 'https://ai.wolinet.com';
+export const XINFERENCE_GITHUB = 'https://github.com/wolinet-renatus/wolinetAI';
 export const XINFERENCE_IO = 'https://model.xinference.io';
-export const XAGENT_BASE_URL = 'https://wolinet.ai';
+export const XAGENT_BASE_URL = 'https://ai.wolinet.com';
 
 export const LOGIN_PATH = '/login';
 export const SETUP_PATH = '/setup';

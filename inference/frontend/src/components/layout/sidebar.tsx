@@ -14,7 +14,6 @@ import {
   FileTextIcon,
   SquareArrowOutUpRight,
   Globe,
-  BotIcon,
   Rocket,
   Route,
   Monitor,
@@ -36,9 +35,7 @@ import { getBrandingFromEnv } from '@/lib/branding';
 import {
   XINFERENCE_DOCS_URL,
   XINFERENCE_BASE_URL,
-  XINFERENCE_CN_URL,
   XINFERENCE_GITHUB,
-  XAGENT_BASE_URL,
   NO_AUTH,
 } from '@/constants';
 import ThemeToggle from '@/components/layout/theme-toggle';
@@ -147,7 +144,7 @@ const NavGroupSection: FC<NavGroup & { collapsed: boolean; showDivider: boolean 
 };
 
 export function Sidebar() {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
   const branding = getBrandingFromEnv();
   const { clusterVersion, clusterAuth, clusterUIConfig } = useGlobal();
@@ -312,31 +309,45 @@ export function Sidebar() {
         name: t('menu.resourcesAndSupport'),
         items: [
           {
-            path: `${XINFERENCE_DOCS_URL}/${locale.startsWith('zh') ? 'zh-cn' : ''}`,
+            path: XINFERENCE_DOCS_URL,
             name: t('menu.documentation'),
             target: '_blank',
             Icon: FileTextIcon,
             Extra: SquareArrowOutUpRight,
           },
           {
-            path: `${XINFERENCE_GITHUB}/inference`,
+            path: 'mailto:hello@wolinet.com',
             name: t('menu.contactUs'),
             target: '_blank',
             Icon: FaGithub as IconComponent,
             Extra: SquareArrowOutUpRight,
           },
           {
-            path: locale.startsWith('zh') ? XINFERENCE_CN_URL : XINFERENCE_BASE_URL,
-            name: t('menu.website'),
+            path: XINFERENCE_BASE_URL,
+            name: 'Wolinet AI',
             target: '_blank',
             Icon: Globe,
             Extra: SquareArrowOutUpRight,
           },
           {
-            path: XAGENT_BASE_URL,
-            name: t('menu.xagent'),
+            path: 'https://wolinex.wolinet.com',
+            name: 'Wolinex Studio',
             target: '_blank',
-            Icon: BotIcon,
+            Icon: Monitor,
+            Extra: SquareArrowOutUpRight,
+          },
+          {
+            path: 'https://lango.wolinet.com',
+            name: 'Wolinet AI Gateway',
+            target: '_blank',
+            Icon: Route,
+            Extra: SquareArrowOutUpRight,
+          },
+          {
+            path: 'https://github.com/wolinet-renatus/wolinetAI',
+            name: 'Wolinet AI on GitHub',
+            target: '_blank',
+            Icon: FaGithub as IconComponent,
             Extra: SquareArrowOutUpRight,
           },
         ],
@@ -352,7 +363,6 @@ export function Sidebar() {
   }, [
     clusterUIConfig,
     clusterAuth,
-    locale,
     t,
     usersManagePage,
     canAccessKeysPage,

@@ -6,11 +6,11 @@
   --bg-card-hover: rgba(255, 255, 255, 0.08);
   --text-main: #f4f4f5;
   --text-muted: #a1a1aa;
-  --accent-primary: #8b5cf6;
-  --accent-secondary: #3b82f6;
+  --accent-primary: #2563eb;
+  --accent-secondary: #38bdf8;
   --accent-gradient: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
   --border-color: rgba(255, 255, 255, 0.1);
-  --glow-color: rgba(139, 92, 246, 0.3);
+  --glow-color: rgba(37, 99, 235, 0.3);
 }
 
 * {

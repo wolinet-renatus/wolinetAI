@@ -266,9 +266,9 @@ const menuGroups: MenuGroup[] = [
       {
         key: "learning-resources",
         page: "learning-resources",
-        label: "Learning Resources",
+        label: "Wolinet Learning Resources",
         icon: <BookOpen {...ICON} />,
-        external_url: "https://models.litellm.ai/cookbook",
+        external_url: "https://dev.wolinet.com",
       },
       {
         key: "caching",
@@ -594,17 +594,17 @@ const Sidebar_: React.FC<SidebarProps> = ({
     );
   };
 
-  const logoSrc = logoUrl || `${baseUrl}/get_image`;
+  const logoSrc = logoUrl || "/assets/logos/wolinet.png";
   const reachableDarkLogo = logoUrlDark === erroredDarkLogo ? null : logoUrlDark;
-  const darkLogoSrc = reachableDarkLogo || logoUrl || `${baseUrl}/get_image?theme=dark`;
+  const darkLogoSrc = reachableDarkLogo || logoUrl || "/assets/logos/wolinet.png";
 
   return (
     <Sidebar collapsed={collapsed}>
       <SidebarHeader className="h-14 border-b border-border group-data-[collapsed=true]/sidebar:h-auto">
         <div className="flex items-center justify-between gap-2 group-data-[collapsed=true]/sidebar:flex-col">
           <div className="flex min-w-0 items-center gap-2">
-            <Link href={uiHref("")} className="flex min-w-0 items-center" aria-label="LiteLLM home">
-              <img src={logoSrc} alt="LiteLLM" className={cn(LOGO_CLASS_NAME, "dark:hidden")} />
+            <Link href={uiHref("")} className="flex min-w-0 items-center" aria-label="Wolinet AI Gateway home">
+              <img src={logoSrc} alt="Wolinet AI Gateway" className={cn(LOGO_CLASS_NAME, "dark:hidden")} />
               <img
                 src={darkLogoSrc}
                 alt=""
@@ -616,7 +616,7 @@ const Sidebar_: React.FC<SidebarProps> = ({
             {version && (
               <Badge
                 variant="outline"
-                render={<a href="https://docs.litellm.ai/release_notes" target="_blank" rel="noopener noreferrer" />}
+                render={<a href="https://github.com/wolinet-renatus/wolinetAI/releases" target="_blank" rel="noopener noreferrer" />}
                 className="px-1.5 py-0 font-mono text-[10px] font-medium text-muted-foreground group-data-[collapsed=true]/sidebar:hidden"
               >
                 v{version}
@@ -646,6 +646,30 @@ const Sidebar_: React.FC<SidebarProps> = ({
               <SidebarMenu>{group.items.map((item) => renderItem(item))}</SidebarMenu>
             </SidebarGroup>
           ))}
+          <SidebarGroup>
+            <SidebarGroupLabel>WOLINET AI</SidebarGroupLabel>
+            <SidebarMenu>
+              {[
+                ["Wolinet AI", "https://ai.wolinet.com"],
+                ["Wolinex Studio", "https://wolinex.wolinet.com"],
+                ["Mitambo Inference", "https://mitambo.wolinet.com"],
+                ["Developer Docs", "https://dev.wolinet.com"],
+                ["Wolinet AI on GitHub", "https://github.com/wolinet-renatus/wolinetAI"],
+              ].map(([label, href]) => (
+                <SidebarMenuItem key={href}>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(sidebarMenuButtonVariants({ size: "default" }))}
+                  >
+                    <ExternalLink className="size-[18px] shrink-0" />
+                    <span className="flex-1 truncate">{label}</span>
+                  </a>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
         </nav>
       </ScrollArea>
 
