@@ -131,6 +131,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 COPY . /opt/inference
 COPY --from=web-builder /opt/inference/xinference/ui/web/dist /opt/inference/xinference/ui/web/dist
+COPY start-mitambo.sh /usr/local/bin/start-mitambo.sh
+RUN chmod 755 /usr/local/bin/start-mitambo.sh
 RUN --mount=type=cache,target=/root/.cache/uv \
     NO_WEB_UI=1 uv pip install --system --no-deps --reinstall "."
 

@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE_TAG="${1:?Usage: deploy_production.sh sha-<git-sha>}"
 STATE_FILE="${ROOT_DIR}/.deployed-image-tag"
-COMPOSE=(docker compose --parallel 1 --project-name wolinet --file "${ROOT_DIR}/docker-compose.prod.yml")
+COMPOSE=(docker compose --parallel 1 --project-name wolinet --file "${ROOT_DIR}/docker-compose.prod.yml" --file "${ROOT_DIR}/docker-compose.gpu.yml")
 
 if [ ! -f "${ROOT_DIR}/.env" ]; then
     echo "Missing production .env in ${ROOT_DIR}" >&2
@@ -15,6 +15,15 @@ set -a
 source "${ROOT_DIR}/.env"
 set +a
 
+set_release_images() {
+    local tag="$1"
+    export WOLINET_IMAGE_TAG="${tag}"
+    export MITAMBO_IMAGE="ghcr.io/wolinet-renatus/wolinet-mitambo:${tag}"
+    export LANGO_IMAGE="ghcr.io/wolinet-renatus/wolinet-lango:${tag}"
+    export WOLINEX_IMAGE="ghcr.io/wolinet-renatus/wolinet-wolinex:${tag}"
+    export WEBSITE_IMAGE="ghcr.io/wolinet-renatus/wolinet-homepage:${tag}"
+}
+
 "${ROOT_DIR}/scripts/setup_mitambo_auth.sh"
 
 PREVIOUS_TAG=""
@@ -23,20 +32,20 @@ if [ -f "${STATE_FILE}" ]; then
 fi
 
 cd "${ROOT_DIR}"
-export WOLINET_IMAGE_TAG="${IMAGE_TAG}"
+set_release_images "${IMAGE_TAG}"
 "${COMPOSE[@]}" config --quiet
 
 if "${COMPOSE[@]}" ps --status running --quiet nginx | grep -q .; then
     "${COMPOSE[@]}" exec -T nginx nginx -t
 fi
 
-"${COMPOSE[@]}" pull lango wolinex website devportal nginx
+"${COMPOSE[@]}" pull mitambo lango wolinex website nginx
 
 if ! "${COMPOSE[@]}" up -d --no-build --wait --remove-orphans; then
     if [ -n "${PREVIOUS_TAG}" ]; then
         echo "Deployment failed; restoring ${PREVIOUS_TAG}" >&2
-        export WOLINET_IMAGE_TAG="${PREVIOUS_TAG}"
-        "${COMPOSE[@]}" pull lango wolinex website devportal nginx
+        set_release_images "${PREVIOUS_TAG}"
+        "${COMPOSE[@]}" pull mitambo lango wolinex website nginx
         "${COMPOSE[@]}" up -d --no-build --wait
     fi
     exit 1

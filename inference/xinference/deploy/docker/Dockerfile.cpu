@@ -34,6 +34,8 @@ RUN /opt/conda/bin/conda create -n ffmpeg-env -c conda-forge 'ffmpeg<7' -y && \
 
 COPY . /opt/inference
 COPY --from=web-builder /opt/inference/xinference/ui/web/dist /opt/inference/xinference/ui/web/dist
+COPY start-mitambo.sh /usr/local/bin/start-mitambo.sh
+RUN chmod 755 /usr/local/bin/start-mitambo.sh
 WORKDIR /opt/inference
 RUN --mount=type=cache,target=/root/.cache/pip \
     NO_WEB_UI=1 pip install -i "$PIP_INDEX" --no-deps "." && \

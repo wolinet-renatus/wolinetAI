@@ -1,6 +1,6 @@
 services:
   mitambo:
-    image: wolinet/xinference:gpu
+    image: ${MITAMBO_IMAGE:-ghcr.io/wolinet-renatus/wolinet-mitambo:latest}
     build:
       context: ./inference
       dockerfile: xinference/deploy/docker/Dockerfile

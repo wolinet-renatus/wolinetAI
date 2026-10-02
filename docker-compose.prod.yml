@@ -131,10 +131,7 @@ services:
   # 3. Xinference — Local GPU inference engine  →  mitambo.wolinet.com
   # ==========================================================================
   mitambo:
-    image: wolinet/xinference:gpu
-    build:
-      context: ./inference
-      dockerfile: xinference/deploy/docker/Dockerfile
+    image: ${MITAMBO_IMAGE:-ghcr.io/wolinet-renatus/wolinet-mitambo:latest}
     container_name: wolinet-mitambo
     restart: unless-stopped
     networks:
@@ -156,9 +153,6 @@ services:
     entrypoint: ["/usr/local/bin/start-mitambo.sh"]
     volumes:
       - xinference_data:/root/.xinference
-      - ./inference/start-mitambo.sh:/usr/local/bin/start-mitambo.sh:ro
-      - ./inference/xinference/ui/web/dist:/app/dist:ro
-      - ./inference/frontend/out:/app/out:ro
     command: >
       xinference-local -H 0.0.0.0 -p 9997 --log-level info
     deploy:
@@ -180,10 +174,7 @@ services:
   # 4. LiteLLM Gateway  →  lango.wolinet.com + dev.wolinet.com (portal)
   # ==========================================================================
   lango:
-    image: ${LANGO_IMAGE:-wolinet/litellm:gateway}
-    build:
-      context: ./gateway
-      dockerfile: Dockerfile
+    image: ${LANGO_IMAGE:-ghcr.io/wolinet-renatus/wolinet-lango:latest}
     restart: unless-stopped
     entrypoint: ["/usr/local/bin/start-gateway.sh"]
     networks:
@@ -256,10 +247,7 @@ services:
           memory: 6G
 
   model-sync:
-    image: ${LANGO_IMAGE:-wolinet/litellm:gateway}
-    build:
-      context: ./gateway
-      dockerfile: Dockerfile
+    image: ${LANGO_IMAGE:-ghcr.io/wolinet-renatus/wolinet-lango:latest}
     entrypoint: ["python3", "/usr/local/bin/sync_xinference_models.py", "--watch"]
     networks:
       - wolinet_internal
@@ -283,10 +271,7 @@ services:
   # 5. Open WebUI (Wolinex)  →  wolinex.wolinet.com
   # ==========================================================================
   wolinex:
-    image: ${WOLINEX_IMAGE:-wolinet/open-webui:gateway}
-    build:
-      context: ./apps/web-client
-      dockerfile: Dockerfile
+    image: ${WOLINEX_IMAGE:-ghcr.io/wolinet-renatus/wolinet-wolinex:latest}
     restart: unless-stopped
     networks:
       - wolinet_internal
@@ -370,39 +355,8 @@ services:
   # 6. Marketing Website  →  ai.wolinet.com
   # ==========================================================================
   website:
-    image: ${WEBSITE_IMAGE:-nginx:1.27-alpine}
+    image: ${WEBSITE_IMAGE:-ghcr.io/wolinet-renatus/wolinet-homepage:latest}
     restart: unless-stopped
-    command:
-      - sh
-      - -c
-      - |
-        mkdir -p /usr/share/nginx/html
-        if [ -d /app/website ] && [ -f /app/website/index.html ]; then
-          cp -r /app/website/. /usr/share/nginx/html/
-        fi
-        cat <<'EOF' > /etc/nginx/conf.d/default.conf
-        server {
-            listen 80;
-            listen 8080;
-            server_name _;
-            root /usr/share/nginx/html;
-            index index.html;
-
-            location = /healthz {
-                access_log off;
-                default_type text/plain;
-                return 200 "ok\n";
-            }
-
-            location / {
-                try_files $$uri $$uri/ /index.html =404;
-            }
-        }
-        EOF
-        chmod -R a+rX /usr/share/nginx/html
-        exec nginx -g 'daemon off;'
-    volumes:
-      - ./website:/app/website:ro
     networks:
       - wolinet_internal
     expose: ["80", "8080"]
