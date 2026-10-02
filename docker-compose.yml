@@ -58,11 +58,7 @@ services:
         delay: 5s
 
   mitambo:
-    image: wolinet/xinference:cpu
-    pull_policy: build
-    build:
-      context: ./inference
-      dockerfile: xinference/deploy/docker/Dockerfile.cpu
+    image: ${MITAMBO_IMAGE:-ghcr.io/wolinet-renatus/wolinet-mitambo-cpu:latest}
     environment:
       XINFERENCE_HOME: /root/.xinference
       XINFERENCE_AUTH_DB_PATH: /root/.xinference/auth/auth.db
@@ -108,11 +104,7 @@ services:
           memory: ${XINFERENCE_MEMORY_LIMIT:-8G}
 
   lango:
-    image: ${LANGO_IMAGE:-wolinet/litellm:gateway}
-    pull_policy: build
-    build:
-      context: ./gateway
-      dockerfile: Dockerfile
+    image: ${LANGO_IMAGE:-ghcr.io/wolinet-renatus/wolinet-lango:latest}
     entrypoint: ["/usr/local/bin/start-gateway.sh"]
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
@@ -185,11 +177,7 @@ services:
   # The developer portal is served by the existing LiteLLM portal routes at
   # dev.wolinet.com; a second LiteLLM container would duplicate state and keys.
   wolinex:
-    build:
-      context: ./apps/web-client
-      dockerfile: Dockerfile
-    image: ${WOLINEX_IMAGE:-wolinet/open-webui:gateway}
-    pull_policy: build
+    image: ${WOLINEX_IMAGE:-ghcr.io/wolinet-renatus/wolinet-wolinex:latest}
     environment:
       PORT: "8080"
       HOST: 0.0.0.0
@@ -256,11 +244,7 @@ services:
         order: start-first
 
   model-sync:
-    image: ${LANGO_IMAGE:-wolinet/litellm:gateway}
-    pull_policy: build
-    build:
-      context: ./gateway
-      dockerfile: Dockerfile
+    image: ${LANGO_IMAGE:-ghcr.io/wolinet-renatus/wolinet-lango:latest}
     entrypoint: ["python3", "/usr/local/bin/sync_xinference_models.py", "--watch"]
     environment:
       LITELLM_BASE_URL: http://lango:4000
@@ -286,11 +270,7 @@ services:
   # The existing web-home image is a static nginx server; publish it only via
   # Dokploy's domain router. Mount the site's built files at ./website.
   website:
-    image: ${WEBSITE_IMAGE:-wolinet/homepage:gateway}
-    pull_policy: build
-    build:
-      context: ./website
-      dockerfile: Dockerfile
+    image: ${WEBSITE_IMAGE:-ghcr.io/wolinet-renatus/wolinet-homepage:latest}
     restart: unless-stopped
     networks:
       - default

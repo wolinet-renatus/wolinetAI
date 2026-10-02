@@ -88,6 +88,9 @@ jobs:
           - image: wolinet-mitambo
             context: inference
             dockerfile: inference/xinference/deploy/docker/Dockerfile
+          - image: wolinet-mitambo-cpu
+            context: inference
+            dockerfile: inference/xinference/deploy/docker/Dockerfile.cpu
     steps:
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
