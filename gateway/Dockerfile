@@ -141,6 +141,7 @@ ENV PATH="/app/.venv/bin:${PATH}" \
 # ship (manifest-scanning tools attribute everything in it to this image).
 # entrypoint.sh invokes litellm/proxy/prisma_migration.py by source path.
 COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/assets /app/assets
 COPY --from=builder /app/docker /app/docker
 COPY --from=builder /app/schema.prisma /app/schema.prisma
 COPY --from=builder /app/litellm/proxy/prisma_migration.py /app/litellm/proxy/prisma_migration.py
