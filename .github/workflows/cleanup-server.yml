@@ -1,0 +1,99 @@
+name: Cleanup Server Disk & Reclaim Space
+
+on:
+  workflow_dispatch:
+    inputs:
+      restart_stack:
+        description: "Restart production stack with pre-built images after cleanup"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://ai.wolinet.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.CONTABO_SSH_KEY }}
+      - name: Add server host key
+        env:
+          CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
+        run: ssh-keyscan -H "$CONTABO_HOST" >> "$HOME/.ssh/known_hosts"
+      - name: Perform deep server disk cleanup
+        env:
+          CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
+          CONTABO_USER: ${{ secrets.CONTABO_USER }}
+        run: |
+          ssh "${CONTABO_USER}@${CONTABO_HOST}" "
+            set -x
+            echo '=================== DISK BEFORE CLEANUP ==================='
+            df -h
+            docker system df 2>/dev/null || true
+
+            echo '==> 1. Truncating bloated container log files...'
+            sudo truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null || true
+
+            echo '==> 2. Pruning stopped containers...'
+            docker container prune -f 2>/dev/null || true
+
+            echo '==> 3. Pruning BuildKit build cache (frees tens of gigabytes)...'
+            docker builder prune -a -f 2>/dev/null || true
+
+            echo '==> 4. Pruning unused images older than 24h...'
+            docker image prune -a -f --filter 'until=24h' 2>/dev/null || true
+
+            echo '==> 5. Cleaning systemd journals older than 3 days...'
+            sudo journalctl --vacuum-time=3d 2>/dev/null || true
+
+            echo '==> 6. Cleaning APT cache...'
+            sudo apt-get clean 2>/dev/null || true
+
+            echo '==> 7. Ensuring Docker log rotation daemon configuration...'
+            if [ -d /etc/docker ] && [ ! -f /etc/docker/daemon.json ]; then
+              sudo tee /etc/docker/daemon.json >/dev/null <<'EOF'
+            {
+              \"log-driver\": \"json-file\",
+              \"log-opts\": {
+                \"max-size\": \"20m\",
+                \"max-file\": \"3\"
+              }
+            }
+            EOF
+              sudo systemctl reload docker 2>/dev/null || true
+            fi
+
+            echo '=================== DISK AFTER CLEANUP ==================='
+            df -h
+            docker system df 2>/dev/null || true
+          "
+      - name: Restart stack with pre-built images if requested
+        if: ${{ inputs.restart_stack }}
+        env:
+          CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
+          CONTABO_USER: ${{ secrets.CONTABO_USER }}
+        run: |
+          ssh "${CONTABO_USER}@${CONTABO_HOST}" "
+            if [ -d /opt/wolinetai ]; then
+              cd /opt/wolinetai
+              echo '==> Starting stack containers with --no-build...'
+              docker compose --project-name wolinet --file docker-compose.prod.yml --file docker-compose.gpu.yml up -d --no-build --remove-orphans || docker compose up -d --no-build --remove-orphans || true
+              docker ps
+            fi
+          "
+      - name: Verify public endpoints
+        if: ${{ inputs.restart_stack }}
+        run: |
+          for url in \
+            https://ai.wolinet.com/healthz \
+            https://wolinex.wolinet.com/health \
+            https://lango.wolinet.com/health \
+            https://dev.wolinet.com/healthz; do
+            curl --fail --silent --show-error --retry 5 --retry-delay 3 "$url" >/dev/null || echo "Note: $url is warming up"
+          done

@@ -39,6 +39,12 @@ if "${COMPOSE[@]}" ps --status running --quiet nginx | grep -q .; then
     "${COMPOSE[@]}" exec -T nginx nginx -t
 fi
 
+echo "==> [deploy] Cleaning bloated logs and stale Docker build caches before pull..."
+truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null || true
+docker builder prune -a -f 2>/dev/null || true
+docker container prune -f 2>/dev/null || true
+docker image prune -f 2>/dev/null || true
+
 "${COMPOSE[@]}" pull mitambo lango wolinex website nginx
 
 if ! "${COMPOSE[@]}" up -d --no-build --wait --remove-orphans; then

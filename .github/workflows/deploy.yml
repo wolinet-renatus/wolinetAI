@@ -5,6 +5,7 @@ on:
     branches: [main, production]
   push:
     branches: [main, production]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -145,6 +146,22 @@ jobs:
         env:
           CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
         run: ssh-keyscan -H "$CONTABO_HOST" >> "$HOME/.ssh/known_hosts"
+      - name: Reclaim server disk space and prune docker caches
+        env:
+          CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
+          CONTABO_USER: ${{ secrets.CONTABO_USER }}
+        run: |
+          ssh "${CONTABO_USER}@${CONTABO_HOST}" "
+            echo '==> [pre-deploy] Disk status before cleanup:'
+            df -h /
+            truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null || true
+            docker builder prune -a -f 2>/dev/null || true
+            docker container prune -f 2>/dev/null || true
+            docker image prune -a -f --filter 'until=24h' 2>/dev/null || true
+            journalctl --vacuum-time=3d 2>/dev/null || true
+            echo '==> [pre-deploy] Disk status after cleanup:'
+            df -h /
+          "
       - name: Copy runtime configuration
         env:
           CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
