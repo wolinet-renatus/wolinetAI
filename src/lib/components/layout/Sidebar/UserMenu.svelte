@@ -24,6 +24,7 @@
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
 	import Map from '$lib/components/icons/Map.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Keyboard from '$lib/components/icons/Keyboard.svelte';
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import Settings from '$lib/components/icons/Settings.svelte';
@@ -561,9 +562,8 @@
 
 				<!-- {$i18n.t('Help')} -->
 
-				{#if $user?.role === 'admin'}
 					<a
-						href="https://docs.openwebui.com"
+						href="https://dev.wolinet.com"
 						target="_blank"
 						draggable="false"
 						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
@@ -578,9 +578,8 @@
 						<div class=" self-center truncate">{$i18n.t('Documentation')}</div>
 					</a>
 
-					<!-- Releases -->
 					<a
-						href="https://github.com/open-webui/open-webui/releases"
+						href="https://github.com/wolinet-renatus/wolinetAI/releases"
 						target="_blank"
 						draggable="false"
 						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
@@ -594,7 +593,42 @@
 						</div>
 						<div class=" self-center truncate">{$i18n.t('Releases')}</div>
 					</a>
-				{/if}
+					<a
+						href="https://wolinex.wolinet.com"
+						target="_blank"
+						draggable="false"
+						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+						on:click={() => {
+							show = false;
+						}}
+					>
+						<div class="self-center mr-3"><GlobeAlt className="size-5" /></div>
+						<div class="self-center truncate">Wolinex Studio</div>
+					</a>
+					<a
+						href="https://mitambo.wolinet.com"
+						target="_blank"
+						draggable="false"
+						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+						on:click={() => {
+							show = false;
+						}}
+					>
+						<div class="self-center mr-3"><GlobeAlt className="size-5" /></div>
+						<div class="self-center truncate">Mitambo Inference</div>
+					</a>
+					<a
+						href="https://lango.wolinet.com"
+						target="_blank"
+						draggable="false"
+						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+						on:click={() => {
+							show = false;
+						}}
+					>
+						<div class="self-center mr-3"><GlobeAlt className="size-5" /></div>
+						<div class="self-center truncate">Wolinet AI Gateway</div>
+					</a>
 
 				<button
 					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
