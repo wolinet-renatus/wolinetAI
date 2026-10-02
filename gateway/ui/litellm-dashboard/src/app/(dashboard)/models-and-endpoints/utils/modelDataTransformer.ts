@@ -42,21 +42,24 @@ const resolveProvider = (
   return splitModel.length === 1 ? getProviderFromModel(litellmModelName) : splitModel[0];
 };
 
+const isWolinetModel = (modelInfo: RawModelInfo, litellmParams: RawLitellmParams): boolean => {
+  const isWolinetProvider =
+    modelInfo.provider === "Wolinet AI" || ["wolinet", "wolinet_ai"].includes(String(modelInfo.litellm_provider));
+  const isXinferenceEndpoint =
+    typeof litellmParams.api_base === "string" && litellmParams.api_base.includes("9997");
+  const isWolinetModelName =
+    typeof litellmParams.model === "string" && litellmParams.model.startsWith("wolinet");
+
+  return isWolinetProvider || isXinferenceEndpoint || isWolinetModelName;
+};
+
 const transformModel = (rawModel: RawModel, getProviderFromModel: (model: string) => string): ModelData => {
   const model: RawModel = JSON.parse(JSON.stringify(rawModel));
   const litellmParams = model.litellm_params;
   const modelInfo = model.model_info;
 
   let provider = resolveProvider(litellmParams.model, litellmParams.custom_llm_provider, getProviderFromModel);
-  if (
-    modelInfo?.provider === "Wolinet AI" ||
-    modelInfo?.litellm_provider === "wolinet" ||
-    modelInfo?.litellm_provider === "wolinet_ai" ||
-    (typeof litellmParams?.api_base === "string" && litellmParams.api_base.includes("9997")) ||
-    (typeof litellmParams?.model === "string" && litellmParams.model.startsWith("wolinet"))
-  ) {
-    provider = "wolinet_ai";
-  }
+  if (isWolinetModel(modelInfo, litellmParams)) provider = "wolinet_ai";
 
   return {
     ...model,
@@ -65,7 +68,10 @@ const transformModel = (rawModel: RawModel, getProviderFromModel: (model: string
     output_cost: costPerMillionTokens(modelInfo?.output_cost_per_token),
     output_cost_per_second: litellmParams.output_cost_per_second ?? modelInfo?.output_cost_per_second ?? null,
     output_cost_per_second_tiers: perSecondCostTiers(modelInfo),
-    litellm_model_name: litellmParams.model,
+    litellm_model_name:
+      provider === "wolinet_ai" && litellmParams.model.startsWith("openai/")
+        ? `wolinet_ai/${litellmParams.model.slice("openai/".length)}`
+        : litellmParams.model,
     max_tokens: modelInfo?.max_tokens,
     max_input_tokens: modelInfo?.max_input_tokens,
     api_base: litellmParams.api_base,

@@ -139,10 +139,14 @@ def _upsert_model(gateway_url: str, gateway_key: str, model_name: str, model_uid
             and existing_metadata.get("xinference_model_uid") == model_uid
             and existing_params.get("model") == f"openai/{model_uid}"
             and str(existing_params.get("api_base", "")).rstrip("/") == inference_api_base.rstrip("/")
+            and existing_info.get("provider") == "Wolinet AI"
+            and existing_info.get("litellm_provider") == "wolinet_ai"
         ):
             return
     model_info = {
         "mode": "chat",
+        "provider": "Wolinet AI",
+        "litellm_provider": "wolinet_ai",
         "metadata": {
             "wolinet_sync_source": MANAGED_SOURCE,
             "xinference_model_uid": model_uid,

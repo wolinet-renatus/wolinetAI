@@ -180,8 +180,11 @@ function CredentialsCell({ credentialName }: { credentialName: string | undefine
 
 function CreatedByCell({ model }: { model: ModelData }) {
   const isConfigModel = !model.model_info?.db_model;
+  const isWolinetManagedModel = model.model_info?.metadata?.wolinet_sync_source === "xinference";
   const createdAt = formatShortDate(model.model_info.created_at);
-  const primary = isConfigModel ? "Defined in config" : model.model_info.created_by || "Unknown";
+  let primary = model.model_info.created_by || "Unknown";
+  if (isConfigModel) primary = "Defined in config";
+  else if (isWolinetManagedModel) primary = "Wolinet Lab";
   const secondaryForDbModel = createdAt ?? "Unknown date";
 
   return (
