@@ -137,7 +137,7 @@ def _upsert_model(gateway_url: str, gateway_key: str, model_name: str, model_uid
         if (
             isinstance(existing_metadata, dict)
             and existing_metadata.get("xinference_model_uid") == model_uid
-            and existing_params.get("model") == f"wolinet_ai/{model_uid}"
+            and existing_params.get("model") == f"openai/{model_uid}"
             and str(existing_params.get("api_base", "")).rstrip("/") == inference_api_base.rstrip("/")
         ):
             return
@@ -153,7 +153,10 @@ def _upsert_model(gateway_url: str, gateway_key: str, model_name: str, model_uid
     payload = {
         "model_name": model_name,
         "litellm_params": {
-            "model": f"wolinet_ai/{model_uid}",
+            # Xinference exposes an OpenAI-compatible API. ``wolinet_ai`` is
+            # not a LiteLLM provider name, so LiteLLM rejects these DB records
+            # during router reload and leaves the model saved but unusable.
+            "model": f"openai/{model_uid}",
             "api_base": inference_api_base,
             "api_key": inference_key,
             "timeout": 600,
