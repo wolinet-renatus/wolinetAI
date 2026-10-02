@@ -9,8 +9,6 @@ from .types import (
     ChatCompletionChunk,
     EmbeddingResponse,
     RerankResponse,
-    TanzaniaPaymentRequest,
-    TanzaniaPaymentResponse,
 )
 
 __version__ = "1.1.0"
@@ -22,6 +20,4 @@ __all__ = [
     "ChatCompletionChunk",
     "EmbeddingResponse",
     "RerankResponse",
-    "TanzaniaPaymentRequest",
-    "TanzaniaPaymentResponse",
 ]

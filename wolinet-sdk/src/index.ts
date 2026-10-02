@@ -13,8 +13,6 @@ import type {
   EmbeddingResponse,
   RerankOptions,
   RerankResponse,
-  TanzaniaPaymentRequest,
-  TanzaniaPaymentResponse,
   WolinetStatusResponse,
   WolinetKeyResponse,
 } from './types.ts';
@@ -155,20 +153,6 @@ export class WolinetAI {
   public readonly models = {
     list: async (): Promise<{ data: Array<{ id: string; object: string; created: number; owned_by: string }> }> => {
       return this.request('/v1/models');
-    },
-  };
-
-  public readonly payments = {
-    tanzania: {
-      topup: async (opts: TanzaniaPaymentRequest): Promise<TanzaniaPaymentResponse> => {
-        return this.request<TanzaniaPaymentResponse>('/v1/payments/tanzania/topup', {
-          method: 'POST',
-          body: JSON.stringify(opts),
-        });
-      },
-      status: async (transactionId: string): Promise<TanzaniaPaymentResponse> => {
-        return this.request<TanzaniaPaymentResponse>(`/v1/payments/tanzania/status?id=${encodeURIComponent(transactionId)}`);
-      },
     },
   };
 

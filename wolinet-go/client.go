@@ -258,34 +258,3 @@ func (c *Client) GetStatus(ctx context.Context) (*StatusResponse, error) {
 	}
 	return &status, nil
 }
-
-// TanzaniaPaymentTopup initiates a mobile money deposit (M-Pesa, TigoPesa, Airtel).
-func (c *Client) TanzaniaPaymentTopup(ctx context.Context, req TanzaniaPaymentRequest) (*TanzaniaPaymentResponse, error) {
-	body, err := json.Marshal(req)
-	if err != nil {
-		return nil, fmt.Errorf("marshal payment request: %w", err)
-	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/v1/payments/tanzania/topup", bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-	c.setHeaders(httpReq)
-
-	resp, err := c.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("execute request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		errBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("api error [%d]: %s", resp.StatusCode, string(errBody))
-	}
-
-	var paymentResp TanzaniaPaymentResponse
-	if err := json.NewDecoder(resp.Body).Decode(&paymentResp); err != nil {
-		return nil, fmt.Errorf("decode response: %w", err)
-	}
-	return &paymentResp, nil
-}

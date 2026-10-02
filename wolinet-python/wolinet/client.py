@@ -14,8 +14,6 @@ from .types import (
     ChatCompletionResponse,
     EmbeddingResponse,
     RerankResponse,
-    TanzaniaPaymentRequest,
-    TanzaniaPaymentResponse,
 )
 
 
@@ -25,7 +23,7 @@ class _ChatCompletionsSync:
 
     def create(
         self,
-        model: str = "wolinex-coder",
+        model: str,
         messages: Optional[List[Dict[str, str]]] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
@@ -75,7 +73,7 @@ class _ChatCompletionsAsync:
 
     async def create(
         self,
-        model: str = "wolinex-coder",
+        model: str,
         messages: Optional[List[Dict[str, str]]] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
@@ -152,30 +150,6 @@ class _RerankSync:
             return RerankResponse.model_validate(resp.json())
 
 
-class _PaymentsSync:
-    def __init__(self, client: "WolinetAI"):
-        self._c = client
-
-    def topup(
-        self,
-        provider: str,
-        phone_number: str,
-        amount_tzs: float,
-        account_reference: Optional[str] = None,
-    ) -> TanzaniaPaymentResponse:
-        url = f"{self._c.base_url}/v1/payments/tanzania/topup"
-        payload = {
-            "provider": provider,
-            "phone_number": phone_number,
-            "amount_tzs": amount_tzs,
-            "account_reference": account_reference or "wolinet-ai-topup",
-        }
-        with httpx.Client(timeout=self._c.timeout) as http:
-            resp = http.post(url, json=payload, headers=self._c._headers)
-            resp.raise_for_status()
-            return TanzaniaPaymentResponse.model_validate(resp.json())
-
-
 class WolinetAI:
     """Synchronous Client for Wolinet AI Sovereign Gateway."""
 
@@ -192,7 +166,6 @@ class WolinetAI:
         self.chat = _ChatCompletionsSync(self)
         self.embeddings = _EmbeddingsSync(self)
         self.rerank = _RerankSync(self)
-        self.payments = _PaymentsSync(self)
 
     @property
     def _headers(self) -> Dict[str, str]:

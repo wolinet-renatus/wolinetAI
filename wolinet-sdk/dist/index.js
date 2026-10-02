@@ -115,19 +115,6 @@ export class WolinetAI {
             return this.request('/v1/models');
         },
     };
-    payments = {
-        tanzania: {
-            topup: async (opts) => {
-                return this.request('/v1/payments/tanzania/topup', {
-                    method: 'POST',
-                    body: JSON.stringify(opts),
-                });
-            },
-            status: async (transactionId) => {
-                return this.request(`/v1/payments/tanzania/status?id=${encodeURIComponent(transactionId)}`);
-            },
-        },
-    };
     async status() {
         return this.request('/wolinet/status');
     }

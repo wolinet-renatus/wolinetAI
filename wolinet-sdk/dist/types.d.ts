@@ -8,7 +8,7 @@ export interface ChatMessage {
     name?: string;
 }
 export interface ChatCompletionOptions {
-    model: 'wolinex-coder' | 'deepseek-coder-1.3b' | 'wolinex-omni' | (string & {});
+    model: string;
     messages: ChatMessage[];
     temperature?: number;
     top_p?: number;
@@ -94,19 +94,6 @@ export interface RerankResponse {
     usage: {
         total_tokens: number;
     };
-}
-export interface TanzaniaPaymentRequest {
-    provider: 'mpesa' | 'tigopesa' | 'airtel' | 'halopesa';
-    phone_number: string;
-    amount_tzs: number;
-    account_reference?: string;
-}
-export interface TanzaniaPaymentResponse {
-    transaction_id: string;
-    status: 'PENDING' | 'SUCCESS' | 'FAILED';
-    amount_tzs: number;
-    message: string;
-    provider: string;
 }
 export interface WolinetStatusResponse {
     brand: {

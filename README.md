@@ -3,9 +3,9 @@
 This directory contains official, strongly typed client SDKs for connecting applications to the **Wolinet AI Sovereign Gateway & Inference Cluster**.
 
 All SDKs support:
-- 🚀 **Local Sovereign Inference:** Direct access to `wolinex-coder` running on the local inference cluster without cloud lock-in.
+- 🚀 **Gateway Model Discovery:** Use model IDs enabled for your LiteLLM gateway key.
 - ⚡ **Real-Time Streaming:** Server-Sent Events (SSE) streaming for instant response rendering.
-- 🇹🇿 **Tanzania Payments:** Mobile Money top-up (M-Pesa, TigoPesa, Airtel Money) for East African developer ecosystems.
+- 📊 **Usage Billing:** LiteLLM usage events can be sent to Lago for subscription billing.
 - 📊 **Platform Telemetry:** Instant cluster node status, GPU metrics, and health inspection.
 
 ---
@@ -31,8 +31,8 @@ make sdk
 # Or run the generator directly
 python3 scripts/generate_sdk.py --lang all
 
-# Generate multi-language code snippets for wolinex-coder
-python3 scripts/generate_sdk.py --snippets --model wolinex-coder
+# Generate multi-language code snippets for an enabled model
+python3 scripts/generate_sdk.py --snippets --model YOUR_ENABLED_MODEL_ID
 ```
 
 ---
@@ -42,5 +42,5 @@ python3 scripts/generate_sdk.py --snippets --model wolinex-coder
 The gateway also provides a live endpoint to retrieve multi-language code snippets dynamically:
 
 ```bash
-curl -s "http://localhost:4000/wolinet/sdk/snippets?model=wolinex-coder" | jq .
+curl -s "http://localhost:4000/wolinet/sdk/snippets?model=YOUR_ENABLED_MODEL_ID" | jq .
 ```

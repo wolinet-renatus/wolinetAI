@@ -102,23 +102,6 @@ type RerankResponse struct {
 	Model   string         `json:"model"`
 }
 
-// TanzaniaPaymentRequest request for mobile money topup.
-type TanzaniaPaymentRequest struct {
-	Provider         string  `json:"provider"` // mpesa, tigopesa, airtel, halopesa
-	PhoneNumber      string  `json:"phone_number"`
-	AmountTZS        float64 `json:"amount_tzs"`
-	AccountReference string  `json:"account_reference,omitempty"`
-}
-
-// TanzaniaPaymentResponse response for mobile money transaction.
-type TanzaniaPaymentResponse struct {
-	TransactionID string  `json:"transaction_id"`
-	Status        string  `json:"status"`
-	AmountTZS     float64 `json:"amount_tzs"`
-	Message       string  `json:"message"`
-	Provider      string  `json:"provider"`
-}
-
 // StatusResponse platform telemetry and node status.
 type StatusResponse struct {
 	Brand struct {

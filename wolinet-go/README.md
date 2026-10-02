@@ -27,7 +27,7 @@ func main() {
 
 	// 1. Unary Chat Completion
 	resp, err := client.CreateChatCompletion(context.Background(), wolinet.ChatCompletionRequest{
-		Model: "wolinex-coder",
+		Model: "your-enabled-model-id",
 		Messages: []wolinet.ChatMessage{
 			{Role: "user", Content: "Write an HTTP server in Go"},
 		},
@@ -39,7 +39,7 @@ func main() {
 
 	// 2. Real-time Streaming
 	stream, err := client.CreateChatCompletionStream(context.Background(), wolinet.ChatCompletionRequest{
-		Model: "wolinex-coder",
+		Model: "your-enabled-model-id",
 		Messages: []wolinet.ChatMessage{
 			{Role: "user", Content: "Count from 1 to 5"},
 		},

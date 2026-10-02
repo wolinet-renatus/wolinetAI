@@ -2,9 +2,8 @@
 
 Official TypeScript & JavaScript client for the **Wolinet AI Sovereign Gateway & Inference Cluster**.
 
-- 🚀 **100% Local First:** Works with sovereign local models (`wolinex-coder`) and cloud failover.
+- 🚀 **Gateway Model Discovery:** Use any model enabled in the LiteLLM catalog.
 - ⚡ **Streaming Support:** Async generator SSE streaming for instant code and text token rendering.
-- 🇹🇿 **Tanzania Payments:** Built-in mobile money top-up (M-Pesa, TigoPesa, Airtel Money).
 - 🌐 **Zero External Dependencies:** Built on native `fetch` and `ReadableStream`.
 
 ## Installation
@@ -25,14 +24,14 @@ const client = new WolinetAI({
 
 // 1. Unary Chat Completion
 const completion = await client.chat.completions.create({
-  model: 'wolinex-coder',
+  model: 'your-enabled-model-id',
   messages: [{ role: 'user', content: 'Write a quicksort in TypeScript' }],
 });
 console.log(completion.choices[0].message.content);
 
 // 2. Real-time Streaming
 for await (const chunk of client.chat.completions.stream({
-  model: 'wolinex-coder',
+  model: 'your-enabled-model-id',
   messages: [{ role: 'user', content: 'Count from 1 to 5' }],
 })) {
   process.stdout.write(chunk.choices[0]?.delta?.content || '');

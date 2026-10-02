@@ -12,7 +12,7 @@ func TestChatCompletion(t *testing.T) {
 	defer cancel()
 
 	resp, err := client.CreateChatCompletion(ctx, ChatCompletionRequest{
-		Model: "wolinex-coder",
+		Model: "your-enabled-model-id",
 		Messages: []ChatMessage{
 			{Role: "user", Content: "Reply with the single word: OK"},
 		},
