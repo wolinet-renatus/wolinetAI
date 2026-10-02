@@ -139,6 +139,9 @@ services:
         aliases:
           - mitambo
           - wolinet-mitambo
+        aliases:
+          - mitambo
+          - wolinet-mitambo
     environment:
       XINFERENCE_HOME: /root/.xinference
       XINFERENCE_AUTH_ADVANCED: ${XINFERENCE_AUTH_ADVANCED:-true}

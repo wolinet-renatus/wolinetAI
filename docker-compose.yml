@@ -77,7 +77,10 @@ services:
       - ./inference/xinference/ui/web/dist:/app/dist:ro
       - ./inference/frontend/out:/app/out:ro
     networks:
-      default: {}
+      default:
+        aliases:
+          - mitambo
+          - wolinet-mitambo
       wolinet_internal:
         aliases:
           - mitambo
