@@ -7,6 +7,8 @@
 # ==============================================================================
 set -e
 
+export PATH="/opt/conda/bin:/usr/local/bin:$PATH"
+
 echo "==> [mitambo] Bootstrapping Wolinet AI Inference Engine..."
 
 # 1. Locate Xinference Python package directory

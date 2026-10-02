@@ -10,6 +10,8 @@ class ModelSyncEndpointTests(unittest.TestCase):
         self.assertIn("http://wolinet-mitambo:9997", urls)
         self.assertIn("http://wolinet_mitambo:9997", urls)
         self.assertIn("http://tasks.mitambo:9997", urls)
+        self.assertIn("http://172.17.0.1:9997", urls)
+        self.assertIn("http://host.docker.internal:9997", urls)
         self.assertIn("https://mitambo.wolinet.com", urls)
 
     def test_inference_urls_respects_compose_project_name(self) -> None:

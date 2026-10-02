@@ -267,6 +267,8 @@ services:
     depends_on:
       - lango
       - mitambo
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     deploy:
       restart_policy:
         condition: on-failure

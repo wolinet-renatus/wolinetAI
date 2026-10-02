@@ -99,6 +99,7 @@ def _request_json(
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         },
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
@@ -128,16 +129,36 @@ def _inference_urls() -> list[str]:
         "http://tasks.mitambo:9997",
         "http://tasks.wolinet-mitambo:9997",
         "http://tasks.wolinet_mitambo:9997",
+        "http://172.17.0.1:9997",
+        "http://host.docker.internal:9997",
     ):
         if alias not in candidates:
             candidates.append(alias)
 
-    project_name = os.environ.get("COMPOSE_PROJECT_NAME") or os.environ.get("STACK_NAME")
-    if project_name:
+    # Detect dynamic project prefixes from environment or container hostname
+    project_names: list[str] = []
+    env_project = os.environ.get("COMPOSE_PROJECT_NAME") or os.environ.get("STACK_NAME")
+    if env_project:
+        project_names.append(env_project.strip())
+
+    try:
+        import socket
+        hostname = socket.gethostname()
+        for sep in ("-model-sync", "_model-sync", "-sync", "_sync"):
+            if sep in hostname:
+                prefix = hostname.split(sep)[0]
+                if prefix and prefix not in project_names:
+                    project_names.append(prefix)
+    except Exception:
+        pass
+
+    for proj in project_names:
         for fmt in (
-            f"http://{project_name}-mitambo:9997",
-            f"http://{project_name}_mitambo:9997",
-            f"http://tasks.{project_name}_mitambo:9997",
+            f"http://{proj}-mitambo:9997",
+            f"http://{proj}_mitambo:9997",
+            f"http://{proj}-mitambo-1:9997",
+            f"http://{proj}_mitambo_1:9997",
+            f"http://tasks.{proj}_mitambo:9997",
         ):
             if fmt not in candidates:
                 candidates.append(fmt)
