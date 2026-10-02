@@ -776,8 +776,6 @@ async def get_user_wallet(user=Depends(get_verified_user)):
     max_budget = float(user_info.get('max_budget') or 25.0)
     spend = float(user_info.get('spend') or 0.0)
     remaining = max(0.0, round(max_budget - spend, 4))
-    default_model = os.getenv('DEFAULT_MODELS', 'wolinex-coder')
-
     return {
         'user_id': user.id,
         'email': user.email,
@@ -785,14 +783,7 @@ async def get_user_wallet(user=Depends(get_verified_user)):
         'credits_allocated': max_budget,
         'credits_spent': spend,
         'credits_remaining': remaining,
-        'default_model': default_model,
-        'assigned_models': [
-            'wolinex-coder',
-            'wolinex-coder-pro',
-            'wolinex-coder-lite',
-            'wolinex-omni',
-            'wolinex-embed',
-        ],
+        'default_model': os.getenv('DEFAULT_MODELS', '').split(',')[0].strip() or None,
+        'assigned_models': user_info.get('models') or [],
         'tier': 'Sovereign Administrator' if user.role == 'admin' else 'Sovereign Free Tier',
     }
-

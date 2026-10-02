@@ -123,6 +123,34 @@ async def get_models_request(
     return await send_get_request(request, f'{url}/models', key, user=user, config=config)
 
 
+async def get_configured_models_request(
+    request: Request,
+    url: str,
+    key: str,
+    user: UserModel,
+    config: dict,
+    model_ids: list[str],
+):
+    """Fetch live provider models, applying configured IDs only as a live-list filter."""
+    response = await get_models_request(request, url, key, user=user, config=config)
+    if not model_ids or not response:
+        return response
+
+    allowed_ids = set(model_ids)
+    if isinstance(response, list):
+        return [model for model in response if isinstance(model, dict) and model.get('id') in allowed_ids]
+    if isinstance(response, dict) and isinstance(response.get('data'), list):
+        return {
+            **response,
+            'data': [
+                model
+                for model in response['data']
+                if isinstance(model, dict) and model.get('id') in allowed_ids
+            ],
+        }
+    return response
+
+
 def openai_reasoning_model_handler(payload):
     """
     Handle reasoning model specific parameters
@@ -395,27 +423,19 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
             )
 
             enable = api_config.get('enable', True)
-            model_ids = api_config.get('model_ids', [])
+            model_ids = api_config.get('model_ids') or []
 
             if enable:
-                if len(model_ids) == 0:
-                    request_tasks.append(get_models_request(request, url, api_keys[idx], user=user, config=api_config))
-                else:
-                    model_list = {
-                        'object': 'list',
-                        'data': [
-                            {
-                                'id': model_id,
-                                'name': model_id,
-                                'owned_by': 'openai',
-                                'openai': {'id': model_id},
-                                'urlIdx': idx,
-                            }
-                            for model_id in model_ids
-                        ],
-                    }
-
-                    request_tasks.append(asyncio.ensure_future(asyncio.sleep(0, model_list)))
+                request_tasks.append(
+                    get_configured_models_request(
+                        request,
+                        url,
+                        api_keys[idx],
+                        user,
+                        api_config,
+                        model_ids,
+                    )
+                )
             else:
                 request_tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
 

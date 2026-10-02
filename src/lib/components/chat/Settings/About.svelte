@@ -122,7 +122,7 @@
 						{$i18n.t('Private Knowledge & RAG')}
 					</div>
 					<p class="text-[11px] text-gray-500 dark:text-gray-400 leading-normal">
-						Ingest source code, internal documents, and knowledge repositories with sovereign embeddings (<code class="font-mono text-gray-700 dark:text-gray-300">wolinex-embed</code>) for isolated semantic search.
+						Ingest source code and documents with the embedding provider configured for this workspace.
 					</p>
 				</div>
 			</div>
@@ -158,7 +158,7 @@
 					{$i18n.t('Privacy & Data Sovereignty')}
 				</div>
 				<p class="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-					Zero external tracking, air-gapped readiness, strict enterprise data isolation, and sovereign local embeddings via <code class="font-mono text-gray-700 dark:text-gray-300">wolinex-embed</code>.
+					Zero external tracking, air-gapped readiness, and strict enterprise data isolation.
 				</p>
 			</div>
 		</div>
@@ -168,43 +168,13 @@
 			class="p-4 rounded-xl bg-gray-50/80 dark:bg-gray-850/50 border border-gray-200/80 dark:border-gray-800 space-y-2.5"
 		>
 			<div class="text-xs font-semibold text-gray-900 dark:text-gray-100 flex items-center justify-between">
-				<span>{$i18n.t('Provisioned Model Suite')}</span>
+				<span>{$i18n.t('Gateway Model Catalog')}</span>
 				<span class="text-[10px] text-gray-400 font-mono">{$i18n.t('Wolinet Unified API')}</span>
 			</div>
 
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-				<div class="p-2.5 rounded-lg bg-white dark:bg-gray-900/90 border border-gray-200/70 dark:border-gray-750 flex items-center justify-between">
-					<div class="flex items-center gap-2">
-						<span class="size-2 rounded-full bg-emerald-500"></span>
-						<span class="font-medium text-gray-800 dark:text-gray-200 font-mono">wolinex-coder</span>
-					</div>
-					<span class="text-[10px] text-gray-400">{$i18n.t('Primary Code Engine')}</span>
-				</div>
-
-				<div class="p-2.5 rounded-lg bg-white dark:bg-gray-900/90 border border-gray-200/70 dark:border-gray-750 flex items-center justify-between">
-					<div class="flex items-center gap-2">
-						<span class="size-2 rounded-full bg-blue-500"></span>
-						<span class="font-medium text-gray-800 dark:text-gray-200 font-mono">wolinex-omni</span>
-					</div>
-					<span class="text-[10px] text-gray-400">{$i18n.t('Multimodal & General')}</span>
-				</div>
-
-				<div class="p-2.5 rounded-lg bg-white dark:bg-gray-900/90 border border-gray-200/70 dark:border-gray-750 flex items-center justify-between">
-					<div class="flex items-center gap-2">
-						<span class="size-2 rounded-full bg-purple-500"></span>
-						<span class="font-medium text-gray-800 dark:text-gray-200 font-mono">wolinex-coder-pro</span>
-					</div>
-					<span class="text-[10px] text-gray-400">{$i18n.t('Complex Reasoning')}</span>
-				</div>
-
-				<div class="p-2.5 rounded-lg bg-white dark:bg-gray-900/90 border border-gray-200/70 dark:border-gray-750 flex items-center justify-between">
-					<div class="flex items-center gap-2">
-						<span class="size-2 rounded-full bg-amber-500"></span>
-						<span class="font-medium text-gray-800 dark:text-gray-200 font-mono">wolinex-embed</span>
-					</div>
-					<span class="text-[10px] text-gray-400">{$i18n.t('Semantic Search & RAG')}</span>
-				</div>
-			</div>
+			<p class="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+				Models shown in chat come from the LiteLLM gateway and reflect models currently enabled for this account.
+			</p>
 		</div>
 
 		<!-- Developer & API Documentation Links -->

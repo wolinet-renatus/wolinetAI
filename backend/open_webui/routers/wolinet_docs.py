@@ -16,6 +16,7 @@ Routes exposed:
 from __future__ import annotations
 
 import logging
+import json
 import os
 from pathlib import Path
 
@@ -62,9 +63,23 @@ def _master_key() -> str:
     return key
 
 
-def _default_model() -> str:
-    return (os.getenv('DEFAULT_MODELS', 'wolinex-coder').split(',')[0].strip()
-            or 'wolinex-coder')
+async def _default_model() -> str:
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+            async with session.get(
+                f"{_gateway_base()}/v1/models",
+                headers={'Authorization': f'Bearer {_master_key()}'},
+            ) as response:
+                response.raise_for_status()
+                payload = await response.json()
+        models = payload.get('data', []) if isinstance(payload, dict) else []
+        if models and isinstance(models[0], dict):
+            model_id = models[0].get('id')
+            if isinstance(model_id, str) and model_id:
+                return model_id
+    except Exception as exc:
+        log.info('Could not discover the active gateway model for the docs page: %s', exc)
+    return 'YOUR_ENABLED_MODEL_ID'
 
 
 # ── Pydantic Schemas ──────────────────────────────────────────────────────────
@@ -776,7 +791,7 @@ def _build_portal_html(title: str, openapi_url: str, scalar_js_url: str, favicon
 
 <script>
 (function(){{
-  var S={{authed:false,user:null,key:null,masked:true,hist:[],model:'{default_model}'}};
+  var S={{authed:false,user:null,key:null,masked:true,hist:[],model:{json.dumps(default_model)}}};
 
   window.navTo=function(id,el){{
     document.querySelectorAll('.panel').forEach(function(p){{p.classList.remove('active');}});
@@ -1145,7 +1160,7 @@ async def sovereign_docs(request: Request):
             openapi_url='/gateway/openapi.json',
             scalar_js_url='/static/scalar.js',
             favicon_url='/static/favicon.png',
-            default_model=_default_model(),
+            default_model=await _default_model(),
         ),
         headers={'Cache-Control': 'no-cache'},
     )
