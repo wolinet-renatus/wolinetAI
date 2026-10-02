@@ -218,6 +218,7 @@ const ModelCard: React.FC<{ model: InferenceModel; base_url: string }> = ({ mode
 const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken }) => {
   const [activeTab, setActiveTab] = useState<"explorer" | "models" | "sdk" | "agent" | "mock">("explorer");
   const [status, setStatus] = useState<WolinetStatus | null>(null);
+  const [gatewayModels, setGatewayModels] = useState<InferenceModel[]>([]);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -314,13 +315,35 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: WolinetStatus = await res.json();
       setStatus(data);
+      try {
+        const modelsRes = await fetch(`${gatewayOrigin}/v1/models`, {
+          headers: { Authorization: `Bearer ${effectiveKey}` },
+          cache: "no-store",
+        });
+        if (!modelsRes.ok) throw new Error(`HTTP ${modelsRes.status}`);
+        const modelPayload = await modelsRes.json();
+        const rows = Array.isArray(modelPayload?.data) ? modelPayload.data : [];
+        setGatewayModels(rows.filter((model: any) => typeof model?.id === "string").map((model: any) => ({
+          id: model.id,
+          type: "LLM",
+          icon: "🤖",
+          engine: model.owned_by || "Wolinet AI",
+          quantization: "",
+          size_b: null,
+          context_length: null,
+          ability: ["chat"],
+          description: "Enabled in the Wolinet AI Gateway",
+        })));
+      } catch {
+        setGatewayModels([]);
+      }
       setLastRefresh(new Date());
     } catch (err) {
       setStatusError(err instanceof Error ? err.message : "Failed to fetch status");
     } finally {
       setLoading(false);
     }
-  }, [statusUrl]);
+  }, [statusUrl, gatewayOrigin, effectiveKey]);
 
   // Fetch on mount + auto-refresh every 30s
   useEffect(() => {
@@ -329,10 +352,15 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
     return () => clearInterval(interval);
   }, [fetchStatus]);
 
-  // Send message to local wolinex-coder
+  // Route the embedded assistant through a model currently advertised by the gateway.
   const sendChatMessage = async (promptText?: string) => {
     const textToSend = promptText || chatInput;
     if (!textToSend.trim() || chatLoading) return;
+    const selectedModel = llmModels.find(model => model.id === "Wolinet Coder")?.id ?? llmModels[0]?.id;
+    if (!selectedModel) {
+      setChatMessages(prev => [...prev, { role: "assistant", content: "No active gateway model is available right now." }]);
+      return;
+    }
 
     const userMsg: ChatMessage = { role: "user", content: textToSend };
     setChatMessages(prev => [...prev, userMsg]);
@@ -347,7 +375,7 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
           Authorization: "Bearer sk-wolinet-local-dev",
         },
         body: JSON.stringify({
-          model: "wolinex-coder",
+          model: selectedModel,
           messages: [
             {
               role: "system",
@@ -397,9 +425,10 @@ const APIReferenceView: React.FC<ApiRefProps> = ({ proxySettings, accessToken })
 
   const gwStatus = status?.gateway.status ?? "unknown";
   const infStatus = status?.inference.status ?? "unknown";
-  const models = status?.inference.models ?? [];
+  const models = gatewayModels;
   const nodes = status?.inference.nodes ?? [];
   const llmModels = models.filter(m => m.type === "LLM");
+  const defaultModel = llmModels.find(model => model.id === "Wolinet Coder")?.id ?? llmModels[0]?.id ?? "";
   const embedModels = models.filter(m => m.type === "embedding");
   const rerankModels = models.filter(m => m.type === "rerank");
 
@@ -665,7 +694,7 @@ const client = new WolinetAI({
 
 // Run code generation with local sovereign model
 const completion = await client.chat.completions.create({
-  model: 'wolinex-coder',
+  model: '${defaultModel}',
   messages: [{ role: 'user', content: 'Write a Fibonacci sequence in Rust' }],
 });
 
@@ -691,7 +720,7 @@ client = WolinetAI(base_url="${base_url}", api_key="${effectiveKey}")
 
 # Generate response with local sovereign model
 res = client.chat_completion(
-    model="wolinex-coder",
+    model="${defaultModel}",
     messages=[{"role": "user", "content": "Explain async/await in Python"}],
 )
 
@@ -716,7 +745,7 @@ client = openai.OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="${llmModels[0]?.id ?? "wolinex-coder"}",
+    model="${defaultModel}",
     messages=[
         {"role": "system", "content": "You are Wolinet AI, a sovereign intelligence."},
         {"role": "user", "content": "How do I optimize local GGUF models?"}
@@ -751,7 +780,7 @@ curl ${base_url}/v1/chat/completions \\
   -H "Authorization: Bearer ${effectiveKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "model": "${llmModels[0]?.id ?? "wolinex-coder"}",
+    "model": "${defaultModel}",
     "stream": true,
     "messages": [
       {"role": "user", "content": "Write hello world in Zig"}
@@ -774,7 +803,7 @@ curl ${base_url}/wolinet/status`}
               <div className="flex items-center gap-2">
                 <span className="text-base font-semibold text-white">Wolinet AI Sovereign Assistant — Chat with your API</span>
                 <span className="text-[10px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                  wolinex-coder (Local GGUF)
+                  {defaultModel || "No active gateway model"}
                 </span>
               </div>
               <p className="text-[12px] text-muted-foreground mt-0.5">
@@ -920,7 +949,7 @@ curl \${base_url}/v1/chat/completions \\
   -H "Authorization: Bearer \${effectiveKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "model": "\${llmModels[0]?.id ?? "wolinex-coder"}",
+    "model": "\${defaultModel}",
     "stream": true,
     "messages": [{"role": "user", "content": "Testing mock server"}]
   }'`}

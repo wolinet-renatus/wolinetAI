@@ -426,12 +426,12 @@ export const getProviderCreateMetadata = async (): Promise<ProviderCreateInfo[]>
         {
           key: "api_base",
           label: "API Base",
-          placeholder: "http://127.0.0.1:9997/v1",
-          tooltip: "The base URL for Wolinet AI inference engine. Defaults to http://127.0.0.1:9997/v1 if not specified.",
+          placeholder: "http://mitambo:9997/v1",
+          tooltip: "The base URL for the Mitambo Xinference service on the shared Docker network.",
           required: false,
           field_type: "text",
           options: null,
-          default_value: "http://127.0.0.1:9997/v1",
+          default_value: "http://mitambo:9997/v1",
         },
         {
           key: "api_key",
@@ -444,7 +444,7 @@ export const getProviderCreateMetadata = async (): Promise<ProviderCreateInfo[]>
           default_value: null,
         },
       ],
-      default_model_placeholder: "wolinet/wolinex-coder",
+      default_model_placeholder: "Wolinet Coder or an active Xinference model ID",
     });
   }
   return jsonData;
