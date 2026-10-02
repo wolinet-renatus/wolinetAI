@@ -11,6 +11,7 @@ export interface ModelInfo {
   team_id: string;
   db_model: boolean;
   access_groups: string[] | null;
+  metadata?: Record<string, unknown> | null;
   blocked?: boolean;
   team_public_model_name?: string;
   key?: string;
