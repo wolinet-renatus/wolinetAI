@@ -135,7 +135,9 @@ try:
 except Exception as e:
     print(f'==> [mitambo-init] API key seeding note: {e}')
 
-# 3. Connect via RESTfulClient, login, and verify/launch model
+# 3. Connect via RESTfulClient, login, and report the models already running.
+# Models are launched and stopped through Xinference; the model-sync sidecar
+# mirrors that live catalog into LiteLLM without changing inference state.
 try:
     from xinference.client import RESTfulClient
     client = RESTfulClient(endpoint)
@@ -153,41 +155,8 @@ try:
         pass
 
     running_models = client.list_models()
-    print(f'==> [mitambo-init] Current active models: {list(running_models.keys())}')
-
-    # Terminate any unwanted/stale models to free CPU/RAM
-    for uid in list(running_models.keys()):
-        if uid != 'deepseek-coder-instruct':
-            print(f'==> [mitambo-init] Terminating stale model: {uid}')
-            try:
-                client.terminate_model(uid)
-            except Exception:
-                pass
-
-    if 'deepseek-coder-instruct' not in running_models:
-        print('==> [mitambo-init] Launching Wolinet Coder (deepseek-coder-instruct) on llama.cpp CPU...')
-        client.launch_model(
-            model_name='deepseek-coder-instruct',
-            model_uid='deepseek-coder-instruct',
-            model_engine='llama.cpp',
-            model_format='ggufv2',
-            model_size_in_billions='1_3',
-            quantization='Q4_K_M',
-            n_gpu=None,
-            n_gpu_layers=0,
-            n_ctx=2048,
-            n_parallel=1,
-        )
-        print('==> [mitambo-init] 🎉 SUCCESS! Wolinet Coder (deepseek-coder-instruct) launched!')
-
-    # Verify model is running
-    verified_models = client.list_models()
-    if 'deepseek-coder-instruct' in verified_models:
-        print('==> [mitambo-init] ✅ Wolinet Coder verified and ready for inference!')
-        sys.exit(0)
-    else:
-        print('==> [mitambo-init] Model not yet in list; will retry...')
-        sys.exit(1)
+    print(f'==> [mitambo-init] Active Xinference models: {list(running_models.keys())}')
+    sys.exit(0)
 except Exception as me:
     print(f'==> [mitambo-init] Init attempt notice (will retry): {me}')
     sys.exit(1)
