@@ -283,7 +283,10 @@ services:
   # 5. Open WebUI (Wolinex)  →  wolinex.wolinet.com
   # ==========================================================================
   wolinex:
-    image: ${WOLINEX_IMAGE:-ghcr.io/open-webui/open-webui:main}
+    image: ${WOLINEX_IMAGE:-wolinet/open-webui:gateway}
+    build:
+      context: ./apps/web-client
+      dockerfile: Dockerfile
     restart: unless-stopped
     networks:
       - wolinet_internal

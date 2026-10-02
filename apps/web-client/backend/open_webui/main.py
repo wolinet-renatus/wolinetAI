@@ -594,6 +594,21 @@ if SAFE_MODE:
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
+# Keep requests from existing chats usable after a local inference UID is
+# stopped or renamed. These IDs are compatibility inputs only; they are never
+# added to the model catalog shown to users.
+RETIRED_LOCAL_MODEL_IDS = frozenset(
+    {
+        'deepseek-coder-1.3b',
+        'deepseek-coder',
+        'wolinex-coder',
+        'wolinex-coder-pro',
+        'wolinex-coder-lite',
+        'wolinex-omni',
+        'wolinet-coder',
+    }
+)
+
 
 class SPAStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
@@ -1763,7 +1778,26 @@ async def chat_completion(
         model_info = None
         if not model_item.get('direct', False):
             if model_id not in request.app.state.MODELS:
-                raise Exception('Model not found')
+                fallback_model = next(
+                    (
+                        available_model
+                        for available_model in request.app.state.MODELS.values()
+                        if str(available_model.get('id', '')).casefold() == 'wolinet coder'
+                        or str(available_model.get('name', '')).casefold() == 'wolinet coder'
+                    ),
+                    None,
+                )
+                if isinstance(model_id, str) and model_id in RETIRED_LOCAL_MODEL_IDS and fallback_model:
+                    fallback_model_id = str(fallback_model['id'])
+                    log.warning(
+                        'Routing retired local model selection %s to active gateway model %s',
+                        model_id,
+                        fallback_model_id,
+                    )
+                    model_id = fallback_model_id
+                    form_data['model'] = fallback_model_id
+                else:
+                    raise Exception('Model not found')
 
             model = request.app.state.MODELS[model_id]
             model_info = await Models.get_model_by_id(model_id)
