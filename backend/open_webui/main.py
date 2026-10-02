@@ -929,7 +929,7 @@ if ENABLE_OTEL:
 ########################################
 
 
-app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
+app.state.config.ENABLE_OLLAMA_API = os.getenv('ENABLE_OLLAMA_API', str(ENABLE_OLLAMA_API)).lower() == 'true'
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.config.OLLAMA_API_CONFIGS = OLLAMA_API_CONFIGS
 
