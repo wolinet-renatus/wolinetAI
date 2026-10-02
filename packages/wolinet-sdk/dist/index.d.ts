@@ -2,7 +2,7 @@
  * Wolinet AI TypeScript SDK
  * Auto-generated from Wolinet AI Sovereign OpenAPI Specification
  */
-import type { ChatCompletionOptions, ChatCompletionResponse, ChatCompletionChunk, EmbeddingOptions, EmbeddingResponse, RerankOptions, RerankResponse, TanzaniaPaymentRequest, TanzaniaPaymentResponse, WolinetStatusResponse, WolinetKeyResponse } from './types.ts';
+import type { ChatCompletionOptions, ChatCompletionResponse, ChatCompletionChunk, EmbeddingOptions, EmbeddingResponse, RerankOptions, RerankResponse, WolinetStatusResponse, WolinetKeyResponse } from './types.ts';
 export type * from './types.ts';
 export interface WolinetClientOptions {
     baseUrl?: string;
@@ -36,12 +36,6 @@ export declare class WolinetAI {
                 owned_by: string;
             }>;
         }>;
-    };
-    readonly payments: {
-        tanzania: {
-            topup: (opts: TanzaniaPaymentRequest) => Promise<TanzaniaPaymentResponse>;
-            status: (transactionId: string) => Promise<TanzaniaPaymentResponse>;
-        };
     };
     status(): Promise<WolinetStatusResponse>;
     getKey(): Promise<WolinetKeyResponse>;

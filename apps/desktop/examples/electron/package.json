@@ -15,26 +15,7 @@
           "security.workspace.trust.enabled": false,
           "workbench.colorTheme": "dark",
           "ai-features.openAiOfficial.allowEnvironmentApiKey": true,
-          "ai-features.openAiCustom.customOpenAiModels": [
-            {
-              "id": "qwen2.5-coder",
-              "model": "qwen2.5-coder",
-              "url": "http://127.0.0.1:4000/v1",
-              "apiKey": "sk-wolinet-admin-2026"
-            },
-            {
-              "id": "deepseek-r1",
-              "model": "deepseek-r1",
-              "url": "http://127.0.0.1:4000/v1",
-              "apiKey": "sk-wolinet-admin-2026"
-            },
-            {
-              "id": "wolinex-general",
-              "model": "wolinex-general",
-              "url": "http://127.0.0.1:4000/v1",
-              "apiKey": "sk-wolinet-admin-2026"
-            }
-          ]
+          "ai-features.openAiCustom.customOpenAiModels": []
         },
         "reloadOnReconnect": true,
         "electron": {

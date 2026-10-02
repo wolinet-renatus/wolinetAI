@@ -105,12 +105,12 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="wolinex-coder",
+    model="YOUR_ENABLED_MODEL_ID",
     messages=[{"role": "user", "content": "Hello"}],
 )
 print(response.choices[0].message.content)</code></pre>
             <div class="code-foot">
-              <span>MODEL <b>wolinex-coder</b></span
+              <span>MODEL <b>YOUR_ENABLED_MODEL_ID</b></span
               ><span>FORMAT <b>CHAT COMPLETIONS</b></span>
             </div>
           </article>
@@ -120,18 +120,9 @@ print(response.choices[0].message.content)</code></pre>
               <h2>Choose your route</h2>
             </div>
             <div class="model-row">
-              <span class="model-type">LOCAL / CHAT</span
-              ><code>wolinex-coder</code
-              ><span>Private coding and general tasks</span>
-            </div>
-            <div class="model-row">
-              <span class="model-type">LOCAL / EMBEDDING</span
-              ><code>wolinex-embed</code
-              ><span>Semantic search and retrieval</span>
-            </div>
-            <div class="model-row">
-              <span class="model-type">CLOUD / REASONING</span
-              ><code>deepseek-r1</code><span>Multi-step reasoning</span>
+              <span class="model-type">ACTIVE MODELS</span
+              ><code>GET /v1/models</code
+              ><span>Use a model ID returned by the gateway for this key.</span>
             </div>
             <a class="reference-link" href="https://lango.wolinet.com/docs"
               >Open full API reference <span>↗</span></a

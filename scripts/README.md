@@ -5,7 +5,7 @@ Utility scripts for managing the lifecycle, registration, and health of the Woli
 ## Scripts
 - **`start_platform.sh`**: Launches both the Xinference Engine (`http://127.0.0.1:9997`) and the LiteLLM AI Gateway (`http://127.0.0.1:4000`), waiting until both are ready.
 - **`register_models.sh`**: Scans `models/registrations/*.json` and registers each custom model spec with the running Xinference engine.
-- **`healthcheck.sh`**: Validates engine responsiveness, gateway status, and executes an actual test inference against `wolinex-coder`.
+- **`healthcheck.sh`**: Validates engine and gateway responsiveness, then tests the first model enabled for the gateway key.
 
 ## Usage
 All scripts can be invoked directly or via the root `Makefile`:

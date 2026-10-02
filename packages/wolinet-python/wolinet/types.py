@@ -77,18 +77,3 @@ class RerankResponse(BaseModel):
     results: List[RerankResult]
     model: str
     usage: Dict[str, int]
-
-
-class TanzaniaPaymentRequest(BaseModel):
-    provider: Literal["mpesa", "tigopesa", "airtel", "halopesa"]
-    phone_number: str
-    amount_tzs: float
-    account_reference: Optional[str] = None
-
-
-class TanzaniaPaymentResponse(BaseModel):
-    transaction_id: str
-    status: str
-    amount_tzs: float
-    message: str
-    provider: str

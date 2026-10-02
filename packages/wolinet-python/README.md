@@ -17,14 +17,14 @@ client = WolinetAI(base_url="http://localhost:4000", api_key="sk-wolinet-local-d
 
 # 1. Unary Chat Completion
 res = client.chat.create(
-    model="wolinex-coder",
+    model="your-enabled-model-id",
     messages=[{"role": "user", "content": "Write a Python decorator for logging execution time."}],
 )
 print(res.choices[0].message.content)
 
 # 2. Real-time Streaming
 for chunk in client.chat.create(
-    model="wolinex-coder",
+    model="your-enabled-model-id",
     messages=[{"role": "user", "content": "Explain vector databases in 2 sentences"}],
     stream=True,
 ):

@@ -1,15 +1,5 @@
 {
   "$schema": "https://charm.land/crush.json",
-  "models": {
-    "large": {
-      "model": "wolinex-coder",
-      "provider": "wolinet"
-    },
-    "small": {
-      "model": "wolinex-coder-lite",
-      "provider": "wolinet"
-    }
-  },
   "providers": {
     "wolinet": {
       "name": "Wolinet Sovereign Gateway",

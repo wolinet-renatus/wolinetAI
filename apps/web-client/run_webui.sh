@@ -23,7 +23,11 @@ fi
 export PORT="${PORT:-3000}"
 export HOST="${HOST:-0.0.0.0}"
 export OPENAI_API_BASE_URL="${OPENAI_API_BASE_URL:-http://127.0.0.1:4000/v1}"
-export OPENAI_API_KEY="${OPENAI_API_KEY:-sk-wolinet-admin-2026}"
+export OPENAI_API_KEY="${OPENAI_API_KEY:-${LITELLM_MASTER_KEY:-${WOLINET_GATEWAY_MASTER_KEY:-}}}"
+if [ -z "${OPENAI_API_KEY}" ]; then
+    echo "[Wolinet Portal] Set OPENAI_API_KEY or LITELLM_MASTER_KEY to connect to the gateway." >&2
+    exit 1
+fi
 export ENABLE_FORWARD_USER_INFO_HEADERS="${ENABLE_FORWARD_USER_INFO_HEADERS:-True}"
 export WEBUI_NAME="${WEBUI_NAME:-Wolinet AI}"
 export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:5433/webui}"

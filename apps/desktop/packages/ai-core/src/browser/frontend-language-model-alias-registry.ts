@@ -28,57 +28,27 @@ export class DefaultLanguageModelAliasRegistry implements LanguageModelAliasRegi
     protected aliases: LanguageModelAlias[] = [
         {
             id: 'default/code',
-            defaultModelIds: [
-                'wolinex-coder',
-                'deepseek-r1',
-                'anthropic/claude-opus-5',
-                'openai/gpt-5.6-sol',
-                'google/gemini-3.1-pro-preview'
-            ],
+            defaultModelIds: [],
             description: nls.localize('theia/ai/core/defaultModelAliases/code/description', 'Optimized for code understanding and generation tasks.')
         },
         {
             id: 'default/universal',
-            defaultModelIds: [
-                'wolinex-coder',
-                'deepseek-r1',
-                'wolinex-omni',
-                'anthropic/claude-opus-5',
-                'openai/gpt-5.6-sol',
-                'google/gemini-3.1-pro-preview'
-            ],
+            defaultModelIds: [],
             description: nls.localize('theia/ai/core/defaultModelAliases/universal/description', 'Well-balanced for both code and general language use.')
         },
         {
             id: 'default/code-completion',
-            defaultModelIds: [
-                'wolinex-coder-lite',
-                'wolinex-coder',
-                'anthropic/claude-sonnet-5',
-                'openai/gpt-5.6-sol',
-                'google/gemini-3.1-pro-preview'
-            ],
+            defaultModelIds: [],
             description: nls.localize('theia/ai/core/defaultModelAliases/code-completion/description', 'Best suited for code autocompletion scenarios.')
         },
         {
             id: 'default/summarize',
-            defaultModelIds: [
-                'wolinex-coder',
-                'deepseek-r1',
-                'anthropic/claude-opus-5',
-                'openai/gpt-5.6-sol',
-                'google/gemini-3.1-pro-preview'
-            ],
+            defaultModelIds: [],
             description: nls.localize('theia/ai/core/defaultModelAliases/summarize/description', 'Models prioritized for summarization and condensation of content.')
         },
         {
             id: 'default/fast',
-            defaultModelIds: [
-                'wolinex-coder-lite',
-                'anthropic/claude-haiku-4-5',
-                'openai/gpt-5.6-luna',
-                'google/gemini-3.8-flash'
-            ],
+            defaultModelIds: [],
             description: nls.localize('theia/ai/core/defaultModelAliases/fast/description',
                 'Faster and cheaper models for simpler tasks like exploration or basic tool calling, where deep reasoning is not required.')
         }

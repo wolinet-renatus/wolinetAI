@@ -265,7 +265,7 @@
 						</span>
 					</div>
 					<div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-						Default Model: <code class="font-mono text-gray-700 dark:text-gray-300">wolinex-coder</code> • Spend Metering Enabled
+						Models and spend are managed by the enabled gateway catalog.
 					</div>
 				</div>
 			</div>

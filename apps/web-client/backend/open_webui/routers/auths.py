@@ -144,7 +144,7 @@ async def create_session_response(
                 'spent': spend,
                 'remaining': max(0.0, round(max_budget - spend, 4)),
                 'currency': 'USD',
-                'default_model': os.getenv('DEFAULT_MODELS', 'wolinex-coder'),
+                'default_model': os.getenv('DEFAULT_MODELS', '').split(',')[0].strip() or None,
             }
     except Exception:
         pass
@@ -155,7 +155,7 @@ async def create_session_response(
             'spent': 0.0,
             'remaining': 25.0,
             'currency': 'USD',
-            'default_model': os.getenv('DEFAULT_MODELS', 'wolinex-coder'),
+            'default_model': os.getenv('DEFAULT_MODELS', '').split(',')[0].strip() or None,
         }
 
     return {
@@ -247,7 +247,7 @@ async def get_session_user(
                 'spent': spend,
                 'remaining': max(0.0, round(max_budget - spend, 4)),
                 'currency': 'USD',
-                'default_model': os.getenv('DEFAULT_MODELS', 'wolinex-coder'),
+                'default_model': os.getenv('DEFAULT_MODELS', '').split(',')[0].strip() or None,
             }
     except Exception:
         pass
@@ -258,7 +258,7 @@ async def get_session_user(
             'spent': 0.0,
             'remaining': 25.0,
             'currency': 'USD',
-            'default_model': os.getenv('DEFAULT_MODELS', 'wolinex-coder'),
+            'default_model': os.getenv('DEFAULT_MODELS', '').split(',')[0].strip() or None,
         }
 
     response_data = {

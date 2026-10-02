@@ -45,29 +45,13 @@ litellm_settings:
       - aiohttp_openai
     search_tool_name: "duckduckgo-search"
     max_agentic_loops: 3
+  callbacks: []
 search_tools:
   - search_tool_name: "duckduckgo-search"
     litellm_params:
       search_provider: "duckduckgo"
     search_tool_info:
       description: "Default web search provider via DuckDuckGo"
-model_list:
-  - model_name: wolinet-coder
-    litellm_params:
-      model: openai/deepseek-coder-instruct
-      api_base: os.environ/WOLINET_API_BASE
-      api_key: os.environ/XINFERENCE_API_KEY
-      timeout: 600
-    model_info:
-      id: "wolinet-coder"
-      name: "Wolinet Coder"
-      mode: chat
-      provider: "Wolinet AI"
-      litellm_provider: "openai"
-      description: "Wolinet Coder - Sovereign High-Performance AI Coding Engine"
-      max_tokens: 2048
-      max_input_tokens: 2048
-
 router_settings:
   num_retries: 2
   redis_host: os.environ/REDIS_HOST
@@ -76,13 +60,3 @@ router_settings:
   routing_strategy: latency-based-routing
   timeout: 600
   enable_pre_call_checks: true
-  model_group_alias:
-    "deepseek-coder-1.3b": "wolinet-coder"
-    "deepseek-coder-instruct": "wolinet-coder"
-    "deepseek-coder": "wolinet-coder"
-    "wolinex-coder": "wolinet-coder"
-    "wolinex-coder-pro": "wolinet-coder"
-    "wolinex-coder-lite": "wolinet-coder"
-    "wolinex-omni": "wolinet-coder"
-    "Wolinet Coder": "wolinet-coder"
-    "wolinet coder": "wolinet-coder"

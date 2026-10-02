@@ -36,20 +36,38 @@ else
     echo "⚠️  NOT RUNNING (Run: make gateway or ./gateway/run_gateway.sh)"
 fi
 
-echo -n "4. Testing Local Inference ('wolinex-coder')... "
-RESPONSE=$(curl -s -X POST http://127.0.0.1:9997/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ${XINFERENCE_API_KEY:-}" \
-  -d '{
-    "model": "wolinex-coder",
-    "messages": [{"role": "user", "content": "ping"}],
-    "max_tokens": 10
-  }' 2>/dev/null || true)
+echo -n "4. Testing an enabled gateway model... "
+MODEL_ID=$(python3 - <<'PY'
+import json
+import os
+import urllib.request
 
-if [[ "${RESPONSE}" == *"choices"* ]]; then
-    echo "✅ INFERENCE WORKING"
+key = os.getenv("LITELLM_MASTER_KEY") or os.getenv("WOLINET_GATEWAY_MASTER_KEY") or "not-needed"
+request = urllib.request.Request(
+    "http://127.0.0.1:4000/v1/models",
+    headers={"Authorization": f"Bearer {key}"},
+)
+try:
+    with urllib.request.urlopen(request, timeout=10) as response:
+        models = json.load(response).get("data", [])
+    print(models[0]["id"] if models else "")
+except Exception:
+    print("")
+PY
+)
+
+if [ -z "${MODEL_ID}" ]; then
+    echo "❌ No enabled model returned by LiteLLM"
 else
-    echo "❌ INFERENCE FAILED: ${RESPONSE}"
+    RESPONSE=$(curl -s -X POST "http://127.0.0.1:4000/v1/chat/completions" \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer ${LITELLM_MASTER_KEY:-${WOLINET_GATEWAY_MASTER_KEY:-not-needed}}" \
+      -d "{\"model\":\"${MODEL_ID}\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":10}" 2>/dev/null || true)
+    if [[ "${RESPONSE}" == *"choices"* ]]; then
+        echo "✅ INFERENCE WORKING (${MODEL_ID})"
+    else
+        echo "❌ INFERENCE FAILED for ${MODEL_ID}: ${RESPONSE}"
+    fi
 fi
 
 echo "=== Health Check Complete ==="

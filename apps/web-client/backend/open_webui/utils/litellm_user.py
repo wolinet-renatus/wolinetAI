@@ -27,15 +27,6 @@ def _default_user_budget() -> float:
     return float(os.getenv('DEFAULT_USER_BUDGET', '25.0'))
 
 
-DEFAULT_ALLOWED_MODELS = [
-    'wolinex-coder',
-    'wolinex-coder-pro',
-    'wolinex-coder-lite',
-    'wolinex-omni',
-    'wolinex-embed',
-]
-
-
 async def provision_litellm_user(
     user_id: str,
     email: str,
@@ -51,8 +42,6 @@ async def provision_litellm_user(
         max_budget = 10000.0 if role == 'admin' else _default_user_budget()
 
     litellm_role = 'proxy_admin' if role == 'admin' else 'internal_user'
-    default_model = os.getenv('DEFAULT_MODELS', 'wolinex-coder')
-
     payload = {
         'user_id': user_id,
         'user_email': email,
@@ -60,9 +49,7 @@ async def provision_litellm_user(
         'user_role': litellm_role,
         'max_budget': max_budget,
         'auto_create_key': True,
-        'models': DEFAULT_ALLOWED_MODELS if role != 'admin' else [],
         'metadata': {
-            'default_model': default_model,
             'credits_allocated': max_budget,
             'tier': 'Sovereign Administrator' if role == 'admin' else 'Sovereign Free Tier',
             'provider': 'Wolinet AI',

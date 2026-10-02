@@ -43,7 +43,7 @@ Clients (Agentic Coding IDE / Apps)
               │
               ▼
    AI Gateway Layer (:4000)
-    ├── Local ($0)   ──► wolinex-coder (:9997)
+    ├── Enabled models ──► Xinference / configured providers
     ├── Cloud ($)    ──► DeepSeek / Claude / GPT-4o
     └── Media ($$$)  ──► Kling / Runway Video APIs
 ```
@@ -52,10 +52,10 @@ Clients (Agentic Coding IDE / Apps)
 
 ## 📂 Project Organization
 
-* **`gateway/`**: 100% open-source LiteLLM Gateway codebase (`gateway/litellm`), Tanzania mobile money billing subsystem (`gateway/litellm/proxy/payments/tanzania`), custom Wolinet brand assets (`gateway/assets`), and Next.js admin UI.
+* **`gateway/`**: LiteLLM Gateway configuration and custom Wolinet integration assets. Lago receives usage events for billing.
 * **`inference/`**: Core multi-backend inference engine (Xinference stack) powering local GGUF models.
 * **`models/`**: Quantized GGUF model weights and declarative Version 2 JSON manifests (`wolinex-coder`, `qwen2.5-omni`).
-* **`apps/web-client/`**: Wolinet AI Studio — interactive hybrid browser console with live telemetry and Tanzania mobile money top-up.
+* **`apps/web-client/`**: Wolinet AI Studio, backed by the live model catalog exposed by LiteLLM.
 * **`apps/agentic-coder/`**: Reference autonomous coding agent with full tool calling capabilities.
 * **`scripts/`**: Automation scripts for registration, health checking, and system lifecycle.
 * **`docker-compose.yml`**: Production single-command deployment stack with PostgreSQL and Redis.

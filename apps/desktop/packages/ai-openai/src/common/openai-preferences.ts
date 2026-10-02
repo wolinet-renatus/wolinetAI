@@ -97,50 +97,7 @@ on the machine running Theia. Use the environment variable `OPENAI_API_KEY` to s
             title: AI_CORE_PREFERENCES_TITLE,
             markdownDescription: nls.localize('theia/ai/openai/customEndpoints/mdDescription',
                 'Integrate models via the Wolinet AI LiteLLM Gateway (http://127.0.0.1:4000/v1). Dynamic routing between local engines and cloud models is managed by the gateway.'),
-            default: [
-                {
-                    id: 'wolinex-coder',
-                    model: 'wolinex-coder',
-                    url: 'http://127.0.0.1:4000/v1',
-                    apiKey: 'sk-wolinet-admin-2026'
-                },
-                {
-                    id: 'wolinex-coder-lite',
-                    model: 'wolinex-coder-lite',
-                    url: 'http://127.0.0.1:4000/v1',
-                    apiKey: 'sk-wolinet-admin-2026'
-                },
-                {
-                    id: 'deepseek-r1',
-                    model: 'deepseek-r1',
-                    url: 'http://127.0.0.1:4000/v1',
-                    apiKey: 'sk-wolinet-admin-2026'
-                },
-                {
-                    id: 'wolinex-omni',
-                    model: 'wolinex-omni',
-                    url: 'http://127.0.0.1:4000/v1',
-                    apiKey: 'sk-wolinet-admin-2026'
-                },
-                {
-                    id: 'claude-3-5-sonnet',
-                    model: 'claude-3-5-sonnet',
-                    url: 'http://127.0.0.1:4000/v1',
-                    apiKey: 'sk-wolinet-admin-2026'
-                },
-                {
-                    id: 'gpt-4o',
-                    model: 'gpt-4o',
-                    url: 'http://127.0.0.1:4000/v1',
-                    apiKey: 'sk-wolinet-admin-2026'
-                },
-                {
-                    id: 'deepseek-v3',
-                    model: 'deepseek-v3',
-                    url: 'http://127.0.0.1:4000/v1',
-                    apiKey: 'sk-wolinet-admin-2026'
-                }
-            ],
+            default: [],
             items: {
                 type: 'object',
                 properties: {

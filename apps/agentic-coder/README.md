@@ -3,7 +3,7 @@
 A reference autonomous agentic coding assistant built to demonstrate how client applications interact with the **Wolinet AI Gateway**.
 
 ## Features
-- **OpenAI-Compatible Tool Loop**: Implements tool calling compatible with local GGUF models (`wolinex-coder`) and cloud models (`deepseek-r1`, `gpt-4o`).
+- **OpenAI-Compatible Tool Loop**: Implements tool calling for any model enabled for the supplied gateway key. If `--model` is omitted, the agent selects the first model returned by `GET /v1/models`.
 - **Autonomous Toolset**:
   - `read_file`: Inspects files and code ranges.
   - `write_file`: Writes or modifies files safely.
@@ -20,8 +20,8 @@ make agent
 # Or pass a single prompt directly
 .venv/bin/python3 apps/agentic-coder/main.py --prompt "Check git status and summarize recent changes"
 
-# Switch model to cloud frontier if desired
-.venv/bin/python3 apps/agentic-coder/main.py --model deepseek-r1 --prompt "Analyze distributed consensus algorithm"
+# Select a specific enabled gateway model
+.venv/bin/python3 apps/agentic-coder/main.py --model YOUR_ENABLED_MODEL_ID --prompt "Analyze a distributed consensus algorithm"
 ```
 
 ## Adding Custom Tools

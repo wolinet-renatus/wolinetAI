@@ -45,8 +45,6 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      DEFAULT_MODEL: wolinex-coder
-      DEFAULT_MODELS: wolinex-coder
       UI_LOGO_PATH: "/app/assets/wolinet_logo.png"
       UI_LOGO_PATH_DARK: "/app/assets/wolinet_logo_dark.png"
     volumes:
@@ -99,7 +97,6 @@ services:
       ENABLE_OLLAMA_API: "False"
       ENABLE_OPENAI_API: "True"
       RAG_EMBEDDING_ENGINE: openai
-      RAG_EMBEDDING_MODEL: wolinex-embed
       RAG_OPENAI_API_BASE_URL: "http://lango:4000/v1"
       RAG_OPENAI_API_KEY: sk-wolinet-dev-master-key
       ENABLE_RAG_HYBRID_SEARCH: "False"
@@ -112,8 +109,6 @@ services:
       FORWARDED_ALLOW_IPS: "*"
       DEFAULT_USER_BUDGET: "25.0"
       # Model discovery and session stability
-      DEFAULT_MODELS: "wolinex-coder"
-      ENABLE_MODEL_FILTER: "False"
       BYPASS_MODEL_ACCESS_CONTROL: "True"
       WEBUI_AUTH_COOKIE_SECURE: "False"
       DEFAULT_LOCALE: "en-US"

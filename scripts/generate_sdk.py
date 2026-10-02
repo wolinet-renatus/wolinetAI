@@ -48,7 +48,7 @@ def fetch_openapi_schema(url: str = "http://localhost:4000/openapi.json") -> dic
             "info": {
                 "title": "Wolinet AI Sovereign Gateway API",
                 "version": "1.0.0",
-                "description": "Unified sovereign gateway with local GGUF inference and Tanzania payments",
+                "description": "Unified gateway for model discovery, inference, and usage billing",
             },
             "servers": [
                 {"url": "http://localhost:4000", "description": "Local Gateway"},
@@ -61,7 +61,6 @@ def fetch_openapi_schema(url: str = "http://localhost:4000/openapi.json") -> dic
                 "/v1/models": {"get": {"summary": "List Models"}},
                 "/wolinet/status": {"get": {"summary": "Platform Status"}},
                 "/wolinet/key": {"get": {"summary": "Active API Key"}},
-                "/v1/payments/tanzania/topup": {"post": {"summary": "Tanzania Mobile Money Top-up"}},
             },
         }
 
@@ -98,10 +97,6 @@ def generate_typescript_sdk(schema: dict):
             "ai",
             "llm",
             "sovereign",
-            "wolinex-coder",
-            "mpesa",
-            "tigopesa",
-            "airtel-money",
             "east-africa",
         ],
         "author": "Wolinet AI <dev@wolinet.ai>",
@@ -146,7 +141,7 @@ export interface ChatMessage {
 }
 
 export interface ChatCompletionOptions {
-  model: 'wolinex-coder' | 'deepseek-coder-1.3b' | 'wolinex-omni' | (string & {});
+  model: string;
   messages: ChatMessage[];
   temperature?: number;
   top_p?: number;
@@ -244,21 +239,6 @@ export interface RerankResponse {
   };
 }
 
-export interface TanzaniaPaymentRequest {
-  provider: 'mpesa' | 'tigopesa' | 'airtel' | 'halopesa';
-  phone_number: string;
-  amount_tzs: number;
-  account_reference?: string;
-}
-
-export interface TanzaniaPaymentResponse {
-  transaction_id: string;
-  status: 'PENDING' | 'SUCCESS' | 'FAILED';
-  amount_tzs: number;
-  message: string;
-  provider: string;
-}
-
 export interface WolinetStatusResponse {
   brand: {
     name: string;
@@ -322,8 +302,6 @@ import type {
   EmbeddingResponse,
   RerankOptions,
   RerankResponse,
-  TanzaniaPaymentRequest,
-  TanzaniaPaymentResponse,
   WolinetStatusResponse,
   WolinetKeyResponse,
 } from './types.ts';
@@ -467,20 +445,6 @@ export class WolinetAI {
     },
   };
 
-  public readonly payments = {
-    tanzania: {
-      topup: async (opts: TanzaniaPaymentRequest): Promise<TanzaniaPaymentResponse> => {
-        return this.request<TanzaniaPaymentResponse>('/v1/payments/tanzania/topup', {
-          method: 'POST',
-          body: JSON.stringify(opts),
-        });
-      },
-      status: async (transactionId: string): Promise<TanzaniaPaymentResponse> => {
-        return this.request<TanzaniaPaymentResponse>(`/v1/payments/tanzania/status?id=${encodeURIComponent(transactionId)}`);
-      },
-    },
-  };
-
   public async status(): Promise<WolinetStatusResponse> {
     return this.request<WolinetStatusResponse>('/wolinet/status');
   }
@@ -500,9 +464,8 @@ export default WolinetAI;
 
 Official TypeScript & JavaScript client for the **Wolinet AI Sovereign Gateway & Inference Cluster**.
 
-- 🚀 **100% Local First:** Works with sovereign local models (`wolinex-coder`) and cloud failover.
+- 🚀 **Gateway Model Discovery:** Use any model enabled in the LiteLLM catalog.
 - ⚡ **Streaming Support:** Async generator SSE streaming for instant code and text token rendering.
-- 🇹🇿 **Tanzania Payments:** Built-in mobile money top-up (M-Pesa, TigoPesa, Airtel Money).
 - 🌐 **Zero External Dependencies:** Built on native `fetch` and `ReadableStream`.
 
 ## Installation
@@ -523,14 +486,14 @@ const client = new WolinetAI({
 
 // 1. Unary Chat Completion
 const completion = await client.chat.completions.create({
-  model: 'wolinex-coder',
+  model: 'your-enabled-model-id',
   messages: [{ role: 'user', content: 'Write a quicksort in TypeScript' }],
 });
 console.log(completion.choices[0].message.content);
 
 // 2. Real-time Streaming
 for await (const chunk of client.chat.completions.stream({
-  model: 'wolinex-coder',
+  model: 'your-enabled-model-id',
   messages: [{ role: 'user', content: 'Count from 1 to 5' }],
 })) {
   process.stdout.write(chunk.choices[0]?.delta?.content || '');
@@ -670,19 +633,6 @@ class RerankResponse(BaseModel):
     usage: Dict[str, int]
 
 
-class TanzaniaPaymentRequest(BaseModel):
-    provider: Literal["mpesa", "tigopesa", "airtel", "halopesa"]
-    phone_number: str
-    amount_tzs: float
-    account_reference: Optional[str] = None
-
-
-class TanzaniaPaymentResponse(BaseModel):
-    transaction_id: str
-    status: str
-    amount_tzs: float
-    message: str
-    provider: str
 '''
     with open(PY_SDK_DIR / "wolinet" / "types.py", "w") as f:
         f.write(types_py)
@@ -704,8 +654,6 @@ from .types import (
     ChatCompletionResponse,
     EmbeddingResponse,
     RerankResponse,
-    TanzaniaPaymentRequest,
-    TanzaniaPaymentResponse,
 )
 
 
@@ -715,7 +663,7 @@ class _ChatCompletionsSync:
 
     def create(
         self,
-        model: str = "wolinex-coder",
+        model: str,
         messages: Optional[List[Dict[str, str]]] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
@@ -765,7 +713,7 @@ class _ChatCompletionsAsync:
 
     async def create(
         self,
-        model: str = "wolinex-coder",
+        model: str,
         messages: Optional[List[Dict[str, str]]] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
@@ -842,30 +790,6 @@ class _RerankSync:
             return RerankResponse.model_validate(resp.json())
 
 
-class _PaymentsSync:
-    def __init__(self, client: "WolinetAI"):
-        self._c = client
-
-    def topup(
-        self,
-        provider: str,
-        phone_number: str,
-        amount_tzs: float,
-        account_reference: Optional[str] = None,
-    ) -> TanzaniaPaymentResponse:
-        url = f"{self._c.base_url}/v1/payments/tanzania/topup"
-        payload = {
-            "provider": provider,
-            "phone_number": phone_number,
-            "amount_tzs": amount_tzs,
-            "account_reference": account_reference or "wolinet-ai-topup",
-        }
-        with httpx.Client(timeout=self._c.timeout) as http:
-            resp = http.post(url, json=payload, headers=self._c._headers)
-            resp.raise_for_status()
-            return TanzaniaPaymentResponse.model_validate(resp.json())
-
-
 class WolinetAI:
     """Synchronous Client for Wolinet AI Sovereign Gateway."""
 
@@ -882,7 +806,6 @@ class WolinetAI:
         self.chat = _ChatCompletionsSync(self)
         self.embeddings = _EmbeddingsSync(self)
         self.rerank = _RerankSync(self)
-        self.payments = _PaymentsSync(self)
 
     @property
     def _headers(self) -> Dict[str, str]:
@@ -966,8 +889,6 @@ from .types import (
     ChatCompletionChunk,
     EmbeddingResponse,
     RerankResponse,
-    TanzaniaPaymentRequest,
-    TanzaniaPaymentResponse,
 )
 
 __version__ = "1.1.0"
@@ -979,8 +900,6 @@ __all__ = [
     "ChatCompletionChunk",
     "EmbeddingResponse",
     "RerankResponse",
-    "TanzaniaPaymentRequest",
-    "TanzaniaPaymentResponse",
 ]
 '''
     with open(PY_SDK_DIR / "wolinet" / "__init__.py", "w") as f:
@@ -1006,14 +925,14 @@ client = WolinetAI(base_url="http://localhost:4000", api_key="sk-wolinet-local-d
 
 # 1. Unary Chat Completion
 res = client.chat.create(
-    model="wolinex-coder",
+    model="your-enabled-model-id",
     messages=[{"role": "user", "content": "Write a Python decorator for logging execution time."}],
 )
 print(res.choices[0].message.content)
 
 # 2. Real-time Streaming
 for chunk in client.chat.create(
-    model="wolinex-coder",
+    model="your-enabled-model-id",
     messages=[{"role": "user", "content": "Explain vector databases in 2 sentences"}],
     stream=True,
 ):
@@ -1154,23 +1073,6 @@ type RerankResponse struct {
 	ID      string         `json:"id"`
 	Results []RerankResult `json:"results"`
 	Model   string         `json:"model"`
-}
-
-// TanzaniaPaymentRequest request for mobile money topup.
-type TanzaniaPaymentRequest struct {
-	Provider         string  `json:"provider"` // mpesa, tigopesa, airtel, halopesa
-	PhoneNumber      string  `json:"phone_number"`
-	AmountTZS        float64 `json:"amount_tzs"`
-	AccountReference string  `json:"account_reference,omitempty"`
-}
-
-// TanzaniaPaymentResponse response for mobile money transaction.
-type TanzaniaPaymentResponse struct {
-	TransactionID string  `json:"transaction_id"`
-	Status        string  `json:"status"`
-	AmountTZS     float64 `json:"amount_tzs"`
-	Message       string  `json:"message"`
-	Provider      string  `json:"provider"`
 }
 
 // StatusResponse platform telemetry and node status.
@@ -1463,36 +1365,6 @@ func (c *Client) GetStatus(ctx context.Context) (*StatusResponse, error) {
 	return &status, nil
 }
 
-// TanzaniaPaymentTopup initiates a mobile money deposit (M-Pesa, TigoPesa, Airtel).
-func (c *Client) TanzaniaPaymentTopup(ctx context.Context, req TanzaniaPaymentRequest) (*TanzaniaPaymentResponse, error) {
-	body, err := json.Marshal(req)
-	if err != nil {
-		return nil, fmt.Errorf("marshal payment request: %w", err)
-	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/v1/payments/tanzania/topup", bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-	c.setHeaders(httpReq)
-
-	resp, err := c.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("execute request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		errBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("api error [%d]: %s", resp.StatusCode, string(errBody))
-	}
-
-	var paymentResp TanzaniaPaymentResponse
-	if err := json.NewDecoder(resp.Body).Decode(&paymentResp); err != nil {
-		return nil, fmt.Errorf("decode response: %w", err)
-	}
-	return &paymentResp, nil
-}
 """
     with open(GO_SDK_DIR / "client.go", "w") as f:
         f.write(client_go)
@@ -1512,7 +1384,7 @@ func TestChatCompletion(t *testing.T) {
 	defer cancel()
 
 	resp, err := client.CreateChatCompletion(ctx, ChatCompletionRequest{
-		Model: "wolinex-coder",
+		Model: "your-enabled-model-id",
 		Messages: []ChatMessage{
 			{Role: "user", Content: "Reply with the single word: OK"},
 		},
@@ -1577,7 +1449,7 @@ func main() {
 
 	// 1. Unary Chat Completion
 	resp, err := client.CreateChatCompletion(context.Background(), wolinet.ChatCompletionRequest{
-		Model: "wolinex-coder",
+		Model: "your-enabled-model-id",
 		Messages: []wolinet.ChatMessage{
 			{Role: "user", Content: "Write an HTTP server in Go"},
 		},
@@ -1589,7 +1461,7 @@ func main() {
 
 	// 2. Real-time Streaming
 	stream, err := client.CreateChatCompletionStream(context.Background(), wolinet.ChatCompletionRequest{
-		Model: "wolinex-coder",
+		Model: "your-enabled-model-id",
 		Messages: []wolinet.ChatMessage{
 			{Role: "user", Content: "Count from 1 to 5"},
 		},
@@ -1622,7 +1494,7 @@ func main() {
 # ==============================================================================
 # 4. MULTI-LANGUAGE CODE SNIPPETS (SCALAR EQUIVALENT)
 # ==============================================================================
-def generate_snippets(model: str = "wolinex-coder", base_url: str = "http://localhost:4000") -> Dict[str, str]:
+def generate_snippets(model: str, base_url: str = "http://localhost:4000") -> Dict[str, str]:
     """Generate multi-language code snippets for the given model & gateway URL."""
     return {
         "curl": f"""curl {base_url}/v1/chat/completions \\
@@ -1684,7 +1556,7 @@ def main():
     parser.add_argument("--url", default="http://localhost:4000/openapi.json", help="OpenAPI specification URL")
     parser.add_argument("--lang", default="all", choices=["all", "python", "typescript", "go"], help="Target SDK language")
     parser.add_argument("--snippets", action="store_true", help="Print multi-language code snippets")
-    parser.add_argument("--model", default="wolinex-coder", help="Model name for code snippets")
+    parser.add_argument("--model", required=True, help="Model ID returned by the gateway's /v1/models endpoint")
     args = parser.parse_args()
 
     if args.snippets:

@@ -97,86 +97,10 @@ else
     done
 fi
 
-# 2. Launch local models when an authenticated Xinference API key is configured
-xinference_cli() {
-    "${ROOT_DIR}/.venv/bin/xinference" "$@" \
-        --endpoint "http://127.0.0.1:${XINFERENCE_PORT}" \
-        --api-key "${XINFERENCE_API_KEY}"
-}
-
-if [[ -z "${XINFERENCE_API_KEY:-}" ]]; then
-    echo "[Engine] Auth is enabled. Set XINFERENCE_API_KEY after Xinference setup to launch models."
-else
-RUNNING_MODELS=$(xinference_cli list 2>/dev/null || true)
-if [[ "${RUNNING_MODELS}" != *"wolinex-coder"* ]]; then
-    echo "[Engine] Launching default model 'wolinex-coder'..."
-    MODEL_PATH_ARGS=()
-    if [ -n "${WOLINET_CODER_MODEL_PATH:-}" ] && [ -f "${WOLINET_CODER_MODEL_PATH}" ]; then
-        MODEL_PATH_ARGS=(--model-path "${WOLINET_CODER_MODEL_PATH}")
-    elif [ -f "${ROOT_DIR}/models/Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf" ]; then
-        MODEL_PATH_ARGS=(--model-path "${ROOT_DIR}/models/Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf")
-    fi
-    xinference_cli launch \
-        -n wolinex-coder \
-        -u wolinex-coder \
-        --model-engine llama.cpp \
-        --size-in-billions 3 \
-        --model-format ggufv2 \
-        -q q4_k_m \
-        ${MODEL_PATH_ARGS[@]+"${MODEL_PATH_ARGS[@]}"} \
-        --disable-virtual-env || true
-fi
-
-if [[ "${RUNNING_MODELS}" != *"qwen2.5-omni-3b-local"* ]]; then
-    echo "[Engine] Launching multimodal model 'qwen2.5-omni-3b-local'..."
-    OMNI_PATH_ARGS=()
-    if [ -f "${ROOT_DIR}/models/Qwen2.5-Omni-3B-iq2_m.gguf" ]; then
-        OMNI_PATH_ARGS=(--model-path "${ROOT_DIR}/models/Qwen2.5-Omni-3B-iq2_m.gguf")
-    fi
-    xinference_cli launch \
-        -n qwen2.5-omni-3b-local \
-        -u qwen2.5-omni-3b-local \
-        --model-engine llama.cpp \
-        --size-in-billions 3 \
-        --model-format ggufv2 \
-        -q iq2_m \
-        ${OMNI_PATH_ARGS[@]+"${OMNI_PATH_ARGS[@]}"} \
-        --disable-virtual-env || true
-fi
-
-if [[ "${RUNNING_MODELS}" != *"deepseek-coder-1.3b"* ]]; then
-    echo "[Engine] Launching code model 'deepseek-coder-1.3b'..."
-    DEEPSEEK_PATH_ARGS=()
-    if [ -f "${ROOT_DIR}/models/deepseek-coder-1.3b-instruct.Q4_K_M.gguf" ]; then
-        DEEPSEEK_PATH_ARGS=(--model-path "${ROOT_DIR}/models/deepseek-coder-1.3b-instruct.Q4_K_M.gguf")
-    fi
-    xinference_cli launch \
-        -n deepseek-coder-1.3b \
-        -u deepseek-coder-1.3b \
-        --model-engine llama.cpp \
-        --size-in-billions 1_3 \
-        --model-format ggufv2 \
-        -q q4_k_m \
-        ${DEEPSEEK_PATH_ARGS[@]+"${DEEPSEEK_PATH_ARGS[@]}"} \
-        --disable-virtual-env || true
-fi
-
-if [[ "${RUNNING_MODELS}" != *"bge-small-en-v1.5"* ]]; then
-    echo "[Engine] Launching default embedding model 'bge-small-en-v1.5'..."
-    xinference_cli launch \
-        -u bge-small-en-v1.5 \
-        --model-name bge-small-en-v1.5 \
-        --model-type embedding || true
-fi
-
-if [[ "${RUNNING_MODELS}" != *"bge-reranker-v2-m3"* ]]; then
-    echo "[Engine] Launching default reranker model 'bge-reranker-v2-m3'..."
-    xinference_cli launch \
-        -u bge-reranker-v2-m3 \
-        --model-name bge-reranker-v2-m3 \
-        --model-type rerank || true
-fi
-fi
+# 2. Models are selected and launched explicitly through Xinference.
+# The deployment model-sync sidecar publishes only running chat/generation
+# models to LiteLLM; startup never launches or terminates models implicitly.
+echo "[Engine] Preserving the current Xinference model state. Launch models through Xinference to publish them to the gateway."
 
 # 3. Start AI Gateway (LiteLLM)
 echo "[Gateway] Starting LiteLLM Gateway on port ${GATEWAY_PORT}..."

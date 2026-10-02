@@ -1,6 +1,9 @@
 services:
   mitambo:
-    image: ${XINFERENCE_GPU_IMAGE:-xprobe/xinference:latest}
+    image: wolinet/xinference:gpu
+    build:
+      context: ./inference
+      dockerfile: xinference/deploy/docker/Dockerfile
     environment:
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: compute,utility

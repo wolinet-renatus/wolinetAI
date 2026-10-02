@@ -60,7 +60,7 @@ npm run build:browser
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `OPENAI_API_BASE_URL` | `http://127.0.0.1:4000/v1` | URL of the local Wolinet AI LiteLLM Gateway |
-| `OPENAI_API_KEY` | `sk-wolinet-admin-2026` | Authentication key for the local Gateway |
+| `OPENAI_API_KEY` | Required | API key for the local Gateway |
 | `THEIA_PORT` | `3090` | Port for the browser-based IDE server |
 | `THEIA_HOST` | `127.0.0.1` | Binding interface for local security |
 

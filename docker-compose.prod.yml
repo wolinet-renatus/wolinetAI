@@ -131,7 +131,10 @@ services:
   # 3. Xinference — Local GPU inference engine  →  mitambo.wolinet.com
   # ==========================================================================
   mitambo:
-    image: xprobe/xinference:${XINFERENCE_IMAGE_TAG:-latest}
+    image: wolinet/xinference:gpu
+    build:
+      context: ./inference
+      dockerfile: xinference/deploy/docker/Dockerfile
     container_name: wolinet-mitambo
     restart: unless-stopped
     networks:
@@ -197,6 +200,10 @@ services:
       REDIS_PORT: "6379"
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
       REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}@redis:6379
+      LAGO_API_BASE: ${LAGO_API_BASE:-https://api.getlago.com}
+      LAGO_API_KEY: ${LAGO_API_KEY:-}
+      LAGO_API_EVENT_CODE: ${LAGO_API_EVENT_CODE:-openai_tokens}
+      LAGO_API_CHARGE_BY: ${LAGO_API_CHARGE_BY:-team_id}
       LITELLM_DISABLE_NO_REDIS_WARNING: "true"
       # Inference engine (internal bridge)
       WOLINET_API_BASE: http://mitambo:9997/v1
@@ -207,8 +214,6 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       # Portal
-      DEFAULT_MODEL: ${DEFAULT_MODEL:-wolinet-coder}
-      DEFAULT_MODELS: ${DEFAULT_MODELS:-wolinet-coder}
       WOLINET_COOKIE_DOMAIN: ".wolinet.com"
       UI_LOGO_PATH: "/app/assets/wolinet_logo.png"
       UI_LOGO_PATH_DARK: "/app/assets/wolinet_logo_dark.png"
@@ -242,6 +247,25 @@ services:
           cpus: "3.0"
           memory: 6G
 
+  model-sync:
+    image: ${LANGO_IMAGE:-ghcr.io/berriai/litellm:main-latest}
+    entrypoint: ["python3", "/usr/local/bin/sync_xinference_models.py", "--watch"]
+    networks:
+      - wolinet_internal
+    environment:
+      LITELLM_BASE_URL: http://lango:4000
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
+      XINFERENCE_BASE_URL: http://mitambo:9997
+      XINFERENCE_API_KEY: ${XINFERENCE_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
+      XINFERENCE_MODEL_SYNC_INTERVAL: ${XINFERENCE_MODEL_SYNC_INTERVAL:-30}
+    volumes:
+      - ./scripts/deploy/sync_xinference_models.py:/usr/local/bin/sync_xinference_models.py:ro
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+
   # ==========================================================================
   # 5. Open WebUI (Wolinex)  →  wolinex.wolinet.com
   # ==========================================================================
@@ -258,7 +282,7 @@ services:
       WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?Set WEBUI_SECRET_KEY in .env}
       # LiteLLM gateway (internal bridge — zero latency)
       OPENAI_API_BASE_URL: "http://lango:4000/v1"
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
+      OPENAI_API_KEY: ${LITELLM_MASTER_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       WEBUI_AUTH_COOKIE_SAME_SITE: lax
       WEBUI_AUTH_COOKIE_SECURE: "True"
       WEBUI_SESSION_COOKIE_SAME_SITE: lax
@@ -281,9 +305,8 @@ services:
       ENABLE_OLLAMA_API: "False"
       ENABLE_OPENAI_API: "True"
       RAG_EMBEDDING_ENGINE: openai
-      RAG_EMBEDDING_MODEL: wolinex-embed
       RAG_OPENAI_API_BASE_URL: "http://lango:4000/v1"
-      RAG_OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
+      RAG_OPENAI_API_KEY: ${LITELLM_MASTER_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       ENABLE_RAG_HYBRID_SEARCH: "False"
       VECTOR_DB: chroma
       # Telemetry
@@ -293,10 +316,6 @@ services:
       CORS_ALLOW_ORIGIN: "https://wolinex.wolinet.com;https://dev.wolinet.com;https://docs.wolinet.com"
       FORWARDED_ALLOW_IPS: "*"
       DEFAULT_USER_BUDGET: "25.0"
-      DEFAULT_MODELS: "wolinet-coder"
-      ENABLE_MODEL_FILTER: "True"
-      MODEL_FILTER_LIST: "wolinet-coder"
-      OPENAI_API_CONFIGS: '{"0": {"enable": true, "model_ids": ["wolinet-coder"]}}'
     volumes:
       - webui_data:/app/backend/data
       - ./gateway/assets/wolinet_logo.png:/app/build/static/logo.png:ro
@@ -416,4 +435,3 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-

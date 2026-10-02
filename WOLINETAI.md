@@ -64,8 +64,7 @@ wolinetai/
 ├── gateway/                     # 🛡️ Cloned Open-Source AI Gateway Layer (LiteLLM Full Source)
 │   ├── litellm/                 # Full LiteLLM core Python codebase (Editable live link)
 │   │   ├── proxy/               # FastAPI proxy server, routers, auth, DB client
-│   │   │   └── payments/        # 🇹🇿 Native Tanzania Payment Gateway Subsystem
-│   │   │       └── tanzania/    # M-Pesa, Tigo Pesa, Airtel Money, Selcom & AzamPay integration
+│   │   ├── integrations/lago.py # Usage event callback configured by LiteLLM
 │   │   └── ...                  # Provider adapters, router, budget logic
 │   ├── assets/                  # 🎨 Wolinet AI Branding Assets (Logos & Favicons)
 │   │   ├── wolinet_logo.png     # Custom light logo
@@ -110,9 +109,9 @@ wolinetai/
 
 | Tier | Workload Focus | Model Engine | Cost Impact |
 | :--- | :--- | :--- | :--- |
-| **Tier 1: Local Heavy-Duty**<br>*(~80% of total tokens)* | • Autonomous agent loops<br>• Reading files & code search<br>• Syntax linting & basic bug fixes<br>• Autocomplete & inline suggestions | **Local Engine (Xinference)**<br>`wolinex-coder` (3B Q4_K_M GGUF)<br>`qwen2.5-omni` (3B iq2_m GGUF) | **$0.00 / token**<br>Unlimited local tokens 24/7 without credit depletion. |
-| **Tier 2: Frontier Reasoning**<br>*(~15% of total tokens)* | • Multi-file architectural refactoring<br>• Intricate algorithmic puzzles<br>• System design verification | **Cloud Provider APIs**<br>• DeepSeek-R1 (Full 671B)<br>• Claude 3.5 Sonnet<br>• OpenAI GPT-4o | **Low Cost**<br>Called surgically only when local models trigger uncertainty or fallbacks. |
-| **Tier 3: Extreme Multi-Modal**<br>*(~5% of workloads)* | • Text-to-Video generation<br>• Ultra high-resolution image rendering | **Cloud Specialized APIs**<br>• Kling AI / Runway Gen-3<br>• Fal.ai / Replicate Flux Pro | **Pay-per-video**<br>Avoids renting $2,000/mo 80GB VRAM GPUs on server. |
+| **Xinference models** | Chat and generation workloads | Running models exposed by LiteLLM's synchronized catalog | Depends on the model and deployment cost configuration |
+| **External providers** | Models configured in LiteLLM | Enabled LiteLLM model catalog entries | Provider and Lago billing configuration |
+| **Media providers** | Image, audio, and video workloads | Enabled provider routes | Provider pricing and Lago billing configuration |
 
 ---
 
@@ -227,17 +226,15 @@ client = OpenAI(
     api_key="sk-wolinet-master-key"
 )
 
-# Call local $0 model for routine coding:
+# List models enabled for this key, then use a returned model ID:
+models = client.models.list().data
+model_id = models[0].id
+
 response = client.chat.completions.create(
-    model="wolinex-coder",
+    model=model_id,
     messages=[{"role": "user", "content": "Refactor this function..."}]
 )
 
-# Or call frontier model for complex architectural planning:
-response = client.chat.completions.create(
-    model="deepseek-r1",
-    messages=[{"role": "user", "content": "Design a distributed raft consensus..."}]
-)
 ```
 
 ### Reference Agent Implementation
@@ -252,31 +249,11 @@ make agent
 
 ---
 
-## 8. 🇹🇿 Tanzania Mobile Money Payment Rails & Credit Architecture
+## 8. Usage Billing with Lago
 
-To serve developers and enterprises across Tanzania and East Africa, Wolinet AI includes a native mobile money billing subsystem built directly into the LiteLLM gateway (`gateway/litellm/proxy/payments/tanzania/`).
+LiteLLM sends successful request usage events to Lago when `LAGO_API_KEY`, `LAGO_API_BASE`, and `LAGO_API_EVENT_CODE` are configured. Set `LAGO_API_CHARGE_BY=team_id` and issue LiteLLM keys with a `team_id` to bill internal teams. The event includes the model name, response cost, and token counts.
 
-### Supported Rails & Auto-Carrier Detection
-* **Vodacom M-Pesa** (`074x`, `075x`, `076x`)
-* **Tigo Pesa / Airtel Money** (`065x`, `067x`, `071x`, `068x`, `069x`, `078x`)
-* **HaloPesa** (`062x`)
-* **Selcom & AzamPay Aggregation** (Direct USSD Push & Web Checkout)
-
-### Payment API Surface
-
-| Endpoint | Method | Description |
-| :--- | :--- | :--- |
-| `/v1/payments/tanzania/packages` | `GET` | List available TZS token packages with USD credit values |
-| `/v1/payments/tanzania/checkout` | `POST` | Initiate USSD Push prompt to customer mobile number |
-| `/v1/payments/tanzania/status/{order_id}` | `GET` | Poll real-time order confirmation status |
-| `/v1/payments/tanzania/simulate-success/{order_id}` | `POST` | Dev sandbox: simulates customer USSD PIN approval & credit grant |
-
-### Automated Credit & Key Allocation
-Upon successful USSD PIN approval:
-1. An order record in the payment store transition to `SUCCESS`.
-2. A dedicated LiteLLM virtual key (`sk-wolinet-...`) is generated or topped up.
-3. The dollar equivalent budget is credited to LiteLLM's `LiteLLM_VerificationToken` table in PostgreSQL.
-4. Clients receive instantaneous access to cloud reasoning models while local models stay permanently $0.00.
+Configure billable metrics, customers, subscriptions, and provider billing in Lago. Add and enable model providers in LiteLLM's model catalog; only enabled LiteLLM models are exposed through the gateway and WebUI.
 
 ---
 
@@ -296,7 +273,7 @@ The gateway codebase located in `gateway/` is 100% open source and fully customi
 * **Wolinet AI Studio Web Client**:
   * Located at `apps/web-client/` (served on port `3080` via `make web`).
   * Features: chat interface, real-time model switching, integrated developer portal at `/docs`
-    with Tanzania Mobile Money checkout, API key management, and AI assistant.
+    with API key management and AI assistant.
 
 ---
 
@@ -368,4 +345,3 @@ In cloud deployments, ensure the following environment variables are set in `.en
 * `XINFERENCE_MODEL_DOWNLOAD_WORKERS=4` & `HF_HUB_DOWNLOAD_WORKERS=4`: Parallelized chunk downloads.
 * `XINFERENCE_MEDIA_ALLOW_LOCAL_PATH=true`: Permissive file path loading for local agent tools.
 * `XINFERENCE_MEDIA_BLOCK_PRIVATE_ADDRESS=false`: Enables multimodal fetch from internal network IPs.
-

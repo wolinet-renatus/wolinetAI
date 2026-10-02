@@ -54,6 +54,22 @@ All containers attach exclusively to a single user-defined bridge network (`woli
 No model weights or GGUF files are bundled into container images or manually copied to the server disk.
 * Xinference runs with `xinference_data` volume mounted to `/root/.xinference`.
 * Models are launched dynamically on-demand from **Hugging Face** or **ModelScope** via Xinference's native Model Launch API or Web UI.
+* The gateway model catalog is synchronized from running Xinference chat/generation models. The WebUI reads its available model list from LiteLLM, so a stopped model disappears after the next sync interval.
+
+## Lago usage billing
+
+Set these secrets and values in Dokploy before deploying to send LiteLLM usage events to Lago:
+
+```env
+LAGO_API_BASE=https://api.getlago.com
+LAGO_API_KEY=<your Lago API key>
+LAGO_API_EVENT_CODE=openai_tokens
+LAGO_API_CHARGE_BY=team_id
+```
+
+Create the `openai_tokens` billable metric in Lago, then create customers/subscriptions for the internal teams. Keys sent through LiteLLM must carry the corresponding `team_id`; LiteLLM reports model, response cost, and token counts in each event. Without `LAGO_API_KEY`, billing callbacks stay disabled.
+
+Add model providers and their credentials in LiteLLM's model catalog or `/model/new`. Lago configures billable metrics, customers, and subscriptions; it is not the model-provider registry.
 * Models persist across container restarts in the Docker named volume without host filesystem contamination.
 
 ---

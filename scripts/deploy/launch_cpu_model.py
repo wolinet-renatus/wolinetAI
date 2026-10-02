@@ -36,8 +36,8 @@ def parse_args():
     )
     parser.add_argument(
         "--model-name",
-        default="deepseek-coder-instruct",
-        help="Model name (default: deepseek-coder-instruct)",
+        required=True,
+        help="Model name registered with Xinference",
     )
     parser.add_argument(
         "--size-in-billions",

@@ -17,7 +17,11 @@ if [ -f "${ROOT_DIR}/.env" ]; then
 fi
 
 export LITELLM_BASE_URL="${LITELLM_BASE_URL:-http://127.0.0.1:4000/v1}"
-export LITELLM_API_KEY="${LITELLM_API_KEY:-sk-wolinet-admin-2026}"
+export LITELLM_API_KEY="${LITELLM_API_KEY:-${LITELLM_MASTER_KEY:-${WOLINET_GATEWAY_MASTER_KEY:-}}}"
+if [ -z "${LITELLM_API_KEY}" ]; then
+    echo "[Wolinet CLI] Set LITELLM_API_KEY or LITELLM_MASTER_KEY before connecting to the gateway." >&2
+    exit 1
+fi
 
 if [ ! -x "${BIN_PATH}" ]; then
     echo "[Wolinet CLI] Building binary from vendored source..."

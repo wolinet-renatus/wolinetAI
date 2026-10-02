@@ -18,11 +18,10 @@ log = logging.getLogger("litellm.proxy.wolinet_portal")
 
 
 def get_default_model() -> str:
-    """Return the configured sovereign default model (defaulting to wolinex-coder)."""
+    """Return the configured default model, or an empty value when unset."""
     return (
         os.getenv("DEFAULT_MODEL")
-        or os.getenv("DEFAULT_MODELS", "wolinex-coder").split(",")[0].strip()
-        or "wolinex-coder"
+        or os.getenv("DEFAULT_MODELS", "").split(",")[0].strip()
     )
 
 

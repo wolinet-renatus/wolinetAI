@@ -6,7 +6,7 @@ specification for local frontend development, testing, and CI pipelines without 
 
 Features:
 - OpenAI-compatible /v1/chat/completions (streaming SSE + non-streaming)
-- /v1/models endpoint listing local sovereign models (wolinex-coder, etc.)
+- /v1/models endpoint listing sample enabled models
 - /wolinet/status live health aggregator endpoint
 - Embedded Scalar API Reference pointing to mock endpoints
 - Full CORS support for dashboard and web-client testing
@@ -21,7 +21,7 @@ from urllib.parse import urlparse, parse_qs
 
 MOCK_MODELS = [
     {
-        "id": "wolinex-coder",
+        "id": "sample-chat-model",
         "object": "model",
         "created": int(time.time()),
         "owned_by": "wolinet-ai",
@@ -262,7 +262,7 @@ class MockGatewayHandler(BaseHTTPRequestHandler):
             body = {}
 
         if path in ("/v1/chat/completions", "/chat/completions"):
-            model = body.get("model", "wolinex-coder")
+            model = body.get("model", "sample-chat-model")
             stream = body.get("stream", False)
             messages = body.get("messages", [])
             last_msg = messages[-1].get("content", "") if messages else "Hello"

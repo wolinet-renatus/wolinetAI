@@ -82,7 +82,7 @@ def main():
         "--prompt", "-p", type=str, help="Prompt or task instruction for the agent"
     )
     parser.add_argument(
-        "--model", "-m", type=str, default="wolinex-coder", help="Model name (default: wolinex-coder)"
+        "--model", "-m", type=str, default=os.getenv("WOLINET_MODEL"), help="Enabled model ID; defaults to the first model returned by the gateway"
     )
     parser.add_argument(
         "--endpoint", "-e", type=str,
@@ -97,16 +97,33 @@ def main():
     )
     args = parser.parse_args()
 
-    # Route benchmark
-    if args.test or (args.positional_prompt and args.positional_prompt.lower() == "test"):
-        run_benchmark(endpoint=args.endpoint, model=args.model)
-        return
-
     instruction = args.prompt or args.positional_prompt
+
+    model = args.model
+    if not model:
+        api_key = (
+            os.getenv("LITELLM_MASTER_KEY")
+            or os.getenv("WOLINET_GATEWAY_MASTER_KEY")
+            or "not-needed"
+        )
+        try:
+            available = OpenAI(base_url=args.endpoint, api_key=api_key).models.list().data
+        except Exception as exc:
+            console.print(f"[bold red]Could not load enabled models from the gateway:[/bold red] {exc}")
+            raise SystemExit(1)
+        if not available:
+            console.print("[bold red]The gateway has no enabled models. Start a model in Xinference or enable a provider in LiteLLM.[/bold red]")
+            raise SystemExit(1)
+        model = available[0].id
+        console.print(f"[dim]Using enabled gateway model: {model}[/dim]")
+
+    if args.test or (args.positional_prompt and args.positional_prompt.lower() == "test"):
+        run_benchmark(endpoint=args.endpoint, model=model)
+        return
 
     agent = AgenticCoder(
         base_url=args.endpoint,
-        model=args.model,
+        model=model,
         workspace_root=args.workspace,
     )
 
@@ -117,7 +134,7 @@ def main():
 
     console.print(Panel.fit(
         "🤖 [bold green]Wolinet Agentic Coder[/bold green] - Interactive Terminal\n"
-        f"[dim]Endpoint:[/dim] [cyan]{args.endpoint}[/cyan] | [dim]Model:[/dim] [green]{args.model}[/green]\n"
+        f"[dim]Endpoint:[/dim] [cyan]{args.endpoint}[/cyan] | [dim]Model:[/dim] [green]{model}[/green]\n"
         "[dim]Type your coding goal, or 'exit' / 'quit' to close.[/dim]",
         border_style="cyan"
     ))
@@ -131,7 +148,7 @@ def main():
                 console.print("[dim]Goodbye![/dim]")
                 break
             if instruction.lower() == "test":
-                run_benchmark(endpoint=args.endpoint, model=args.model)
+                run_benchmark(endpoint=args.endpoint, model=model)
                 continue
 
             result = agent.run(instruction)

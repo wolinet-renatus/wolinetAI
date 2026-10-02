@@ -25,7 +25,7 @@ class AgenticCoder:
         self,
         base_url: str = "http://localhost:4000/v1",
         api_key: str | None = None,
-        model: str = "wolinex-coder",
+        model: str | None = None,
         workspace_root: str = ".",
         max_iterations: int = 15,
     ):
@@ -41,6 +41,8 @@ class AgenticCoder:
         resolved_url = base_url or os.getenv("LITELLM_BASE_URL") or "http://localhost:4000/v1"
         self.client = OpenAI(base_url=resolved_url, api_key=resolved_key)
         self.base_url = resolved_url
+        if not model:
+            raise ValueError("model must be an enabled LiteLLM model ID")
         self.model = model
         self.workspace_root = os.path.abspath(workspace_root)
         self.max_iterations = max_iterations

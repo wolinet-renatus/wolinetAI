@@ -40,7 +40,6 @@ chmod -R a+rX "${ROOT_DIR}/inference/frontend/out" 2>/dev/null || true
 chmod -R a+rX "${ROOT_DIR}/apps/dev-portal" 2>/dev/null || true
 chmod +x "${ROOT_DIR}/inference/start-mitambo.sh" 2>/dev/null || true
 chmod +x "${ROOT_DIR}/gateway/start-gateway.sh" 2>/dev/null || true
-chmod +x "${ROOT_DIR}/scripts/models/launch-wolinet-coder.sh" 2>/dev/null || true
 
 echo "==> [wolinet] Verified $(find "${ROOT_DIR}/inference/xinference/ui/web/dist" -type f | wc -l) files in xinference UI dist"
 echo "==> [wolinet] Verified $(find "${ROOT_DIR}/website" -type f | wc -l) files in website dist"
@@ -52,16 +51,6 @@ if [ -f "docker-compose.prod.yml" ] && [ "${1:-}" = "prod" ]; then
 fi
 docker compose -f "${COMPOSE_FILE}" up -d --build --remove-orphans
 
-echo "==> [wolinet] 6/6 Purging stale models from Open WebUI database..."
-sleep 5
-PG_CONTAINER=$(docker ps -q -f name=postgres | head -n 1 || true)
-if [ -n "${PG_CONTAINER}" ]; then
-  for db in webui wolinex; do
-    docker exec "${PG_CONTAINER}" psql -U postgres -d "${db}" -c "DELETE FROM model WHERE id NOT IN ('wolinet-coder');" 2>/dev/null || true
-  done
-  echo "==> [wolinet] Stale models purged from Open WebUI database."
-fi
-
 # Force reload lango and wolinex containers to pick up updated config and models
 for svc in lango wolinex; do
   C_ID=$(docker ps -q -f name="${svc}" | head -n 1 || true)
@@ -71,8 +60,4 @@ for svc in lango wolinex; do
   fi
 done
 
-echo "==> [wolinet] 7/7 Verifying Wolinet Coder (deepseek-coder-instruct) is active and running..."
-bash "${ROOT_DIR}/scripts/models/launch-wolinet-coder.sh" || true
-
-echo "==> [wolinet] Deployment complete! Stack is up, authenticated, model is running."
-
+echo "==> [wolinet] Deployment complete! The model-sync service will publish running Xinference models to LiteLLM."
