@@ -901,13 +901,20 @@ def _build_portal_html(title: str, openapi_url: str, scalar_js_url: str, favicon
 
   function renderQS(){{
     var o=window.location.origin,k=S.key||'YOUR_API_KEY',m=S.model;
-    document.getElementById('ov-curl').textContent=
-      'curl '+o+'/v1/chat/completions \\\n'+
-      '  -H "Authorization: Bearer '+k+'" \\\n'+
-      '  -H "Content-Type: application/json" \\\n'+
-      '  -d \'{{"model":"'+m+'","stream":true,"messages":[{{"role":"user","content":"Hello Wolinet AI"}}]}}\'\'';
-    document.getElementById('ov-python').textContent=
-      'import openai\nclient = openai.OpenAI(\n    api_key="'+k+'",\n    base_url="'+o+'/v1"\n)\nresp = client.chat.completions.create(\n    model="'+m+'",\n    messages=[{{"role":"user","content":"Hello Wolinet AI"}}]\n)\nprint(resp.choices[0].message.content)';
+    var body=JSON.stringify({{model:m,stream:true,messages:[{{role:'user',content:'Hello Wolinet AI'}}]}});
+    document.getElementById('ov-curl').textContent='curl '+o+'/v1/chat/completions -H "Authorization: Bearer '+k+'" -H "Content-Type: application/json" -d '+JSON.stringify(body);
+    document.getElementById('ov-python').textContent=[
+      'import openai',
+      'client = openai.OpenAI(',
+      '    api_key="'+k+'",',
+      '    base_url="'+o+'/v1"',
+      ')',
+      'resp = client.chat.completions.create(',
+      '    model="'+m+'",',
+      '    messages=[{{"role":"user","content":"Hello Wolinet AI"}}]',
+      ')',
+      'print(resp.choices[0].message.content)'
+    ].join(String.fromCharCode(10));
   }}
 
   var scalarMounted=false;
@@ -1075,11 +1082,14 @@ def _build_portal_html(title: str, openapi_url: str, scalar_js_url: str, favicon
 
   window.qp=function(topic){{
     var o=window.location.origin,k=S.key||'YOUR_API_KEY',m=S.model;
+    var chatBody=JSON.stringify(JSON.stringify({{model:m,stream:true,messages:[{{role:'user',content:'Hello'}}]}}));
+    var guardrailBody=JSON.stringify(JSON.stringify({{guardrail_name:'default',text:'Validate this'}}));
+    var nl=String.fromCharCode(10);
     var prompts={{
-      'chat':{{u:'Show me POST /v1/chat/completions',a:'<div><b>POST /v1/chat/completions</b> &mdash; OpenAI-compatible streaming completions.<br><br><b>cURL:</b><pre>curl '+o+'/v1/chat/completions \\\n  -H "Authorization: Bearer '+k+'" \\\n  -d \'{{"model":"'+m+'","stream":true,"messages":[{{"role":"user","content":"Hello"}}]}}\'</pre></div>'}},
-      'python':{{u:'How do I use the Python SDK?',a:'<div><b>Python SDK (OpenAI drop-in):</b><pre>import openai\nclient = openai.OpenAI(api_key="'+k+'", base_url="'+o+'/v1")\nresp = client.chat.completions.create(model="'+m+'", messages=[{{"role":"user","content":"Hello"}}])\nprint(resp.choices[0].message.content)</pre></div>'}},
-      'auth':{{u:'How does API authentication work?',a:S.authed?'<div><b>API Key Auth:</b><br>Send <code>Authorization: Bearer '+k+'</code> on every request. Your key is pre-filled in the API Reference test forms.</div>':'<div><b>API Key Auth:</b><br>All endpoints require <code>Authorization: Bearer &lt;key&gt;</code>.<br><br><button class="btn btn-primary btn-sm" onclick="openAuth(\'signin\')" style="margin-top:8px;">Sign In / Register</button></div>'}},
-      'guardrails':{{u:'How do I apply guardrails?',a:'<div><b>POST /guardrails/apply_guardrail</b><br>Validates text against sovereign safety policies.<br><br><pre>curl '+o+'/guardrails/apply_guardrail \\\n  -H "Authorization: Bearer '+k+'" \\\n  -d \'{{"guardrail_name":"default","text":"Validate this"}}\'</pre></div>'}},
+      'chat':{{u:'Show me POST /v1/chat/completions',a:'<div><b>POST /v1/chat/completions</b> &mdash; OpenAI-compatible streaming completions.<br><br><b>cURL:</b><pre>curl '+o+'/v1/chat/completions -H "Authorization: Bearer '+k+'" -H "Content-Type: application/json" -d '+chatBody+'</pre></div>'}},
+      'python':{{u:'How do I use the Python SDK?',a:'<div><b>Python SDK (OpenAI drop-in):</b><pre>'+['import openai','client = openai.OpenAI(api_key="'+k+'", base_url="'+o+'/v1")','resp = client.chat.completions.create(model="'+m+'", messages=[{{"role":"user","content":"Hello"}}])','print(resp.choices[0].message.content)'].join(nl)+'</pre></div>'}},
+      'auth':{{u:'How does API authentication work?',a:S.authed?'<div><b>API Key Auth:</b><br>Send <code>Authorization: Bearer '+k+'</code> on every request. Your key is pre-filled in the API Reference test forms.</div>':'<div><b>API Key Auth:</b><br>All endpoints require <code>Authorization: Bearer &lt;key&gt;</code>.<br><br><button class="btn btn-primary btn-sm" onclick="openAuth(&quot;signin&quot;)" style="margin-top:8px;">Sign In / Register</button></div>'}},
+      'guardrails':{{u:'How do I apply guardrails?',a:'<div><b>POST /guardrails/apply_guardrail</b><br>Validates text against sovereign safety policies.<br><br><pre>curl '+o+'/guardrails/apply_guardrail -H "Authorization: Bearer '+k+'" -H "Content-Type: application/json" -d '+guardrailBody+'</pre></div>'}},
       'status':{{u:'What does GET /wolinet/status return?',a:'<div><b>GET /wolinet/status</b><br>Real-time cluster health, models loaded, GPU allocations, and gateway spend.<br><br><pre>curl '+o+'/wolinet/status</pre></div>'}},
     }};
     var p=prompts[topic];if(!p)return;
@@ -1098,7 +1108,7 @@ def _build_portal_html(title: str, openapi_url: str, scalar_js_url: str, favicon
     c.appendChild(td);c.scrollTop=c.scrollHeight;
 
     var o=window.location.origin;
-    var sys='You are Wolinet AI Sovereign Assistant \u2014 expert developer guide for the Wolinet AI platform.\nBase URL: '+o+'\nUser: '+(S.authed?(S.user&&S.user.name||'Developer')+' ('+((S.user&&S.user.email)||'')+')':'Guest')+'\nDefault model: '+S.model+'\nKey endpoints: POST /v1/chat/completions, POST /v1/embeddings, POST /guardrails/apply_guardrail, GET /v1/models, GET /wolinet/status\nBe concise, authoritative, and provide production-ready code examples. Use fenced code blocks.';
+    var sys=['You are Wolinet AI Sovereign Assistant \u2014 expert developer guide for the Wolinet AI platform.','Base URL: '+o,'User: '+(S.authed?(S.user&&S.user.name||'Developer')+' ('+((S.user&&S.user.email)||'')+')':'Guest'),'Default model: '+S.model,'Key endpoints: POST /v1/chat/completions, POST /v1/embeddings, POST /guardrails/apply_guardrail, GET /v1/models, GET /wolinet/status','Be concise, authoritative, and provide production-ready code examples. Use fenced code blocks.'].join(String.fromCharCode(10));
 
     S.hist.push({{role:'user',content:q}});
     if(S.hist.length>8)S.hist=S.hist.slice(-8);
@@ -1121,7 +1131,7 @@ def _build_portal_html(title: str, openapi_url: str, scalar_js_url: str, favicon
           .replace(/\\n\\n/g,'<br><br>').replace(/\\n/g,'<br>');
         var eps=reply.match(/(POST|GET|DELETE|PUT)\\s+(\\/[a-zA-Z0-9_\\-\\.\\/:]+)/g);
         var btns='';
-        if(eps){{var uniq=[...new Set(eps)].slice(0,3);btns='<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">'+uniq.map(function(ep){{var pts=ep.split(/\\s+/);return '<a class="ep-btn" onclick="navTo(\'reference\',document.querySelector(\'[onclick*=reference]\'));window.location.hash=\'#'+pts[0]+pts[1]+'\'">'+ep+' &rarr;</a>';}}).join('')+'</div>';}}
+        if(eps){{var uniq=[...new Set(eps)].slice(0,3);btns='<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">'+uniq.map(function(ep){{var pts=ep.split(/\\s+/);return '<a class="ep-btn" data-method="'+pts[0]+'" data-path="'+pts[1]+'">'+ep+' &rarr;</a>';}}).join('')+'</div>';}}
         asstMsg('assistant','<div>'+fmt+btns+'</div>');
       }}else{{
         var err=await r.json().catch(function(){{return {{}};}});
@@ -1135,6 +1145,8 @@ def _build_portal_html(title: str, openapi_url: str, scalar_js_url: str, favicon
   }};
 
   document.addEventListener('click',function(e){{
+    var endpoint=e.target.closest('a.ep-btn');
+    if(endpoint){{e.preventDefault();navTo('reference');window.location.hash='#'+endpoint.dataset.method+endpoint.dataset.path;return;}}
     var t=e.target.closest('button,[role="button"]');if(!t)return;
     var txt=(t.textContent||'').toLowerCase();
     if((txt.includes('send request')||txt.includes('test request'))&&!S.authed){{e.preventDefault();e.stopPropagation();openAuth('signin');}}
