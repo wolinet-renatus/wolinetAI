@@ -3058,6 +3058,13 @@ async def get_system_oauth_token(request, user):
 
 
 async def background_tasks_handler(ctx):
+    # Failed upstream requests may still reach this handler without a model
+    # in their context. Background title/tag/follow-up generation must not turn
+    # that primary routing error into a secondary KeyError.
+    if not ctx.get('model') and not ctx.get('form_data', {}).get('model'):
+        log.debug('Skipping background tasks because the request has no resolved model')
+        return
+
     request = ctx['request']
     form_data = ctx['form_data']
     user = ctx['user']
