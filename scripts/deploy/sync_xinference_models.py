@@ -16,7 +16,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger("xinference-model-sync")
 
 MANAGED_SOURCE = "xinference"
-DEFAULT_PUBLIC_MODEL = "Wolinet Coder"
+DEFAULT_PUBLIC_MODEL = "Wolinet Pro"
+CODER_PUBLIC_MODEL = "Wolinet Coder"
 EXCLUDED_MODELS = frozenset(
     {
         "tiny-llama",
@@ -35,8 +36,6 @@ LEGACY_MODEL_NAMES = frozenset(
         "wolinex-coder-pro",
         "wolinex-coder-lite",
         "wolinex-omni",
-        "Wolinet Coder",
-        "wolinet coder",
     }
 )
 
@@ -263,31 +262,58 @@ def sync_once() -> None:
                       inference_key, managed.get(model_id))
         log.info("Synced running Xinference model in LiteLLM: %s", model_id)
 
-    # Keep the public default name stable while the actual inference UID stays
-    # dynamic. An explicit UID can select a preferred active model; otherwise
-    # prioritize deepseek/coder/qwen models over fallbacks.
-    preferred_uid = os.environ.get("XINFERENCE_DEFAULT_MODEL_UID", "").strip()
+    # Keep the public names stable while the actual inference UIDs stay dynamic.
+    # 1. Wolinet Pro (Flagship general chat): prioritizes qwen, llama, pro, chat
+    # 2. Wolinet Coder (Developer specialist): prioritizes deepseek, coder
+    preferred_pro_uid = (
+        os.environ.get("XINFERENCE_PRO_MODEL_UID", "").strip()
+        or os.environ.get("XINFERENCE_DEFAULT_MODEL_UID", "").strip()
+    )
+    preferred_coder_uid = os.environ.get("XINFERENCE_CODER_MODEL_UID", "").strip()
+
     active_valid = [k for k in active if not any(exc in k.lower() for exc in ("tiny-llama", "tinyllama", "tiny_llama"))]
-    coder_candidates = [k for k in active_valid if any(pref in k.lower() for pref in ("deepseek", "coder", "qwen"))]
-    if preferred_uid and preferred_uid in active:
-        default_uid = preferred_uid
-    elif coder_candidates:
-        default_uid = sorted(coder_candidates)[0]
+
+    # Select backend for Wolinet Pro
+    pro_candidates = [k for k in active_valid if any(pref in k.lower() for pref in ("qwen", "llama", "pro", "chat"))]
+    if preferred_pro_uid and preferred_pro_uid in active:
+        pro_uid = preferred_pro_uid
+    elif pro_candidates:
+        pro_uid = sorted(pro_candidates)[0]
     elif active_valid:
-        default_uid = sorted(active_valid)[0]
+        pro_uid = sorted(active_valid)[0]
     else:
-        default_uid = None
+        pro_uid = None
 
-    default_entry = managed.get(DEFAULT_PUBLIC_MODEL)
-    if default_uid:
-        _upsert_model(gateway_url, gateway_key, DEFAULT_PUBLIC_MODEL, default_uid,
+    # Select backend for Wolinet Coder
+    coder_candidates = [k for k in active_valid if any(pref in k.lower() for pref in ("deepseek", "coder"))]
+    if preferred_coder_uid and preferred_coder_uid in active:
+        coder_uid = preferred_coder_uid
+    elif coder_candidates:
+        coder_uid = sorted(coder_candidates)[0]
+    elif active_valid:
+        coder_uid = sorted(active_valid)[0]
+    else:
+        coder_uid = None
+
+    if pro_uid:
+        default_entry = managed.get(DEFAULT_PUBLIC_MODEL)
+        _upsert_model(gateway_url, gateway_key, DEFAULT_PUBLIC_MODEL, pro_uid,
                       inference_api_base, inference_key, default_entry)
-        log.info("Public model %s routes to active Xinference model %s", DEFAULT_PUBLIC_MODEL, default_uid)
+        log.info("Public model %s routes to active Xinference model %s", DEFAULT_PUBLIC_MODEL, pro_uid)
 
+    if coder_uid:
+        coder_entry = managed.get(CODER_PUBLIC_MODEL)
+        _upsert_model(gateway_url, gateway_key, CODER_PUBLIC_MODEL, coder_uid,
+                      inference_api_base, inference_key, coder_entry)
+        log.info("Public model %s routes to active Xinference model %s", CODER_PUBLIC_MODEL, coder_uid)
+
+    public_models = {DEFAULT_PUBLIC_MODEL, CODER_PUBLIC_MODEL}
     for model_id, entry in managed.items():
-        if model_id == DEFAULT_PUBLIC_MODEL and default_uid:
+        if model_id == DEFAULT_PUBLIC_MODEL and pro_uid:
             continue
-        if model_id != DEFAULT_PUBLIC_MODEL and model_id in active and model_id not in EXCLUDED_MODELS:
+        if model_id == CODER_PUBLIC_MODEL and coder_uid:
+            continue
+        if model_id not in public_models and model_id in active and model_id not in EXCLUDED_MODELS:
             continue
         model_info = _model_info(entry)
         entry_id = model_info.get("id")

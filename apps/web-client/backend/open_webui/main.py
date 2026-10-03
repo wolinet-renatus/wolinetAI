@@ -606,7 +606,8 @@ RETIRED_LOCAL_MODEL_IDS = frozenset(
         'wolinex-coder-lite',
         'wolinex-omni',
         'wolinet-coder',
-        'wolinet coder',
+        'tiny-llama',
+        'tinyllama',
     }
 )
 PUBLIC_MODEL_UNAVAILABLE_MESSAGE = 'Sorry, our AI service is temporarily unavailable. Please try again later.'
@@ -1826,6 +1827,14 @@ async def chat_completion(
                         detail=PUBLIC_MODEL_UNAVAILABLE_MESSAGE,
                     )
                 fallback_model = next(
+                    (
+                        available_model
+                        for available_model in request.app.state.MODELS.values()
+                        if str(available_model.get('id', '')).casefold() == 'wolinet pro'
+                        or str(available_model.get('name', '')).casefold() == 'wolinet pro'
+                    ),
+                    None,
+                ) or next(
                     (
                         available_model
                         for available_model in request.app.state.MODELS.values()

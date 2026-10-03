@@ -204,7 +204,7 @@ services:
       OLLAMA_BASE_URL: ""
       OLLAMA_BASE_URLS: ""
       ENABLE_OPENAI_API: "True"
-      DEFAULT_MODELS: ${DEFAULT_MODELS:-Wolinet Coder}
+      DEFAULT_MODELS: ${DEFAULT_MODELS:-Wolinet Pro}
       BYPASS_MODEL_ACCESS_CONTROL: "True"
       RAG_EMBEDDING_ENGINE: openai
       RAG_OPENAI_API_BASE_URL: http://lango:4000/v1
