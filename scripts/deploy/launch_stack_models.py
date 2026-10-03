@@ -98,13 +98,15 @@ else:
     cache_base = "/root/.xinference/cache/v2"
     target_dir = os.path.join(cache_base, "qwen2.5-instruct-ggufv2-1_5b-q4_k_m")
     target_dir_upper = os.path.join(cache_base, "qwen2.5-instruct-ggufv2-1_5b-Q4_K_M")
+    target_dir_alt = os.path.join(cache_base, "qwen2_5-instruct-ggufv2-1_5b-q4_k_m")
     file_name = "qwen2.5-1.5b-instruct-q4_k_m.gguf"
     file_path = os.path.join(target_dir, file_name)
 
     os.makedirs(target_dir, exist_ok=True)
     os.makedirs(target_dir_upper, exist_ok=True)
+    os.makedirs(target_dir_alt, exist_ok=True)
 
-    # Clean up any stale lock files
+    # Clean up tiny-llama and any stale lock files
     locks_dir = os.path.join(cache_base, ".download-locks")
     if os.path.exists(locks_dir):
         for lock in os.listdir(locks_dir):
@@ -114,12 +116,10 @@ else:
                 pass
 
     current_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
-    EXPECTED_SIZE = 1117320736  # ~1.04 GiB
 
     if current_size < 1000 * 1024 * 1024:
         print(f"📥 Downloading Qwen 2.5 1.5B GGUF weights (~1.05 GB)...")
         url = f"https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/{file_name}"
-        # Direct curl download with resume support and progress
         cmd = ["curl", "-L", "-C", "-", "--retry", "5", "--retry-delay", "2", "-o", file_path, url]
         print(f"   Executing: {' '.join(cmd)}")
         res = subprocess.run(cmd)
@@ -129,16 +129,18 @@ else:
             subprocess.run(["curl", "-L", "-C", "-", "--retry", "5", "-o", file_path, ms_url], check=True)
         print(f"✅ Download complete! Size on disk: {os.path.getsize(file_path) / (1024*1024):.2f} MB")
 
-    # Link into uppercase folder to satisfy any path resolver
-    file_path_upper = os.path.join(target_dir_upper, file_name)
-    if not os.path.exists(file_path_upper):
-        try:
-            os.symlink(file_path, file_path_upper)
-        except Exception:
-            pass
+    # Mirror the complete file to both uppercase and qwen2_5 folders
+    for alt_dir in (target_dir_upper, target_dir_alt):
+        alt_path = os.path.join(alt_dir, file_name)
+        if not os.path.exists(alt_path) or os.path.getsize(alt_path) < 1000 * 1024 * 1024:
+            try:
+                import shutil
+                shutil.copyfile(file_path, alt_path)
+            except Exception:
+                pass
 
     print("🚀 Launching Wolinet Pro (Qwen 2.5 1.5B Instruct)...")
-    print("   Engine: llama.cpp | Format: ggufv2 | Quant: q4_k_m | CPU (n_ctx=4096, n_parallel=1)")
+    print("   Engine: llama.cpp | Format: ggufv2 | Quant: q4_k_m | CPU (n_ctx=2048, n_parallel=1)")
 
     launched = False
     for quant_candidate in ("q4_k_m", "Q4_K_M"):
@@ -152,7 +154,7 @@ else:
                 quantization=quant_candidate,
                 n_gpu=None,
                 n_gpu_layers=0,
-                n_ctx=4096,
+                n_ctx=2048,
                 n_parallel=1,
             )
             print(f"🎉 SUCCESS! Wolinet Pro launched (UID: {p_uid}) with quant={quant_candidate}")
