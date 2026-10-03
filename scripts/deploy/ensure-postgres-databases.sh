@@ -19,6 +19,7 @@ DO $$
 BEGIN
   IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'model') THEN
     DELETE FROM model WHERE id = 'wolinet-coder';
+    DELETE FROM model WHERE LOWER(id) LIKE '%tiny-llama%' OR LOWER(id) LIKE '%tinyllama%';
   END IF;
 
   IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'alembic_version') THEN

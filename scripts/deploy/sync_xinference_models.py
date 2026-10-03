@@ -17,6 +17,14 @@ log = logging.getLogger("xinference-model-sync")
 
 MANAGED_SOURCE = "xinference"
 DEFAULT_PUBLIC_MODEL = "Wolinet Coder"
+EXCLUDED_MODELS = frozenset(
+    {
+        "tiny-llama",
+        "openai/tiny-llama",
+        "tinyllama",
+        "tiny_llama",
+    }
+)
 LEGACY_MODEL_NAMES = frozenset(
     {
         "wolinet-coder",
@@ -53,6 +61,8 @@ def active_chat_models(payload: Any) -> dict[str, dict[str, Any]]:
             abilities = [abilities]
         if (
             model_id
+            and str(model_id).lower() not in EXCLUDED_MODELS
+            and not any(exc in str(model_id).lower() for exc in ("tiny-llama", "tinyllama", "tiny_llama"))
             and model_type == "llm"
             and any(ability in {"chat", "generate"} for ability in abilities if isinstance(ability, str))
         ):
@@ -255,9 +265,19 @@ def sync_once() -> None:
 
     # Keep the public default name stable while the actual inference UID stays
     # dynamic. An explicit UID can select a preferred active model; otherwise
-    # choose the first active UID deterministically.
+    # prioritize deepseek/coder/qwen models over fallbacks.
     preferred_uid = os.environ.get("XINFERENCE_DEFAULT_MODEL_UID", "").strip()
-    default_uid = preferred_uid if preferred_uid in active else (sorted(active)[0] if active else None)
+    active_valid = [k for k in active if not any(exc in k.lower() for exc in ("tiny-llama", "tinyllama", "tiny_llama"))]
+    coder_candidates = [k for k in active_valid if any(pref in k.lower() for pref in ("deepseek", "coder", "qwen"))]
+    if preferred_uid and preferred_uid in active:
+        default_uid = preferred_uid
+    elif coder_candidates:
+        default_uid = sorted(coder_candidates)[0]
+    elif active_valid:
+        default_uid = sorted(active_valid)[0]
+    else:
+        default_uid = None
+
     default_entry = managed.get(DEFAULT_PUBLIC_MODEL)
     if default_uid:
         _upsert_model(gateway_url, gateway_key, DEFAULT_PUBLIC_MODEL, default_uid,
@@ -267,7 +287,7 @@ def sync_once() -> None:
     for model_id, entry in managed.items():
         if model_id == DEFAULT_PUBLIC_MODEL and default_uid:
             continue
-        if model_id != DEFAULT_PUBLIC_MODEL and model_id in active:
+        if model_id != DEFAULT_PUBLIC_MODEL and model_id in active and model_id not in EXCLUDED_MODELS:
             continue
         model_info = _model_info(entry)
         entry_id = model_info.get("id")
@@ -280,7 +300,24 @@ def sync_once() -> None:
             "POST",
             {"id": str(entry_id)},
         )
-        log.info("Removed stopped Xinference model from LiteLLM: %s", model_id)
+        log.info("Removed stopped or excluded Xinference model from LiteLLM: %s", model_id)
+
+    # Force purge any model in LiteLLM matching excluded names (tiny-llama)
+    for entry in current:
+        m_name = str(entry.get("model_name", ""))
+        if any(exc in m_name.lower() for exc in ("tiny-llama", "tinyllama", "tiny_llama")):
+            entry_id = _model_info(entry).get("id")
+            if entry_id:
+                try:
+                    _request_json(
+                        f"{gateway_url.rstrip('/')}/model/delete",
+                        gateway_key,
+                        "POST",
+                        {"id": str(entry_id)},
+                    )
+                    log.info("Purged excluded model from LiteLLM: %s (id: %s)", m_name, entry_id)
+                except Exception as exc:
+                    log.warning("Failed to purge %s from LiteLLM: %s", m_name, exc)
 
 
 def main() -> None:
