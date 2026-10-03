@@ -273,7 +273,7 @@ for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/model_prices_
             'mode': 'chat',
             'supports_reasoning': False,
         }
-        for m in ('tiny-llama', 'openai/tiny-llama', 'qwen2.5', 'openai/qwen2.5'):
+        for m in ('deepseek-coder', 'openai/deepseek-coder', 'deepseek-coder-instruct', 'openai/deepseek-coder-instruct', 'qwen2.5', 'openai/qwen2.5', 'Wolinet Coder', 'openai/Wolinet Coder'):
             spec = dict(default_spec)
             spec['key'] = m
             data[m] = spec
