@@ -146,13 +146,13 @@ try:
     client.login(admin_user, admin_pass)
 
     try:
-        token = client._get_token()
         if token:
-            hashed_ep = hashlib.sha256(endpoint.encode('utf-8')).hexdigest()
             auth_dir = '/root/.xinference/auth'
             os.makedirs(auth_dir, exist_ok=True)
-            with open(os.path.join(auth_dir, hashed_ep), 'w') as f:
-                f.write(token)
+            for ep_variant in (endpoint, 'http://127.0.0.1:9997', 'http://127.0.0.1:9997/', 'http://localhost:9997', 'http://localhost:9997/', 'http://0.0.0.0:9997', 'http://0.0.0.0:9997/'):
+                h = hashlib.sha256(ep_variant.encode('utf-8')).hexdigest()
+                with open(os.path.join(auth_dir, h), 'w') as f:
+                    f.write(token)
     except Exception:
         pass
 
