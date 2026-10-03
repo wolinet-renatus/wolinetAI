@@ -26,6 +26,23 @@ class ModelSyncEndpointTests(unittest.TestCase):
             with self.assertRaises(s.XinferenceUnavailableError):
                 s._fetch_active_models_from_urls("test-key")
 
+    def test_upsert_model_payload_includes_key_and_reasoning_spec(self) -> None:
+        captured = {}
+        def fake_request(url: str, key: str, method: str, payload: dict) -> dict:
+            captured["url"] = url
+            captured["payload"] = payload
+            return {"status": "ok"}
+
+        with patch.object(s, "_request_json", side_effect=fake_request):
+            s._upsert_model("http://lango:4000", "test-master", "tiny-llama", "tiny-llama",
+                            "http://mitambo:9997/v1", "test-inf-key", None)
+
+        self.assertIn("payload", captured)
+        model_info = captured["payload"].get("model_info", {})
+        self.assertEqual(model_info.get("key"), "tiny-llama")
+        self.assertIs(model_info.get("supports_reasoning"), False)
+        self.assertEqual(captured["payload"]["litellm_params"]["model"], "openai/tiny-llama")
+
 
 if __name__ == "__main__":
     unittest.main()

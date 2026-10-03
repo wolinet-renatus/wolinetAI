@@ -9655,7 +9655,10 @@ class Router:
         # initialize client
         self._add_deployment(deployment=deployment)
 
-        Router._register_deployment_pricing(deployment=deployment)
+        try:
+            Router._register_deployment_pricing(deployment=deployment)
+        except Exception as pricing_err:
+            verbose_router_logger.warning("Error registering deployment pricing for %s: %s", deployment.model_name, pricing_err)
 
         # add to model names
         self._add_model_to_list_and_index_map(model=_deployment, model_id=deployment.model_info.id)

@@ -187,9 +187,11 @@ def _upsert_model(gateway_url: str, gateway_key: str, model_name: str, model_uid
             and existing_info.get("provider") == "Wolinet AI"
             and existing_info.get("litellm_provider") == "openai"
             and existing_params.get("max_tokens") == 4096
+            and existing_info.get("key") == model_name
         ):
             return
     model_info = {
+        "key": model_name,
         "mode": "chat",
         "provider": "Wolinet AI",
         "litellm_provider": "openai",
@@ -200,6 +202,7 @@ def _upsert_model(gateway_url: str, gateway_key: str, model_name: str, model_uid
         "output_cost_per_token": 0.0,
         "base_model": "gpt-3.5-turbo",
         "litellm_model_name": model_name,
+        "supports_reasoning": False,
         "metadata": {
             "wolinet_sync_source": MANAGED_SOURCE,
             "xinference_model_uid": model_uid,

@@ -301,6 +301,12 @@ services:
           - website
           - wolinet-website
     expose: ["80", "8080"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.website.rule=Host(`ai.wolinet.com`)"
+      - "traefik.http.routers.website.entrypoints=web,websecure"
+      - "traefik.http.routers.website.tls=true"
+      - "traefik.http.services.website.loadbalancer.server.port=80"
     volumes:
       - ./website:/usr/share/nginx/html:ro
       - ./website/nginx.conf:/etc/nginx/conf.d/default.conf:ro
@@ -310,6 +316,12 @@ services:
       timeout: 5s
       retries: 5
     deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.website.rule=Host(`ai.wolinet.com`)"
+        - "traefik.http.routers.website.entrypoints=web,websecure"
+        - "traefik.http.routers.website.tls=true"
+        - "traefik.http.services.website.loadbalancer.server.port=80"
       restart_policy:
         condition: any
         delay: 5s
