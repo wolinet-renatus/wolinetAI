@@ -132,21 +132,35 @@ jobs:
 
   deploy:
     needs: build
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production') && github.event_name == 'push' && secrets.CONTABO_SSH_KEY != ''
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production') && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment:
       name: production
       url: https://ai.wolinet.com
     steps:
       - uses: actions/checkout@v4
+      - name: Check Contabo deployment configuration
+        id: check_creds
+        env:
+          CONTABO_SSH_KEY: ${{ secrets.CONTABO_SSH_KEY }}
+        run: |
+          if [ -z "$CONTABO_SSH_KEY" ]; then
+            echo "CONTABO_SSH_KEY is not configured; skipping direct SSH deployment (Dokploy pulls pre-built GHCR images)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: webfactory/ssh-agent@v0.9.0
+        if: steps.check_creds.outputs.skip != 'true'
         with:
           ssh-private-key: ${{ secrets.CONTABO_SSH_KEY }}
       - name: Add server host key
+        if: steps.check_creds.outputs.skip != 'true'
         env:
           CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
         run: ssh-keyscan -H "$CONTABO_HOST" >> "$HOME/.ssh/known_hosts"
       - name: Reclaim server disk space and prune docker caches
+        if: steps.check_creds.outputs.skip != 'true'
         env:
           CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
           CONTABO_USER: ${{ secrets.CONTABO_USER }}
@@ -163,6 +177,7 @@ jobs:
             df -h /
           "
       - name: Copy runtime configuration
+        if: steps.check_creds.outputs.skip != 'true'
         env:
           CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
           CONTABO_USER: ${{ secrets.CONTABO_USER }}
@@ -187,6 +202,7 @@ jobs:
             ./scripts/db/migrations \
             "${CONTABO_USER}@${CONTABO_HOST}:/opt/wolinetai/"
       - name: Authenticate registry and roll out release
+        if: steps.check_creds.outputs.skip != 'true'
         env:
           CONTABO_HOST: ${{ secrets.CONTABO_HOST }}
           CONTABO_USER: ${{ secrets.CONTABO_USER }}
@@ -198,6 +214,7 @@ jobs:
           ssh "${CONTABO_USER}@${CONTABO_HOST}" \
             "cd /opt/wolinetai && chmod +x scripts/deploy_production.sh && ./scripts/deploy_production.sh sha-${GITHUB_SHA}"
       - name: Verify public services
+        if: steps.check_creds.outputs.skip != 'true'
         run: |
           for url in \
             https://ai.wolinet.com/healthz \
