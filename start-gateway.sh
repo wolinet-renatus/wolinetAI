@@ -273,7 +273,16 @@ for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/model_prices_
             'mode': 'chat',
             'supports_reasoning': False,
         }
-        for m in ('deepseek-coder', 'openai/deepseek-coder', 'deepseek-coder-instruct', 'openai/deepseek-coder-instruct', 'qwen2.5', 'openai/qwen2.5', 'Wolinet Coder', 'openai/Wolinet Coder'):
+        for m in (
+            'deepseek-coder', 'openai/deepseek-coder',
+            'deepseek-coder-instruct', 'openai/deepseek-coder-instruct',
+            'qwen2.5', 'openai/qwen2.5',
+            'qwen2.5-instruct', 'openai/qwen2.5-instruct',
+            'wolinet-pro', 'openai/wolinet-pro',
+            'Wolinet Pro', 'openai/Wolinet Pro',
+            'wolinet-coder', 'openai/wolinet-coder',
+            'Wolinet Coder', 'openai/Wolinet Coder'
+        ):
             spec = dict(default_spec)
             spec['key'] = m
             data[m] = spec
@@ -405,7 +414,8 @@ fallback_models = [name.strip() for name in os.getenv("WOLINET_FALLBACK_MODELS",
 if fallback_models:
     router = config.setdefault("router_settings", {})
     fallbacks = router.setdefault("fallbacks", [])
-    fallbacks = [item for item in fallbacks if not (isinstance(item, dict) and "Wolinet Coder" in item)]
+    fallbacks = [item for item in fallbacks if not (isinstance(item, dict) and any(k in item for k in ("Wolinet Coder", "Wolinet Pro")))]
+    fallbacks.append({"Wolinet Pro": fallback_models})
     fallbacks.append({"Wolinet Coder": fallback_models})
     router["fallbacks"] = fallbacks
 
@@ -418,7 +428,7 @@ else
   echo "==> [lango] Lago billing is not configured; set LAGO_API_KEY to enable usage events"
 fi
 if [ -n "${WOLINET_FALLBACK_MODELS:-}" ]; then
-  echo "==> [lango] Configured Wolinet Coder cloud fallbacks: ${WOLINET_FALLBACK_MODELS}"
+  echo "==> [lango] Configured Wolinet AI (Pro & Coder) cloud fallbacks: ${WOLINET_FALLBACK_MODELS}"
 else
   echo "==> [lango] No cloud fallback model IDs configured"
 fi
