@@ -389,7 +389,7 @@ class AppConfig:
             return
 
         if name not in entries:
-            entries[name] = ConfigVar(value)
+            entries[name] = ConfigVar(name, name, value)
             return
 
         entries[name].value = value
