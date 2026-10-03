@@ -89,11 +89,12 @@ echo "==> [mitambo] Verified UI static assets: ${UI_COUNT} files in /ui"
 import os, sys, time, json, urllib.request, hashlib, sqlite3
 
 endpoint = 'http://127.0.0.1:9997'
-admin_user = os.environ.get('XINFERENCE_ADMIN_USER', 'admin')
-admin_pass = os.environ.get('XINFERENCE_ADMIN_PASSWORD', 'Woli@1211')
+admin_user = os.environ.get('XINFERENCE_ADMIN_USER') or os.environ.get('MITAMBO_ADMIN_USER') or 'admin'
+admin_pass = os.environ.get('XINFERENCE_ADMIN_PASSWORD') or os.environ.get('MITAMBO_ADMIN_PASSWORD') or 'Woli@1211'
 gateway_key = os.environ.get('XINFERENCE_API_KEY', 'sk-XvKFiwDoOtOe8i4lwbzb8Q')
+db_path = os.environ.get('XINFERENCE_AUTH_DB_PATH', '/root/.xinference/auth/auth.db')
 
-# 1. Setup Admin Account if needed
+# 1. Setup Admin Account if needed or sync password if already created
 try:
     req = urllib.request.Request(f'{endpoint}/v1/admin/setup/status')
     with urllib.request.urlopen(req, timeout=5) as resp:
@@ -104,12 +105,21 @@ try:
         sreq = urllib.request.Request(f'{endpoint}/v1/admin/setup', data=payload, headers={'Content-Type': 'application/json'}, method='POST')
         with urllib.request.urlopen(sreq, timeout=5) as sresp:
             print('==> [mitambo-init] Admin account initialized successfully.')
+    elif os.path.exists(db_path):
+        try:
+            from xinference.api.oauth2.advanced.database import Database
+            from xinference.api.oauth2.advanced.crypto import get_password_hash
+            adb = Database(db_path)
+            u = adb.get_user_by_username(admin_user, source="local")
+            if u:
+                adb.update_password_and_revoke_tokens(u["id"], get_password_hash(admin_pass))
+        except Exception:
+            pass
 except Exception as e:
     print(f'==> [mitambo-init] Setup note: {e}')
 
 # 2. Pre-seed Gateway API Key in auth.db
 try:
-    db_path = os.environ.get('XINFERENCE_AUTH_DB_PATH', '/root/.xinference/auth/auth.db')
     if os.path.exists(db_path):
         conn = sqlite3.connect(db_path)
         cur = conn.cursor()
@@ -142,19 +152,23 @@ except Exception as e:
 # mirrors that live catalog into LiteLLM without changing inference state.
 try:
     from xinference.client import RESTfulClient
-    client = RESTfulClient(endpoint)
-    client.login(admin_user, admin_pass)
-
+    client = None
     try:
-        token = client._get_token()
+        c = RESTfulClient(endpoint)
+        c.login(admin_user, admin_pass)
+        client = c
+        token = c._get_token()
         if token:
             hashed_ep = hashlib.sha256(endpoint.encode('utf-8')).hexdigest()
             auth_dir = '/root/.xinference/auth'
             os.makedirs(auth_dir, exist_ok=True)
             with open(os.path.join(auth_dir, hashed_ep), 'w') as f:
                 f.write(token)
-    except Exception:
-        pass
+    except Exception as login_err:
+        try:
+            client = RESTfulClient(base_url=endpoint, api_key=gateway_key)
+        except Exception:
+            raise login_err
 
     running_models = client.list_models()
     print(f'==> [mitambo-init] Active Xinference models: {list(running_models.keys())}')

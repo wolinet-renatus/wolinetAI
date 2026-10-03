@@ -45,6 +45,13 @@ docker builder prune -a -f 2>/dev/null || true
 docker container prune -f 2>/dev/null || true
 docker image prune -f 2>/dev/null || true
 
+# Set Redis memory overcommit kernel parameter on host
+sysctl -w vm.overcommit_memory=1 2>/dev/null || true
+
+# Ensure mounted scripts and webui files are readable by container processes
+chmod -R a+rX "${ROOT_DIR}/apps/web-client/backend/open_webui" 2>/dev/null || true
+chmod +x "${ROOT_DIR}/inference/start-mitambo.sh" "${ROOT_DIR}/gateway/start-gateway.sh" 2>/dev/null || true
+
 "${COMPOSE[@]}" pull mitambo lango wolinex website nginx
 
 if ! "${COMPOSE[@]}" up -d --no-build --wait --remove-orphans; then
