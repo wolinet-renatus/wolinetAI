@@ -363,6 +363,10 @@ services:
     image: ${WEBSITE_IMAGE:-ghcr.io/wolinet-renatus/wolinet-homepage:latest}
     restart: unless-stopped
     networks:
+      default:
+        aliases:
+          - website
+          - wolinet-website
       wolinet_internal:
         aliases:
           - website

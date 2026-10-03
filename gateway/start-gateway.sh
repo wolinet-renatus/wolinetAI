@@ -299,7 +299,7 @@ if [ -f "/app/assets/favicon.png" ]; then
 fi
 
 # 9. Background seeder: As soon as PostgreSQL migrations complete, seed admin user and virtual key
-python3 -c "
+python3 - <<'PY' &
 import os, time, sys
 
 def seed_db():
@@ -315,11 +315,11 @@ def seed_db():
             with psycopg.connect(db_url, connect_timeout=3) as conn:
                 with conn.cursor() as cur:
                     # 1. LiteLLM_UserTable
-                    cur.execute(\"SELECT to_regclass('public.\\\"LiteLLM_UserTable\\\"')\")
+                    cur.execute("SELECT to_regclass('public.\"LiteLLM_UserTable\"')")
                     row = cur.fetchone()
                     if row and row[0]:
                         cur.execute('''
-                            INSERT INTO \"LiteLLM_UserTable\" (user_id, user_email, user_role, password, models)
+                            INSERT INTO "LiteLLM_UserTable" (user_id, user_email, user_role, password, models)
                             VALUES ('admin', 'admin@wolinet.com', 'proxy_admin', '58c4e871c3d18f4160f5df22dbcb7a467377228fced8743af316b6615cd34355', ARRAY[]::text[])
                             ON CONFLICT (user_id) DO UPDATE SET
                                 user_email = 'admin@wolinet.com',
@@ -327,7 +327,7 @@ def seed_db():
                                 password = '58c4e871c3d18f4160f5df22dbcb7a467377228fced8743af316b6615cd34355';
                         ''')
                         cur.execute('''
-                            INSERT INTO \"LiteLLM_UserTable\" (user_id, user_email, user_role, password, models)
+                            INSERT INTO "LiteLLM_UserTable" (user_id, user_email, user_role, password, models)
                             VALUES ('admin@wolinet.com', 'admin@wolinet.com', 'proxy_admin', '58c4e871c3d18f4160f5df22dbcb7a467377228fced8743af316b6615cd34355', ARRAY[]::text[])
                             ON CONFLICT (user_id) DO UPDATE SET
                                 user_email = 'admin@wolinet.com',
@@ -336,11 +336,11 @@ def seed_db():
                         ''')
 
                     # 2. LiteLLM_VerificationToken
-                    cur.execute(\"SELECT to_regclass('public.\\\"LiteLLM_VerificationToken\\\"')\")
+                    cur.execute("SELECT to_regclass('public.\"LiteLLM_VerificationToken\"')")
                     row_vt = cur.fetchone()
                     if row_vt and row_vt[0]:
                         cur.execute('''
-                            INSERT INTO \"LiteLLM_VerificationToken\" (
+                            INSERT INTO "LiteLLM_VerificationToken" (
                                 token, key_name, key_alias, user_id, models, spend, total_spend, created_at, updated_at
                             )
                             VALUES (
@@ -379,9 +379,8 @@ def seed_db():
         except Exception:
             time.sleep(2)
 
-import threading
-threading.Thread(target=seed_db, daemon=True).start()
-" || true
+seed_db()
+PY
 
 # 8. Apply optional Lago billing and cloud fallback settings.
 CONFIG_PATH=/tmp/wolinet-litellm-config.yaml
