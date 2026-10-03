@@ -129,18 +129,23 @@ else:
             subprocess.run(["curl", "-L", "-C", "-", "--retry", "5", "-o", file_path, ms_url], check=True)
         print(f"✅ Download complete! Size on disk: {os.path.getsize(file_path) / (1024*1024):.2f} MB")
 
-    # Mirror the complete file to both uppercase and qwen2_5 folders
+    full_size = os.path.getsize(file_path)
+    print(f"📦 Source verified GGUF weights size: {full_size / (1024*1024):.2f} MB")
+
+    # Mirror the complete file to both uppercase and qwen2_5 folders, replacing any truncated/corrupted files
     for alt_dir in (target_dir_upper, target_dir_alt):
         alt_path = os.path.join(alt_dir, file_name)
-        if not os.path.exists(alt_path) or os.path.getsize(alt_path) < 1000 * 1024 * 1024:
+        if not os.path.exists(alt_path) or os.path.getsize(alt_path) != full_size:
+            print(f"   Synchronizing full {full_size / (1024*1024):.2f} MB file into {alt_dir}...")
             try:
                 import shutil
                 shutil.copyfile(file_path, alt_path)
-            except Exception:
-                pass
+                print(f"   ✅ Synchronized: {alt_path} ({os.path.getsize(alt_path) / (1024*1024):.2f} MB)")
+            except Exception as se:
+                print(f"   ⚠️ Sync notice: {se}")
 
     print("🚀 Launching Wolinet Pro (Qwen 2.5 1.5B Instruct)...")
-    print("   Engine: llama.cpp | Format: ggufv2 | Quant: q4_k_m | CPU (n_ctx=2048, n_parallel=1)")
+    print("   Engine: llama.cpp | Format: ggufv2 | Quant: q4_k_m | CPU (n_ctx=2048, n_parallel=1, n_threads=4)")
 
     launched = False
     for quant_candidate in ("q4_k_m", "Q4_K_M"):
@@ -152,16 +157,40 @@ else:
                 model_format="ggufv2",
                 model_size_in_billions="1_5",
                 quantization=quant_candidate,
-                n_gpu=None,
+                model_path=file_path,
                 n_gpu_layers=0,
                 n_ctx=2048,
                 n_parallel=1,
+                n_threads=4,
             )
             print(f"🎉 SUCCESS! Wolinet Pro launched (UID: {p_uid}) with quant={quant_candidate}")
             launched = True
             break
         except Exception as pe:
             print(f"⚠️ Launch attempt with quant={quant_candidate} failed: {pe}")
+
+    if not launched:
+        print("🔄 Attempting launch via xinference CLI fallback...")
+        cli_cmd = [
+            "xinference", "launch",
+            "--endpoint", "http://127.0.0.1:9997",
+            "--model-engine", "llama.cpp",
+            "--model-name", "qwen2.5-instruct",
+            "--model-uid", PRO_UID,
+            "--size-in-billions", "1_5",
+            "--model-format", "ggufv2",
+            "--quantization", "q4_k_m",
+            "--n_ctx", "2048",
+            "--n_parallel", "1",
+            "--n_threads", "4",
+        ]
+        res = subprocess.run(cli_cmd, capture_output=True, text=True)
+        if res.returncode == 0:
+            print(f"🎉 SUCCESS via CLI! {res.stdout.strip()}")
+            launched = True
+        else:
+            print(f"CLI fallback stdout: {res.stdout.strip()}")
+            print(f"CLI fallback stderr: {res.stderr.strip()}")
 
     if not launched:
         print("❌ Could not start Wolinet Pro automatically. See logs above.")
