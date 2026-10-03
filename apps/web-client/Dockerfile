@@ -73,7 +73,7 @@ ENV ENV=prod \
     USE_AUXILIARY_EMBEDDING_MODEL_DOCKER=${USE_AUXILIARY_EMBEDDING_MODEL}
 
 ## Basis URL Config ##
-ENV OLLAMA_BASE_URL="/ollama" \
+ENV OLLAMA_BASE_URL="" \
     OPENAI_API_BASE_URL=""
 
 ## API Key and Security Config ##

@@ -305,12 +305,11 @@ def _resolve_api_config(request: Request, idx: int, url: str) -> dict:
 )
 async def get_all_models(request: Request, user: UserModel | None = None):
     """Aggregate model tags from every enabled Ollama backend."""
-    log.info('get_all_models()')
-
-    if not request.app.state.config.ENABLE_OLLAMA_API:
-        models_dict: dict = {'models': []}
+    if not request.app.state.config.ENABLE_OLLAMA_API or not getattr(request.app.state.config, 'OLLAMA_BASE_URLS', None):
         request.app.state.OLLAMA_MODELS = {}
-        return models_dict
+        return {'models': []}
+
+    log.info('get_all_models()')
 
     # Fan-out tag requests to every backend
     tasks = []

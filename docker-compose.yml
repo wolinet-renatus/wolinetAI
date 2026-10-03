@@ -77,14 +77,8 @@ services:
       - ./inference/xinference/ui/web/dist:/app/dist:ro
       - ./inference/frontend/out:/app/out:ro
     networks:
-      default:
-        aliases:
-          - mitambo
-          - wolinet-mitambo
-      wolinet_internal:
-        aliases:
-          - mitambo
-          - wolinet-mitambo
+      - default
+      - wolinet_internal
     ports:
       - "9997:9997"
     expose: ["9997"]
@@ -195,6 +189,8 @@ services:
       WEBUI_DATABASE_URL: ${WEBUI_DATABASE_URL:?Set WEBUI_DATABASE_URL in Dokploy}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       ENABLE_OLLAMA_API: "False"
+      OLLAMA_BASE_URL: ""
+      OLLAMA_BASE_URLS: ""
       ENABLE_OPENAI_API: "True"
       DEFAULT_MODELS: ${DEFAULT_MODELS:-Wolinet Coder}
       BYPASS_MODEL_ACCESS_CONTROL: "True"
@@ -267,8 +263,6 @@ services:
     depends_on:
       - lango
       - mitambo
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     deploy:
       restart_policy:
         condition: on-failure
@@ -332,11 +326,9 @@ services:
 
 networks:
   default:
-    driver: overlay
-    attachable: true
+    driver: bridge
   wolinet_internal:
-    driver: overlay
-    attachable: true
+    driver: bridge
 
 volumes:
   postgres_data:

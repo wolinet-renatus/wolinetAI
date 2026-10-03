@@ -125,6 +125,16 @@ def run_migrations():
 
         command.upgrade(alembic_cfg, 'head')
     except Exception as e:
+        err_msg = str(e)
+        if "Can't locate revision" in err_msg or "ResolutionError" in err_msg:
+            log.warning(f"Detected orphan/unrecognized alembic revision ({err_msg}). Stamping to head to recover...")
+            try:
+                command.stamp(alembic_cfg, 'head')
+                command.upgrade(alembic_cfg, 'head')
+                log.info("Successfully recovered and stamped alembic migrations to head.")
+                return
+            except Exception as stamp_err:
+                log.exception(f"Error auto-recovering alembic stamp: {stamp_err}")
         log.exception(f'Error running migrations: {e}')
 
 
@@ -288,15 +298,20 @@ ENABLE_DIRECT_CONNECTIONS = ConfigVar(
 # OLLAMA_BASE_URL
 ####################################
 
+_enable_ollama_raw = os.getenv('ENABLE_OLLAMA_API', 'True').strip().lower()
+_ollama_disabled = _enable_ollama_raw in ('false', '0', 'no', 'none', 'off')
+
 ENABLE_OLLAMA_API = ConfigVar(
     'ENABLE_OLLAMA_API',
     'ollama.enable',
-    os.getenv('ENABLE_OLLAMA_API', 'True').lower() == 'true',
+    False if _ollama_disabled else True,
 )
+if _ollama_disabled:
+    ENABLE_OLLAMA_API.value = False
 
-OLLAMA_API_BASE_URL = os.getenv('OLLAMA_API_BASE_URL', 'http://localhost:11434/api')
+OLLAMA_API_BASE_URL = '' if _ollama_disabled else os.getenv('OLLAMA_API_BASE_URL', 'http://localhost:11434/api')
 
-OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', '')
+OLLAMA_BASE_URL = '' if _ollama_disabled else os.getenv('OLLAMA_BASE_URL', '')
 if OLLAMA_BASE_URL:
     # Remove trailing slash
     OLLAMA_BASE_URL = OLLAMA_BASE_URL[:-1] if OLLAMA_BASE_URL.endswith('/') else OLLAMA_BASE_URL
@@ -305,23 +320,24 @@ if OLLAMA_BASE_URL:
 K8S_FLAG = os.getenv('K8S_FLAG', '')
 USE_OLLAMA_DOCKER = os.getenv('USE_OLLAMA_DOCKER', 'false')
 
-if OLLAMA_BASE_URL == '' and OLLAMA_API_BASE_URL != '':
-    OLLAMA_BASE_URL = OLLAMA_API_BASE_URL[:-4] if OLLAMA_API_BASE_URL.endswith('/api') else OLLAMA_API_BASE_URL
+if not _ollama_disabled:
+    if OLLAMA_BASE_URL == '' and OLLAMA_API_BASE_URL != '':
+        OLLAMA_BASE_URL = OLLAMA_API_BASE_URL[:-4] if OLLAMA_API_BASE_URL.endswith('/api') else OLLAMA_API_BASE_URL
 
-if ENV == 'prod':
-    if OLLAMA_BASE_URL == '/ollama' and not K8S_FLAG:
-        if USE_OLLAMA_DOCKER.lower() == 'true':
-            # if you use all-in-one docker container (Open WebUI + Ollama)
-            # with the docker build arg USE_OLLAMA=true (--build-arg="USE_OLLAMA=true") this only works with http://localhost:11434
-            OLLAMA_BASE_URL = 'http://localhost:11434'
-        else:
-            OLLAMA_BASE_URL = 'http://host.docker.internal:11434'
-    elif K8S_FLAG:
-        OLLAMA_BASE_URL = 'http://ollama-service.open-webui.svc.cluster.local:11434'
+    if ENV == 'prod':
+        if OLLAMA_BASE_URL == '/ollama' and not K8S_FLAG:
+            if USE_OLLAMA_DOCKER.lower() == 'true':
+                OLLAMA_BASE_URL = 'http://localhost:11434'
+            else:
+                OLLAMA_BASE_URL = 'http://host.docker.internal:11434'
+        elif K8S_FLAG:
+            OLLAMA_BASE_URL = 'http://ollama-service.open-webui.svc.cluster.local:11434'
 
 
 def _resolve_ollama_base_url(url: str) -> str:
     """If the default Ollama port (11434) is unreachable, try the fallback port (12434)."""
+    if _ollama_disabled or not url or url == '/ollama':
+        return ''
 
     def reachable(host: str, port: int) -> bool:
         try:
@@ -346,16 +362,20 @@ def _resolve_ollama_base_url(url: str) -> str:
 
 
 # Auto-resolve Ollama port when no explicit URL was provided by the user.
-# The Dockerfile default is "/ollama" which the block above rewrites to :11434.
-if os.getenv('OLLAMA_BASE_URL', '') in ('', '/ollama') and not os.getenv('OLLAMA_BASE_URLS', ''):
+if not _ollama_disabled and os.getenv('OLLAMA_BASE_URL', '') in ('', '/ollama') and not os.getenv('OLLAMA_BASE_URLS', ''):
     OLLAMA_BASE_URL = _resolve_ollama_base_url(OLLAMA_BASE_URL)
 
 
-OLLAMA_BASE_URLS = os.getenv('OLLAMA_BASE_URLS', '')
-OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != '' else OLLAMA_BASE_URL
+if _ollama_disabled:
+    OLLAMA_BASE_URLS = []
+else:
+    OLLAMA_BASE_URLS = os.getenv('OLLAMA_BASE_URLS', '')
+    OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != '' else OLLAMA_BASE_URL
+    OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(';') if url.strip()]
 
-OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(';')]
 OLLAMA_BASE_URLS = ConfigVar('OLLAMA_BASE_URLS', 'ollama.base_urls', OLLAMA_BASE_URLS)
+if _ollama_disabled:
+    OLLAMA_BASE_URLS.value = []
 
 OLLAMA_API_CONFIGS = ConfigVar(
     'OLLAMA_API_CONFIGS',

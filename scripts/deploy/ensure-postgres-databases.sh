@@ -20,6 +20,13 @@ BEGIN
   IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'model') THEN
     DELETE FROM model WHERE id = 'wolinet-coder';
   END IF;
+
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'alembic_version') THEN
+    -- If alembic_version has d4c1a8e37b62 (foreign/future revision from other image),
+    -- reset it to current Open WebUI head 'f2a4b6c8d0e1' so migrations complete cleanly.
+    UPDATE alembic_version SET version_num = 'f2a4b6c8d0e1'
+    WHERE version_num = 'd4c1a8e37b62';
+  END IF;
 END $$;
 EOSQL
 done

@@ -113,80 +113,12 @@ def _fetch_active_models(inference_url: str, api_key: str, timeout: float = 10) 
 
 
 class XinferenceUnavailableError(Exception):
-    """Raised when none of the configured or fallback Xinference endpoints are reachable."""
+    """Raised when the internal Xinference endpoint is not reachable."""
 
 
-def _inference_urls() -> list[str]:
-    """Return the internal endpoint first, followed by common aliases and fallback URLs."""
-    primary = os.environ.get("XINFERENCE_BASE_URL", "http://mitambo:9997").strip().rstrip("/")
-    candidates = [primary]
-
-    # Add common local container and Swarm service/task aliases if not already included
-    for alias in (
-        "http://mitambo:9997",
-        "http://wolinet-mitambo:9997",
-        "http://wolinet_mitambo:9997",
-        "http://tasks.mitambo:9997",
-        "http://tasks.wolinet-mitambo:9997",
-        "http://tasks.wolinet_mitambo:9997",
-        "http://172.17.0.1:9997",
-        "http://host.docker.internal:9997",
-    ):
-        if alias not in candidates:
-            candidates.append(alias)
-
-    # Detect dynamic project prefixes from environment or container hostname
-    project_names: list[str] = []
-    env_project = os.environ.get("COMPOSE_PROJECT_NAME") or os.environ.get("STACK_NAME")
-    if env_project:
-        project_names.append(env_project.strip())
-
-    try:
-        import socket
-        hostname = socket.gethostname()
-        for sep in ("-model-sync", "_model-sync", "-sync", "_sync"):
-            if sep in hostname:
-                prefix = hostname.split(sep)[0]
-                if prefix and prefix not in project_names:
-                    project_names.append(prefix)
-    except Exception:
-        pass
-
-    for proj in project_names:
-        for fmt in (
-            f"http://{proj}-mitambo:9997",
-            f"http://{proj}_mitambo:9997",
-            f"http://{proj}-mitambo-1:9997",
-            f"http://{proj}_mitambo_1:9997",
-            f"http://tasks.{proj}_mitambo:9997",
-        ):
-            if fmt not in candidates:
-                candidates.append(fmt)
-
-    fallback_env = os.environ.get("XINFERENCE_FALLBACK_URLS", "").strip()
-    if fallback_env:
-        for item in fallback_env.split(","):
-            url = item.strip().rstrip("/")
-            if url and url not in candidates:
-                candidates.append(url)
-    else:
-        # Default public fallback if internal resolution is still initializing
-        public_url = "https://mitambo.wolinet.com"
-        if public_url not in candidates:
-            candidates.append(public_url)
-
-    return candidates
-
-
-def _fetch_active_models_from_urls(api_key: str) -> tuple[str, dict[str, dict[str, Any]]]:
-    failures: list[str] = []
-    for inference_url in _inference_urls():
-        try:
-            return inference_url, _fetch_active_models(inference_url, api_key, timeout=8)
-        except Exception as exc:
-            failures.append(f"{inference_url}: {exc}")
-            log.debug("Xinference endpoint probe failed for %s: %s", inference_url, exc)
-    raise XinferenceUnavailableError("; ".join(failures))
+def _inference_url() -> str:
+    """Return the internal Xinference endpoint on the local Docker network."""
+    return os.environ.get("XINFERENCE_BASE_URL", "http://mitambo:9997").strip().rstrip("/")
 
 
 def _upsert_model(gateway_url: str, gateway_key: str, model_name: str, model_uid: str,
@@ -242,18 +174,22 @@ def _fetch_gateway_models(gateway_url: str, api_key: str) -> list[dict[str, Any]
 
 
 def sync_once() -> None:
-    gateway_url = os.environ.get("LITELLM_BASE_URL", "http://lango:4000")
+    gateway_url = os.environ.get("LITELLM_BASE_URL", "http://lango:4000").rstrip("/")
     gateway_key = os.environ["LITELLM_MASTER_KEY"]
     inference_key = os.environ["XINFERENCE_API_KEY"]
 
-    inference_url, active = _fetch_active_models_from_urls(inference_key)
-    inference_api_base = f"{inference_url.rstrip('/')}/v1"
+    inference_url = _inference_url()
+    try:
+        active = _fetch_active_models(inference_url, inference_key, timeout=8)
+    except Exception as exc:
+        raise XinferenceUnavailableError(f"{inference_url}: {exc}") from exc
+
+    inference_api_base = f"{inference_url}/v1"
     current = _fetch_gateway_models(gateway_url, gateway_key)
-    known_inference_urls = _inference_urls()
     managed = {
         str(entry.get("model_name")): entry
         for entry in current
-        if any(_is_managed(entry, url) for url in known_inference_urls)
+        if _is_managed(entry, inference_url)
     }
     current_by_name = {str(entry.get("model_name")): entry for entry in current if entry.get("model_name")}
 
@@ -305,7 +241,7 @@ def main() -> None:
         try:
             sync_once()
         except XinferenceUnavailableError as exc:
-            log.warning("Xinference endpoints currently unreachable (%s); retrying in %ds", exc, interval)
+            log.warning("Xinference endpoint is not reachable yet (%s); retrying in %ds", exc, interval)
         except Exception:
             log.exception("Model catalog sync failed; it will retry")
         if not args.watch:
