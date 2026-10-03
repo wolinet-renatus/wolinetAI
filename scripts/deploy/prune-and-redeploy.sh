@@ -45,6 +45,7 @@ chmod -R a+rX "${ROOT_DIR}/website" 2>/dev/null || true
 chmod -R a+rX "${ROOT_DIR}/inference/xinference/ui/web/dist" 2>/dev/null || true
 chmod -R a+rX "${ROOT_DIR}/inference/frontend/out" 2>/dev/null || true
 chmod -R a+rX "${ROOT_DIR}/apps/dev-portal" 2>/dev/null || true
+chmod -R a+rX "${ROOT_DIR}/apps/web-client/backend/open_webui/routers" 2>/dev/null || true
 chmod +x "${ROOT_DIR}/inference/start-mitambo.sh" 2>/dev/null || true
 chmod +x "${ROOT_DIR}/gateway/start-gateway.sh" 2>/dev/null || true
 

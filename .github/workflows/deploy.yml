@@ -191,6 +191,7 @@ jobs:
             ./gateway/assets \
             ./gateway/litellm/proxy/swagger \
             ./website \
+            ./apps/web-client/backend/open_webui/routers/wolinet_docs.py \
             ./scripts/deploy/sync_xinference_models.py \
             ./scripts/deploy/ensure-postgres-databases.sh \
             ./nginx/nginx.conf \

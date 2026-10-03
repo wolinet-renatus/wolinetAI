@@ -229,6 +229,7 @@ services:
       - ./gateway/assets/wolinet_logo.png:/app/build/logo.png:ro
       - ./gateway/assets/wolinet_logo.png:/app/build/splash.png:ro
       - ./gateway/assets/wolinet_logo_dark.png:/app/build/splash-dark.png:ro
+      - ./apps/web-client/backend/open_webui/routers/wolinet_docs.py:/app/backend/open_webui/routers/wolinet_docs.py:ro
     networks:
       default:
         aliases:
