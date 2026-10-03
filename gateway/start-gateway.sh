@@ -246,9 +246,9 @@ for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/router.py'):
 
     target_pricing = 'Router._register_deployment_pricing(deployment=deployment)'
     replacement_pricing = '''try:
-            Router._register_deployment_pricing(deployment=deployment)
-        except Exception as _pe:
-            verbose_router_logger.warning(\"Error registering deployment pricing for %s: %s\", getattr(deployment, 'model_name', ''), _pe)'''
+                Router._register_deployment_pricing(deployment=deployment)
+            except Exception as _pe:
+                verbose_router_logger.warning(\"Error registering deployment pricing for %s: %s\", getattr(deployment, 'model_name', ''), _pe)'''
 
     if target_pricing in code:
         code = code.replace(target_pricing, replacement_pricing)
