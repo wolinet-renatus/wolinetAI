@@ -198,13 +198,14 @@ if os.path.exists(p):
 python3 -c "
 import os, json, glob
 
-# 1. Patch utils.py to return default model info instead of raising ModelNotMappedError
+# 1. Patch utils.py to return default model info with 'key' instead of raising ModelNotMappedError or throwing KeyError
 for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/utils.py'):
     with open(p, 'r', encoding='utf-8') as f:
         code = f.read()
 
     target = 'raise ModelNotMappedError(_model_not_mapped_message(model, custom_llm_provider))'
     replacement = '''return {
+        \"key\": model,
         \"max_tokens\": 4096,
         \"max_input_tokens\": 4096,
         \"max_output_tokens\": 4096,
@@ -212,30 +213,49 @@ for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/utils.py'):
         \"output_cost_per_token\": 0.0,
         \"litellm_provider\": custom_llm_provider or \"openai\",
         \"mode\": \"chat\",
+        \"supports_reasoning\": False,
     }'''
 
     if target in code:
         code = code.replace(target, replacement)
-        with open(p, 'w', encoding='utf-8') as f:
-            f.write(code)
-        print('==> [lango] Successfully patched ModelNotMappedError to return default model info in', p)
+        print('==> [lango] Successfully patched ModelNotMappedError in', p)
 
-# 2. Patch router.py get_router_model_info so it safely falls back if get_model_info fails
+    target_key = 'model_cost_key = existing_model[\"key\"]'
+    replacement_key = 'model_cost_key = existing_model.get(\"key\") or _key_str'
+    if target_key in code:
+        code = code.replace(target_key, replacement_key)
+        print('==> [lango] Successfully patched model_cost_key KeyError in', p)
+
+    with open(p, 'w', encoding='utf-8') as f:
+        f.write(code)
+
+# 2. Patch router.py get_router_model_info and pricing registration safety
 for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/router.py'):
     with open(p, 'r', encoding='utf-8') as f:
         code = f.read()
 
-    target = 'model_info: Final = litellm.get_model_info(model=model_info_name)'
-    replacement = '''try:
+    target_info = 'model_info: Final = litellm.get_model_info(model=model_info_name)'
+    replacement_info = '''try:
             model_info = litellm.get_model_info(model=model_info_name)
         except Exception:
-            model_info = {\"max_tokens\": 4096, \"max_input_tokens\": 4096, \"max_output_tokens\": 4096, \"input_cost_per_token\": 0.0, \"output_cost_per_token\": 0.0, \"litellm_provider\": \"openai\", \"mode\": \"chat\"}'''
+            model_info = {\"key\": model_info_name, \"max_tokens\": 4096, \"max_input_tokens\": 4096, \"max_output_tokens\": 4096, \"input_cost_per_token\": 0.0, \"output_cost_per_token\": 0.0, \"litellm_provider\": \"openai\", \"mode\": \"chat\", \"supports_reasoning\": False}'''
 
-    if target in code:
-        code = code.replace(target, replacement)
-        with open(p, 'w', encoding='utf-8') as f:
-            f.write(code)
+    if target_info in code:
+        code = code.replace(target_info, replacement_info)
         print('==> [lango] Successfully patched router.py get_router_model_info in', p)
+
+    target_pricing = 'Router._register_deployment_pricing(deployment=deployment)'
+    replacement_pricing = '''try:
+            Router._register_deployment_pricing(deployment=deployment)
+        except Exception as _pe:
+            verbose_router_logger.warning(\"Error registering deployment pricing for %s: %s\", getattr(deployment, 'model_name', ''), _pe)'''
+
+    if target_pricing in code:
+        code = code.replace(target_pricing, replacement_pricing)
+        print('==> [lango] Successfully patched router.py _register_deployment_pricing in', p)
+
+    with open(p, 'w', encoding='utf-8') as f:
+        f.write(code)
 
 # 3. Inject common custom model specs directly into model_prices_and_context_window.json
 for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/model_prices_and_context_window.json'):
@@ -243,6 +263,7 @@ for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/model_prices_
         with open(p, 'r', encoding='utf-8') as f:
             data = json.load(f)
         default_spec = {
+            'key': 'custom',
             'max_tokens': 4096,
             'max_input_tokens': 4096,
             'max_output_tokens': 4096,
@@ -250,10 +271,12 @@ for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/model_prices_
             'output_cost_per_token': 0.0,
             'litellm_provider': 'openai',
             'mode': 'chat',
+            'supports_reasoning': False,
         }
         for m in ('tiny-llama', 'openai/tiny-llama', 'qwen2.5', 'openai/qwen2.5'):
-            if m not in data:
-                data[m] = default_spec
+            spec = dict(default_spec)
+            spec['key'] = m
+            data[m] = spec
         with open(p, 'w', encoding='utf-8') as f:
             json.dump(data, f)
         print('==> [lango] Injected default model prices for custom models into', p)
@@ -337,8 +360,21 @@ def seed_db():
                                 user_id = 'admin',
                                 updated_at = NOW();
                         ''')
+
+                    # 3. LiteLLM_ProxyModelTable duplicate cleanup
+                    cur.execute("SELECT to_regclass('public.\"LiteLLM_ProxyModelTable\"')")
+                    row_pm = cur.fetchone()
+                    if row_pm and row_pm[0]:
+                        cur.execute('''
+                            DELETE FROM "LiteLLM_ProxyModelTable"
+                            WHERE model_id NOT IN (
+                                SELECT DISTINCT ON (model_name) model_id
+                                FROM "LiteLLM_ProxyModelTable"
+                                ORDER BY model_name, updated_at DESC, created_at DESC
+                            );
+                        ''')
                 conn.commit()
-                print('==> [lango] Database seeded with Wolinet AI admin and virtual key (sk-XvKFiwDoOtOe8i4lwbzb8Q)')
+                print('==> [lango] Database seeded with Wolinet AI admin and virtual key (sk-XvKFiwDoOtOe8i4lwbzb8Q), pruned model duplicates')
                 break
         except Exception:
             time.sleep(2)

@@ -163,7 +163,7 @@ class OpenAIResponsesAPIConfig(BaseResponsesAPIConfig):
         declared: Final = info.get("supports_reasoning")
         if declared is not None:
             return declared
-        return info["key"] in _bundled_openai_reasoning_models()
+        return info.get("key") in _bundled_openai_reasoning_models()
 
     @staticmethod
     def _requests_reasoning_effort(reasoning: object) -> bool:

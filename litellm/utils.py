@@ -3351,7 +3351,7 @@ def register_model(
             builtin_model_info = _get_builtin_model_info_for_registration(model=_key_str)
             if builtin_model_info is not None:
                 existing_model = cast(dict, builtin_model_info)
-                model_cost_key = existing_model["key"]
+                model_cost_key = existing_model.get("key") or _key_str
             else:
                 # An exact entry ends the lookup ladder before the capability rules are
                 # consulted, so seed from them: otherwise registering an unmapped model
