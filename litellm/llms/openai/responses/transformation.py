@@ -173,7 +173,7 @@ class OpenAIResponsesAPIConfig(BaseResponsesAPIConfig):
         return effort is not None
 
     @staticmethod
-    def _enforce_min_max_output_tokens(max_output_tokens: "int | None") -> "int | None":
+    def _enforce_min_max_output_tokens(max_output_tokens: object) -> object:
         """Raise sub-minimum max_output_tokens up to the OpenAI Responses API minimum.
 
         OpenAI's Responses API rejects max_output_tokens below 16 for every model
