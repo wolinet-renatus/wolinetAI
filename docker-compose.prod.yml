@@ -151,7 +151,6 @@ services:
     entrypoint: ["/usr/local/bin/start-mitambo.sh"]
     volumes:
       - xinference_data:/root/.xinference
-      - ./inference/start-mitambo.sh:/usr/local/bin/start-mitambo.sh:ro
     command: >
       xinference-local -H 0.0.0.0 -p 9997 --log-level info
     deploy:
@@ -339,11 +338,6 @@ services:
       - ./gateway/assets/wolinet_logo.png:/app/build/logo.png:ro
       - ./gateway/assets/wolinet_logo.png:/app/build/splash.png:ro
       - ./gateway/assets/wolinet_logo_dark.png:/app/build/splash-dark.png:ro
-      - ./apps/web-client/backend/open_webui/routers/wolinet_docs.py:/app/backend/open_webui/routers/wolinet_docs.py:ro
-      - ./apps/web-client/backend/open_webui/main.py:/app/backend/open_webui/main.py:ro
-      - ./apps/web-client/backend/open_webui/internal/config.py:/app/backend/open_webui/internal/config.py:ro
-      - ./apps/web-client/backend/open_webui/config.py:/app/backend/open_webui/config.py:ro
-      - ./apps/web-client/backend/open_webui/migrations/env.py:/app/backend/open_webui/migrations/env.py:ro
     depends_on:
       postgres:
         condition: service_healthy

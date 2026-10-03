@@ -22,23 +22,10 @@ BEGIN
   END IF;
 
   IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'alembic_version') THEN
-    -- If alembic_version has d4c1a8e37b62 (foreign/future revision from other image) or any unknown revision,
+    -- If alembic_version has d4c1a8e37b62 (foreign/future revision from other image),
     -- reset it to current Open WebUI head 'f2a4b6c8d0e1' so migrations complete cleanly.
     UPDATE alembic_version SET version_num = 'f2a4b6c8d0e1'
-    WHERE version_num = 'd4c1a8e37b62' OR version_num NOT IN (
-      'f2a4b6c8d0e1', 'f1e2d3c4b5a6', 'e1f2a3b4c5d6', 'd4e5f6a7b8c9',
-      'd31026856c01', 'ca81bd47c050', 'c69f45358db4', 'c440947495f3',
-      'c29facfe716b', 'c1d2e3f4a5b6', 'c0fbf31ca0db', 'b7c8d9e0f1a2',
-      'b2c3d4e5f6a7', 'b10670c03dd5', 'af906e964978', 'a5c220713937',
-      'a3dd5bedd151', 'a1b2c3d4e5f6', 'a0b1c2d3e4f5', '9f0c9cd09105',
-      '922e7a387820', '90ef40d4714e', '8452d01d26d7', '81cc2ce44d79',
-      '7e5b5dc7342b', '7826ab40b532', '6a39f3d8e55c', '6283dc0e4d8d',
-      '57c599a3cb57', '56359461a091', '4de81c2a3af1', '4ace53fd72c8',
-      '461111b60977', '3e0e00844bb0', '3c9b0ca343fd', '3af16a1c9fb6',
-      '3ab32c4b8f59', '38d63c18f30f', '37f288994c47', '3781e22d8b01',
-      '374d2f66af06', '2f1211949ecc', '242a2047eae0', '1af9b942657b',
-      '018012973d35'
-    );
+    WHERE version_num = 'd4c1a8e37b62';
   END IF;
 END $$;
 EOSQL

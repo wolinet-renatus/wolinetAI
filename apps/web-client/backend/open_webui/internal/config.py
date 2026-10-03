@@ -388,10 +388,6 @@ class AppConfig:
             entries[name] = value
             return
 
-        if name not in entries:
-            entries[name] = ConfigVar(name, f'app.{name.lower()}', value)
-            return
-
         entries[name].value = value
 
         try:

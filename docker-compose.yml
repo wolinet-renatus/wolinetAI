@@ -229,11 +229,6 @@ services:
       - ./gateway/assets/wolinet_logo.png:/app/build/logo.png:ro
       - ./gateway/assets/wolinet_logo.png:/app/build/splash.png:ro
       - ./gateway/assets/wolinet_logo_dark.png:/app/build/splash-dark.png:ro
-      - ./apps/web-client/backend/open_webui/routers/wolinet_docs.py:/app/backend/open_webui/routers/wolinet_docs.py:ro
-      - ./apps/web-client/backend/open_webui/main.py:/app/backend/open_webui/main.py:ro
-      - ./apps/web-client/backend/open_webui/internal/config.py:/app/backend/open_webui/internal/config.py:ro
-      - ./apps/web-client/backend/open_webui/config.py:/app/backend/open_webui/config.py:ro
-      - ./apps/web-client/backend/open_webui/migrations/env.py:/app/backend/open_webui/migrations/env.py:ro
     networks:
       default:
         aliases:
