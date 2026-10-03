@@ -52,3 +52,7 @@ The default `backups/` directory is relative to this repository root and is igno
 ```
 
 Ensure the scheduler's user can access the Docker socket, the repository's Compose files, and the backup directory. The archive contains every database and role in the shared PostgreSQL cluster; restrict directory access and copy backups off-host for disaster recovery.
+
+## Troubleshooting & Incident Runbook
+
+For common issues (disk 100% full, Contabo IPv6 image pull resets, Swarm paused rollback recovery, Open WebUI Alembic revision mismatches, and `KeyError: 'ENABLE_OLLAMA_API'`), see the dedicated [Production Operations & Troubleshooting Runbook](production-operations-guide.md).
