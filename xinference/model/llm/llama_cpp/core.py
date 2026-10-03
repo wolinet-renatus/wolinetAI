@@ -386,7 +386,13 @@ class XllamaCppModel(LLM, ChatModelMixin):
                             sub_param = getattr(sub_param, p)
                         setattr(sub_param, parts[-1], v)
                     elif hasattr(params, k):
-                        setattr(params, k, v)
+                        val = v
+                        if isinstance(v, str) and (v.isdigit() or (v.startswith('-') and v[1:].isdigit())):
+                            try:
+                                val = int(v)
+                            except Exception:
+                                val = v
+                        setattr(params, k, val)
                     else:
                         logger.debug("Skipping unsupported param %s = %s", k, v)
                 except Exception as e:
