@@ -389,7 +389,7 @@ class AppConfig:
             return
 
         if name not in entries:
-            entries[name] = ConfigVar(name, name, value)
+            super().__setattr__(name, value)
             return
 
         entries[name].value = value
@@ -416,7 +416,10 @@ class AppConfig:
     def __getattr__(self, name: str) -> Any:
         entries = super().__getattribute__('_entries')
         if name not in entries:
-            raise AttributeError(f"No config key '{name}'")
+            try:
+                return super().__getattribute__(name)
+            except AttributeError:
+                raise AttributeError(f"No config key '{name}'")
 
         rc = super().__getattribute__('_rc')
         if rc and _persist_enabled:
