@@ -5,4 +5,4 @@ COPY index.html styles.css app.js favicon.ico favicon.png robots.txt /usr/share/
 COPY assets/ /usr/share/nginx/html/assets/
 COPY .well-known/ /usr/share/nginx/html/.well-known/
 
-EXPOSE 8080
+EXPOSE 80 8080

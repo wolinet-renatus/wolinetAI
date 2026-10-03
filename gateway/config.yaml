@@ -59,4 +59,4 @@ router_settings:
   redis_password: os.environ/REDIS_PASSWORD
   routing_strategy: latency-based-routing
   timeout: 600
-  enable_pre_call_checks: true
+  enable_pre_call_checks: false

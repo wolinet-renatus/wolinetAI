@@ -116,9 +116,56 @@ class XinferenceUnavailableError(Exception):
     """Raised when the internal Xinference endpoint is not reachable."""
 
 
-def _inference_url() -> str:
-    """Return the internal Xinference endpoint on the local Docker network."""
-    return os.environ.get("XINFERENCE_BASE_URL", "http://mitambo:9997").strip().rstrip("/")
+def _inference_urls() -> list[str]:
+    """Return local internal Docker network endpoints first, followed by configured fallbacks."""
+    primary = os.environ.get("XINFERENCE_BASE_URL", "http://mitambo:9997").strip().rstrip("/")
+    candidates = [primary]
+
+    for alias in (
+        "http://mitambo:9997",
+        "http://wolinet-mitambo:9997",
+        "http://wolinet_mitambo:9997",
+        "http://tasks.mitambo:9997",
+        "http://172.17.0.1:9997",
+        "http://host.docker.internal:9997",
+    ):
+        if alias not in candidates:
+            candidates.append(alias)
+
+    project_name = os.environ.get("COMPOSE_PROJECT_NAME") or os.environ.get("STACK_NAME")
+    if project_name:
+        p = project_name.strip()
+        for alias in (
+            f"http://{p}-mitambo:9997",
+            f"http://{p}_mitambo:9997",
+            f"http://tasks.{p}_mitambo:9997",
+        ):
+            if alias not in candidates:
+                candidates.append(alias)
+
+    fallback_env = os.environ.get("XINFERENCE_FALLBACK_URLS", "").strip()
+    if fallback_env:
+        for item in fallback_env.split(","):
+            url = item.strip().rstrip("/")
+            if url and url not in candidates:
+                candidates.append(url)
+    else:
+        public_url = "https://mitambo.wolinet.com"
+        if public_url not in candidates:
+            candidates.append(public_url)
+
+    return candidates
+
+
+def _fetch_active_models_from_urls(api_key: str) -> tuple[str, dict[str, dict[str, Any]]]:
+    failures: list[str] = []
+    for inference_url in _inference_urls():
+        try:
+            return inference_url, _fetch_active_models(inference_url, api_key, timeout=8)
+        except Exception as exc:
+            failures.append(f"{inference_url}: {exc}")
+            log.debug("Xinference endpoint probe failed for %s: %s", inference_url, exc)
+    raise XinferenceUnavailableError("; ".join(failures))
 
 
 def _upsert_model(gateway_url: str, gateway_key: str, model_name: str, model_uid: str,
@@ -138,13 +185,21 @@ def _upsert_model(gateway_url: str, gateway_key: str, model_name: str, model_uid
             and existing_params.get("model") == f"openai/{model_uid}"
             and str(existing_params.get("api_base", "")).rstrip("/") == inference_api_base.rstrip("/")
             and existing_info.get("provider") == "Wolinet AI"
-            and existing_info.get("litellm_provider") == "wolinet_ai"
+            and existing_info.get("litellm_provider") == "openai"
+            and existing_params.get("max_tokens") == 4096
         ):
             return
     model_info = {
         "mode": "chat",
         "provider": "Wolinet AI",
-        "litellm_provider": "wolinet_ai",
+        "litellm_provider": "openai",
+        "max_tokens": 4096,
+        "max_input_tokens": 4096,
+        "max_output_tokens": 4096,
+        "input_cost_per_token": 0.0,
+        "output_cost_per_token": 0.0,
+        "base_model": "gpt-3.5-turbo",
+        "litellm_model_name": model_name,
         "metadata": {
             "wolinet_sync_source": MANAGED_SOURCE,
             "xinference_model_uid": model_uid,
@@ -155,13 +210,11 @@ def _upsert_model(gateway_url: str, gateway_key: str, model_name: str, model_uid
     payload = {
         "model_name": model_name,
         "litellm_params": {
-            # Xinference exposes an OpenAI-compatible API. ``wolinet_ai`` is
-            # not a LiteLLM provider name, so LiteLLM rejects these DB records
-            # during router reload and leaves the model saved but unusable.
             "model": f"openai/{model_uid}",
             "api_base": inference_api_base,
             "api_key": inference_key,
             "timeout": 600,
+            "max_tokens": 4096,
         },
         "model_info": model_info,
     }
@@ -178,18 +231,14 @@ def sync_once() -> None:
     gateway_key = os.environ["LITELLM_MASTER_KEY"]
     inference_key = os.environ["XINFERENCE_API_KEY"]
 
-    inference_url = _inference_url()
-    try:
-        active = _fetch_active_models(inference_url, inference_key, timeout=8)
-    except Exception as exc:
-        raise XinferenceUnavailableError(f"{inference_url}: {exc}") from exc
-
+    inference_url, active = _fetch_active_models_from_urls(inference_key)
     inference_api_base = f"{inference_url}/v1"
     current = _fetch_gateway_models(gateway_url, gateway_key)
+    known_inference_urls = _inference_urls()
     managed = {
         str(entry.get("model_name")): entry
         for entry in current
-        if _is_managed(entry, inference_url)
+        if any(_is_managed(entry, url) for url in known_inference_urls)
     }
     current_by_name = {str(entry.get("model_name")): entry for entry in current if entry.get("model_name")}
 
@@ -241,7 +290,9 @@ def main() -> None:
         try:
             sync_once()
         except XinferenceUnavailableError as exc:
-            log.warning("Xinference endpoint is not reachable yet (%s); retrying in %ds", exc, interval)
+            endpoint = os.environ.get("XINFERENCE_BASE_URL", "http://mitambo:9997").strip().rstrip("/")
+            log.warning("Xinference service at %s is starting up or unreachable; retrying in %ds", endpoint, interval)
+            log.debug("Xinference candidate probe details: %s", exc)
         except Exception:
             log.exception("Model catalog sync failed; it will retry")
         if not args.watch:

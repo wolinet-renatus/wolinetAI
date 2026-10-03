@@ -7,4 +7,4 @@ COPY logo.png /usr/share/nginx/html/logo.png
 COPY logo_dark.png /usr/share/nginx/html/logo_dark.png
 COPY favicon.ico /usr/share/nginx/html/favicon.ico
 COPY favicon.png /usr/share/nginx/html/favicon.png
-EXPOSE 8080
+EXPOSE 80 8080

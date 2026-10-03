@@ -194,7 +194,74 @@ if os.path.exists(p):
         print('==> [lango] Successfully patched SecurityHeadersMiddleware for cache-control and stale chunk recovery')
 " || true
 
-# 7. Copy custom logos and favicon to internal bundled paths if not already mounted
+# 7. Patch utils.py, router.py, and model_prices_and_context_window.json to return default model info for unmapped models (e.g. tiny-llama)
+python3 -c "
+import os, json, glob
+
+# 1. Patch utils.py to return default model info instead of raising ModelNotMappedError
+for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/utils.py'):
+    with open(p, 'r', encoding='utf-8') as f:
+        code = f.read()
+
+    target = 'raise ModelNotMappedError(_model_not_mapped_message(model, custom_llm_provider))'
+    replacement = '''return {
+        \"max_tokens\": 4096,
+        \"max_input_tokens\": 4096,
+        \"max_output_tokens\": 4096,
+        \"input_cost_per_token\": 0.0,
+        \"output_cost_per_token\": 0.0,
+        \"litellm_provider\": custom_llm_provider or \"openai\",
+        \"mode\": \"chat\",
+    }'''
+
+    if target in code:
+        code = code.replace(target, replacement)
+        with open(p, 'w', encoding='utf-8') as f:
+            f.write(code)
+        print('==> [lango] Successfully patched ModelNotMappedError to return default model info in', p)
+
+# 2. Patch router.py get_router_model_info so it safely falls back if get_model_info fails
+for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/router.py'):
+    with open(p, 'r', encoding='utf-8') as f:
+        code = f.read()
+
+    target = 'model_info: Final = litellm.get_model_info(model=model_info_name)'
+    replacement = '''try:
+            model_info = litellm.get_model_info(model=model_info_name)
+        except Exception:
+            model_info = {\"max_tokens\": 4096, \"max_input_tokens\": 4096, \"max_output_tokens\": 4096, \"input_cost_per_token\": 0.0, \"output_cost_per_token\": 0.0, \"litellm_provider\": \"openai\", \"mode\": \"chat\"}'''
+
+    if target in code:
+        code = code.replace(target, replacement)
+        with open(p, 'w', encoding='utf-8') as f:
+            f.write(code)
+        print('==> [lango] Successfully patched router.py get_router_model_info in', p)
+
+# 3. Inject common custom model specs directly into model_prices_and_context_window.json
+for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/model_prices_and_context_window.json'):
+    try:
+        with open(p, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        default_spec = {
+            'max_tokens': 4096,
+            'max_input_tokens': 4096,
+            'max_output_tokens': 4096,
+            'input_cost_per_token': 0.0,
+            'output_cost_per_token': 0.0,
+            'litellm_provider': 'openai',
+            'mode': 'chat',
+        }
+        for m in ('tiny-llama', 'openai/tiny-llama', 'qwen2.5', 'openai/qwen2.5'):
+            if m not in data:
+                data[m] = default_spec
+        with open(p, 'w', encoding='utf-8') as f:
+            json.dump(data, f)
+        print('==> [lango] Injected default model prices for custom models into', p)
+    except Exception as e:
+        print('==> [lango] Note on model_prices json injection:', e)
+" || true
+
+# 8. Copy custom logos and favicon to internal bundled paths if not already mounted
 if [ -f "/app/assets/wolinet_logo.png" ]; then
   cp -f /app/assets/wolinet_logo.png /app/.venv/lib/python3.13/site-packages/litellm/proxy/logo.jpg 2>/dev/null || true
 fi
@@ -208,7 +275,7 @@ if [ -f "/app/assets/favicon.png" ]; then
   cp -f /app/assets/favicon.png /app/.venv/lib/python3.13/site-packages/litellm/proxy/_experimental/out/favicon.png 2>/dev/null || true
 fi
 
-# 7. Background seeder: As soon as PostgreSQL migrations complete, seed admin user and virtual key
+# 9. Background seeder: As soon as PostgreSQL migrations complete, seed admin user and virtual key
 python3 -c "
 import os, time, sys
 

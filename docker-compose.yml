@@ -77,8 +77,14 @@ services:
       - ./inference/xinference/ui/web/dist:/app/dist:ro
       - ./inference/frontend/out:/app/out:ro
     networks:
-      - default
-      - wolinet_internal
+      default:
+        aliases:
+          - mitambo
+          - wolinet-mitambo
+      wolinet_internal:
+        aliases:
+          - mitambo
+          - wolinet-mitambo
     ports:
       - "9997:9997"
     expose: ["9997"]
@@ -143,8 +149,14 @@ services:
       - ./gateway/assets/favicon.png:/app/.venv/lib/python3.13/site-packages/litellm/proxy/_experimental/out/favicon.png:ro
       - ./gateway/litellm/proxy/swagger:/app/.venv/lib/python3.13/site-packages/litellm/proxy/swagger:ro
     networks:
-      - default
-      - wolinet_internal
+      default:
+        aliases:
+          - lango
+          - wolinet-lango
+      wolinet_internal:
+        aliases:
+          - lango
+          - wolinet-lango
     expose: ["4000"]
     command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
     healthcheck:
@@ -218,8 +230,14 @@ services:
       - ./gateway/assets/wolinet_logo.png:/app/build/splash.png:ro
       - ./gateway/assets/wolinet_logo_dark.png:/app/build/splash-dark.png:ro
     networks:
-      - default
-      - wolinet_internal
+      default:
+        aliases:
+          - wolinex
+          - wolinet-wolinex
+      wolinet_internal:
+        aliases:
+          - wolinex
+          - wolinet-wolinex
     expose: ["8080"]
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5)\" >/dev/null 2>&1"]
@@ -274,9 +292,18 @@ services:
     image: ${WEBSITE_IMAGE:-ghcr.io/wolinet-renatus/wolinet-homepage:latest}
     restart: unless-stopped
     networks:
-      - default
-      - wolinet_internal
+      default:
+        aliases:
+          - website
+          - wolinet-website
+      wolinet_internal:
+        aliases:
+          - website
+          - wolinet-website
     expose: ["80", "8080"]
+    volumes:
+      - ./website:/usr/share/nginx/html:ro
+      - ./website/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1"]
       interval: 15s
