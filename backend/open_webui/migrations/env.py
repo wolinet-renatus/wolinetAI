@@ -58,10 +58,46 @@ def _get_engine_connectable():
     )
 
 
+def _sanitize_alembic_version(connection) -> None:
+    """Ensure alembic_version only holds known local migration revisions.
+    If a foreign/unrecognized revision (e.g. 'd4c1a8e37b62') exists, reset it to head."""
+    try:
+        from alembic.script import ScriptDirectory
+        from sqlalchemy import inspect, text
+
+        inspector = inspect(connection)
+        if not inspector.has_table('alembic_version'):
+            return
+
+        script_dir = ScriptDirectory.from_config(alembic_config)
+        known_revisions = {rev.revision for rev in script_dir.walk_revisions()}
+        heads = script_dir.get_heads()
+        head_rev = heads[0] if heads else None
+        if not head_rev:
+            return
+
+        rows = connection.execute(text("SELECT version_num FROM alembic_version")).fetchall()
+        for row in rows:
+            rev_in_db = row[0]
+            if rev_in_db and rev_in_db not in known_revisions:
+                logging.getLogger("alembic.env").warning(
+                    f"Orphan Alembic revision '{rev_in_db}' detected in database. Resetting to head '{head_rev}'."
+                )
+                connection.execute(
+                    text("UPDATE alembic_version SET version_num = :head WHERE version_num = :old"),
+                    {"head": head_rev, "old": rev_in_db},
+                )
+                if hasattr(connection, 'commit'):
+                    connection.commit()
+    except Exception as exc:
+        logging.getLogger("alembic.env").warning(f"Could not verify alembic_version: {exc}")
+
+
 def run_migrations_online() -> None:
     """Execute migrations against a live database connection."""
     live_connectable = _get_engine_connectable()
     with live_connectable.connect() as live_connection:
+        _sanitize_alembic_version(live_connection)
         alembic.context.configure(
             connection=live_connection,
             target_metadata=migration_metadata,
