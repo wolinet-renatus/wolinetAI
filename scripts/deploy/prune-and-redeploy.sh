@@ -72,6 +72,6 @@ done
 
 # Reclaim disk space by pruning superseded/old images no longer used by the active stack
 echo "==> [wolinet] Pruning old superseded images (freeing disk space)..."
-docker image prune -a -f --filter "until=24h" 2>/dev/null || true
+docker image prune -a -f 2>/dev/null || true
 
 echo "==> [wolinet] Deployment complete! The model-sync service will publish running Xinference models to LiteLLM."
