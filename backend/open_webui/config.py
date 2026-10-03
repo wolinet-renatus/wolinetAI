@@ -129,13 +129,12 @@ def run_migrations():
         if "Can't locate revision" in err_msg or "ResolutionError" in err_msg:
             log.warning(f"Detected orphan/unrecognized alembic revision ({err_msg}). Stamping to head to recover...")
             try:
-                command.stamp(alembic_cfg, 'head', purge=True)
+                command.stamp(alembic_cfg, 'head')
                 command.upgrade(alembic_cfg, 'head')
                 log.info("Successfully recovered and stamped alembic migrations to head.")
                 return
             except Exception as stamp_err:
-                log.warning(f"Alembic stamp recovery notice: {stamp_err}")
-                return
+                log.exception(f"Error auto-recovering alembic stamp: {stamp_err}")
         log.exception(f'Error running migrations: {e}')
 
 

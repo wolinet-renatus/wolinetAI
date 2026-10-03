@@ -577,8 +577,8 @@ def _build_portal_html(title: str, openapi_url: str, scalar_js_url: str, favicon
     <span class="status-dot"></span>
     <span class="status-label">Gateway Active</span>
     <span id="hdr-guest-btns" style="display:flex;gap:6px;">
-      <button type="button" id="hdr-btn-signin" class="btn btn-primary btn-sm" onclick="openAuth('signin')">Sign In</button>
-      <button type="button" id="hdr-btn-signup" class="btn btn-outline btn-sm" onclick="openAuth('signup')">Register</button>
+      <a href="/auth" class="btn btn-primary btn-sm" id="hdr-btn-signin" style="text-decoration:none;display:inline-flex;align-items:center;">Sign In</a>
+      <a href="/auth" class="btn btn-outline btn-sm" id="hdr-btn-signup" style="text-decoration:none;display:inline-flex;align-items:center;">Register</a>
     </span>
     <button id="hdr-signout" class="btn btn-ghost btn-sm" style="display:none;" onclick="doLogout()">Sign Out</button>
     <button class="btn btn-outline btn-sm" onclick="toggleAsst()">
@@ -760,12 +760,12 @@ def _build_portal_html(title: str, openapi_url: str, scalar_js_url: str, favicon
         <h3><img src="{favicon_url}" alt="" />Wolinet Developer Access</h3>
         <p>Sign in or create an account to unlock your API key and inference credits.</p>
       </div>
-      <button type="button" class="asst-cls" onclick="closeAuth()">&#10005;</button>
+      <button class="asst-cls" onclick="closeAuth()">&#10005;</button>
     </div>
     <div class="modal-tabs">
-      <button type="button" id="tab-signin" class="modal-tab active" onclick="switchTab('signin')">Sign In</button>
-      <button type="button" id="tab-signup" class="modal-tab" onclick="switchTab('signup')">Create Account</button>
-      <button type="button" id="tab-key"    class="modal-tab" onclick="switchTab('key')">API Key</button>
+      <button id="tab-signin" class="modal-tab active" onclick="switchTab('signin')">Sign In</button>
+      <button id="tab-signup" class="modal-tab" onclick="switchTab('signup')">Create Account</button>
+      <button id="tab-key"    class="modal-tab" onclick="switchTab('key')">API Key</button>
     </div>
     <div class="modal-body">
       <div id="auth-alert" class="alert"></div>
@@ -1013,26 +1013,15 @@ def _build_portal_html(title: str, openapi_url: str, scalar_js_url: str, favicon
     }}catch(e){{al.textContent='Error: '+e.message;al.className='alert error';al.style.display='block';}}
   }};
 
-  window.openAuth=function(tab){{
-    var m=document.getElementById('auth-modal');
-    if(m) m.classList.add('open');
-    switchTab(tab||'signin');
-    clearAuthAlert();
-  }};
-  window.closeAuth=function(){{
-    var m=document.getElementById('auth-modal');
-    if(m) m.classList.remove('open');
-  }};
+  window.openAuth=function(tab){{document.getElementById('auth-modal').classList.add('open');switchTab(tab||'signin');clearAuthAlert();}};
+  window.closeAuth=function(){{document.getElementById('auth-modal').classList.remove('open');}};
   window.closeAuthBd=function(e){{if(e.target&&e.target.id==='auth-modal')closeAuth();}};
   window.switchTab=function(tab){{
     ['signin','signup','key'].forEach(function(t){{
-      var tabEl=document.getElementById('tab-'+t);
-      if(tabEl) tabEl.classList.toggle('active',t===tab);
-      var formEl=document.getElementById('form-'+t);
-      if(formEl) formEl.style.display=(t===tab?'block':'none');
+      document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+      document.getElementById('form-'+t).style.display=(t===tab?'block':'none');
     }});clearAuthAlert();
   }};
-  document.addEventListener('keydown',function(e){{if(e.key==='Escape')closeAuth();}});
   function showAuthAlert(msg,err){{var el=document.getElementById('auth-alert');el.textContent=msg;el.className='alert '+(err?'error':'success');el.style.display='block';}}
   function clearAuthAlert(){{var el=document.getElementById('auth-alert');el.style.display='none';el.className='alert';}}
 
