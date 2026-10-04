@@ -24,6 +24,10 @@ EXCLUDED_MODELS = frozenset(
         "openai/tiny-llama",
         "tinyllama",
         "tiny_llama",
+        "wolinet-pro",
+        "deepseek-coder-instruct",
+        "deepseek-coder",
+        "wolinet-coder",
     }
 )
 LEGACY_MODEL_NAMES = frozenset(
@@ -36,6 +40,7 @@ LEGACY_MODEL_NAMES = frozenset(
         "wolinex-coder-pro",
         "wolinex-coder-lite",
         "wolinex-omni",
+        "wolinet-pro",
     }
 )
 
@@ -254,15 +259,7 @@ def sync_once() -> None:
     }
     current_by_name = {str(entry.get("model_name")): entry for entry in current if entry.get("model_name")}
 
-    for model_id, model in active.items():
-        if model_id in current_by_name and model_id not in managed:
-            log.warning("Skipping active Xinference model %s because LiteLLM already has that name", model_id)
-            continue
-        _upsert_model(gateway_url, gateway_key, model_id, model_id, inference_api_base,
-                      inference_key, managed.get(model_id))
-        log.info("Synced running Xinference model in LiteLLM: %s", model_id)
-
-    # Keep the public names stable while the actual inference UIDs stay dynamic.
+    # Keep ONLY the two public models:
     # 1. Wolinet Pro (Flagship general chat): prioritizes qwen, llama, pro, chat
     # 2. Wolinet Coder (Developer specialist): prioritizes deepseek, coder
     preferred_pro_uid = (
@@ -308,42 +305,29 @@ def sync_once() -> None:
         log.info("Public model %s routes to active Xinference model %s", CODER_PUBLIC_MODEL, coder_uid)
 
     public_models = {DEFAULT_PUBLIC_MODEL, CODER_PUBLIC_MODEL}
-    for model_id, entry in managed.items():
-        if model_id == DEFAULT_PUBLIC_MODEL and pro_uid:
-            continue
-        if model_id == CODER_PUBLIC_MODEL and coder_uid:
-            continue
-        if model_id not in public_models and model_id in active and model_id not in EXCLUDED_MODELS:
-            continue
-        model_info = _model_info(entry)
-        entry_id = model_info.get("id")
-        if not entry_id:
-            log.warning("Cannot remove inactive managed model without LiteLLM model id: %s", model_id)
-            continue
-        _request_json(
-            f"{gateway_url.rstrip('/')}/model/delete",
-            gateway_key,
-            "POST",
-            {"id": str(entry_id)},
-        )
-        log.info("Removed stopped or excluded Xinference model from LiteLLM: %s", model_id)
 
-    # Force purge any model in LiteLLM matching excluded names (tiny-llama)
-    for entry in current:
+    # Purge ANY model from LiteLLM that is not strictly one of our two public models,
+    # or any duplicate deployment of the public models.
+    seen_public_models: set[str] = set()
+    current_after = _fetch_gateway_models(gateway_url, gateway_key)
+    for entry in current_after:
         m_name = str(entry.get("model_name", ""))
-        if any(exc in m_name.lower() for exc in ("tiny-llama", "tinyllama", "tiny_llama")):
-            entry_id = _model_info(entry).get("id")
-            if entry_id:
-                try:
-                    _request_json(
-                        f"{gateway_url.rstrip('/')}/model/delete",
-                        gateway_key,
-                        "POST",
-                        {"id": str(entry_id)},
-                    )
-                    log.info("Purged excluded model from LiteLLM: %s (id: %s)", m_name, entry_id)
-                except Exception as exc:
-                    log.warning("Failed to purge %s from LiteLLM: %s", m_name, exc)
+        entry_id = _model_info(entry).get("id")
+        if not entry_id:
+            continue
+        if m_name in public_models and m_name not in seen_public_models:
+            seen_public_models.add(m_name)
+            continue
+        try:
+            _request_json(
+                f"{gateway_url.rstrip('/')}/model/delete",
+                gateway_key,
+                "POST",
+                {"id": str(entry_id)},
+            )
+            log.info("Purged non-canonical or duplicate model from LiteLLM: %s (id: %s)", m_name, entry_id)
+        except Exception as exc:
+            log.warning("Failed to purge model %s from LiteLLM: %s", m_name, exc)
 
 
 def main() -> None:
