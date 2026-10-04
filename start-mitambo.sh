@@ -157,7 +157,60 @@ try:
         pass
 
     running_models = client.list_models()
-    print(f'==> [mitambo-init] Active Xinference models: {list(running_models.keys())}')
+    print(f'==> [mitambo-init] Currently active models: {list(running_models.keys())}')
+
+    # 4. Auto-launch Wolinet Pro (Qwen 2.5 1.5B) if not running
+    if "wolinet-pro" not in running_models and "qwen2.5-instruct" not in running_models:
+        qwen_src = "/root/.xinference/cache/v2/qwen2.5-instruct-ggufv2-1_5b-q4_k_m/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+        if os.path.exists(qwen_src):
+            try:
+                qwen_alt_dir = "/root/.xinference/cache/v2/qwen2_5-instruct-ggufv2-1_5b-q4_k_m"
+                os.makedirs(qwen_alt_dir, exist_ok=True)
+                qwen_alt = os.path.join(qwen_alt_dir, "qwen2.5-1.5b-instruct-q4_k_m.gguf")
+                if not os.path.exists(qwen_alt) or os.path.getsize(qwen_alt) != os.path.getsize(qwen_src):
+                    import shutil
+                    shutil.copyfile(qwen_src, qwen_alt)
+
+                print("==> [mitambo-init] Auto-launching Wolinet Pro (Qwen 2.5 1.5B)...")
+                client.launch_model(
+                    model_name="qwen2.5-instruct",
+                    model_uid="wolinet-pro",
+                    model_engine="llama.cpp",
+                    model_format="ggufv2",
+                    model_size_in_billions="1_5",
+                    quantization="q4_k_m",
+                    model_path=qwen_src,
+                    n_gpu_layers=0,
+                    n_ctx=2048,
+                    n_parallel=1,
+                    n_threads=4,
+                )
+                print("==> [mitambo-init] Wolinet Pro auto-launched successfully.")
+            except Exception as pe:
+                print(f"==> [mitambo-init] Notice launching Wolinet Pro: {pe}")
+
+    # 5. Auto-launch Wolinet Coder (DeepSeek Coder 1.3B) if not running
+    if "deepseek-coder-instruct" not in running_models:
+        try:
+            print("==> [mitambo-init] Auto-launching Wolinet Coder (DeepSeek Coder 1.3B)...")
+            client.launch_model(
+                model_name="deepseek-coder-instruct",
+                model_uid="deepseek-coder-instruct",
+                model_engine="llama.cpp",
+                model_format="ggufv2",
+                model_size_in_billions="1_3",
+                quantization="Q4_K_M",
+                n_gpu_layers=0,
+                n_ctx=2048,
+                n_parallel=1,
+                n_threads=4,
+            )
+            print("==> [mitambo-init] Wolinet Coder auto-launched successfully.")
+        except Exception as ce:
+            print(f"==> [mitambo-init] Notice launching Wolinet Coder: {ce}")
+
+    running_models = client.list_models()
+    print(f'==> [mitambo-init] Active Xinference models now: {list(running_models.keys())}')
     sys.exit(0)
 except Exception as me:
     print(f'==> [mitambo-init] Init attempt notice (will retry): {me}')
