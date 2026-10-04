@@ -146,6 +146,7 @@ try:
     client.login(admin_user, admin_pass)
 
     try:
+        token = client._get_token() if hasattr(client, "_get_token") else getattr(client, "_token", None)
         if token:
             auth_dir = '/root/.xinference/auth'
             os.makedirs(auth_dir, exist_ok=True)
