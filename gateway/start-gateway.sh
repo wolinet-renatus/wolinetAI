@@ -291,6 +291,21 @@ for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/model_prices_
         print('==> [lango] Injected default model prices for custom models into', p)
     except Exception as e:
         print('==> [lango] Note on model_prices json injection:', e)
+
+# 7.5. Patch ContextWindowExceededError message to inform user to start a new chat
+for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py'):
+    try:
+        with open(p, 'r', encoding='utf-8') as f:
+            code = f.read()
+        target = 'message=f"ContextWindowExceededError: {custom_llm_provider.capitalize()}Exception - {error_str}"'
+        replacement = 'message="⚠️ Conversation Memory Limit Reached: This chat has exceeded the maximum context memory (4,096 tokens). Please start a New Chat to continue chatting smoothly!"'
+        if target in code:
+            code = code.replace(target, replacement)
+            with open(p, 'w', encoding='utf-8') as f:
+                f.write(code)
+            print('==> [lango] Successfully patched ContextWindowExceededError friendly message in', p)
+    except Exception as e:
+        print('==> [lango] Note patching exception_mapping_utils:', e)
 " || true
 
 # 8. Copy custom logos and favicon to internal bundled paths if not already mounted

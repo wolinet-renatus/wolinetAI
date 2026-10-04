@@ -80,8 +80,9 @@ else:
             quantization="Q4_K_M",
             n_gpu=None,
             n_gpu_layers=0,
-            n_ctx=2048,
+            n_ctx=4096,
             n_parallel=1,
+            n_threads=4,
         )
         print(f"🎉 SUCCESS! Wolinet Coder launched (UID: {c_uid})")
     except Exception as ce:
@@ -145,7 +146,7 @@ else:
                 print(f"   ⚠️ Sync notice: {se}")
 
     print("🚀 Launching Wolinet Pro (Qwen 2.5 1.5B Instruct)...")
-    print("   Engine: llama.cpp | Format: ggufv2 | Quant: q4_k_m | CPU (n_ctx=2048, n_parallel=1, n_threads=4)")
+    print("   Engine: llama.cpp | Format: ggufv2 | Quant: q4_k_m | CPU (n_ctx=4096, n_parallel=1, n_threads=4)")
 
     launched = False
     for quant_candidate in ("q4_k_m", "Q4_K_M"):
@@ -159,7 +160,7 @@ else:
                 quantization=quant_candidate,
                 model_path=file_path,
                 n_gpu_layers=0,
-                n_ctx=2048,
+                n_ctx=4096,
                 n_parallel=1,
                 n_threads=4,
             )
@@ -180,7 +181,7 @@ else:
             "--size-in-billions", "1_5",
             "--model-format", "ggufv2",
             "--quantization", "q4_k_m",
-            "--n_ctx", "2048",
+            "--n_ctx", "4096",
             "--n_parallel", "1",
             "--n_threads", "4",
         ]

@@ -181,7 +181,7 @@ try:
                     quantization="q4_k_m",
                     model_path=qwen_src,
                     n_gpu_layers=0,
-                    n_ctx=2048,
+                    n_ctx=4096,
                     n_parallel=1,
                     n_threads=4,
                 )
@@ -201,7 +201,7 @@ try:
                 model_size_in_billions="1_3",
                 quantization="Q4_K_M",
                 n_gpu_layers=0,
-                n_ctx=2048,
+                n_ctx=4096,
                 n_parallel=1,
                 n_threads=4,
             )
