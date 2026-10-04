@@ -1172,7 +1172,7 @@ def _map_vertex_exception(
         )
     elif ExceptionCheckers.is_error_str_context_window_exceeded(error_str):
         raise ContextWindowExceededError(
-            message=f"ContextWindowExceededError: {custom_llm_provider.capitalize()}Exception - {error_str}",
+            message="⚠️ Conversation Memory Limit Reached: This chat has exceeded the maximum context memory (4,096 tokens). Please start a New Chat to continue chatting smoothly!",
             model=model,
             llm_provider=custom_llm_provider,
             litellm_debug_info=extra_information,
