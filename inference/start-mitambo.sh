@@ -115,8 +115,25 @@ try:
         cur = conn.cursor()
         cur.execute('SELECT id FROM users WHERE username = ?', (admin_user,))
         user_row = cur.fetchone()
-        if user_row:
-            uid = user_row[0]
+        
+        # Ensure admin user has correct password hash matching admin_pass
+        try:
+            import bcrypt
+            p_bytes = admin_pass.encode('utf-8')
+            if len(p_bytes) > 72:
+                p_bytes = hashlib.sha256(p_bytes).digest()[:72]
+            p_hash = bcrypt.hashpw(p_bytes, bcrypt.gensalt()).decode('utf-8')
+            if user_row:
+                uid = user_row[0]
+                cur.execute('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?', (p_hash, uid))
+            else:
+                cur.execute('INSERT INTO users (username, password_hash, source, enabled, must_change_password) VALUES (?, ?, ?, ?, ?)', (admin_user, p_hash, 'local', 1, 0))
+                uid = cur.lastrowid
+            conn.commit()
+        except Exception as _pwe:
+            print(f'==> [mitambo-init] Password sync note: {_pwe}')
+
+        if uid:
             key_hash = hashlib.sha256(gateway_key.encode('utf-8')).hexdigest()
             key_prefix = gateway_key[:7]
             cur.execute('SELECT id FROM api_keys WHERE key_hash = ?', (key_hash,))
