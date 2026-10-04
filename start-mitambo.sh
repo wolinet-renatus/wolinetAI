@@ -85,7 +85,7 @@ echo "==> [mitambo] Verified UI static assets: ${UI_COUNT} files in /ui"
   for attempt in $(seq 1 60); do
     sleep 4
     if python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9997/status', timeout=3)" >/dev/null 2>&1; then
-      if python3 -c "
+      if python3 - << 'PY'
 import os, sys, time, json, urllib.request, hashlib, sqlite3
 
 endpoint = 'http://127.0.0.1:9997'
@@ -216,7 +216,8 @@ try:
 except Exception as me:
     print(f'==> [mitambo-init] Init attempt notice (will retry): {me}')
     sys.exit(1)
-"; then
+PY
+      then
         echo "==> [mitambo-init] Initialization and model launch complete."
         break
       fi
