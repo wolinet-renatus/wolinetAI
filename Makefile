@@ -6,7 +6,7 @@ SHELL := /usr/bin/env bash
 PYTHON := .venv/bin/python3
 XINFERENCE := .venv/bin/xinference
 
-.PHONY: help start stop restart gateway mock register test health agent web docker-up docker-down
+.PHONY: help start stop restart gateway mock register test health web docker-up docker-down
 
 help:
 	@echo "Wolinet AI Enterprise Platform"
@@ -19,7 +19,6 @@ help:
 	@echo "  make register     - Register all GGUF models into Xinference"
 	@echo "  make list         - List active models running on Xinference"
 	@echo "  make health       - Run full platform health check"
-	@echo "  make agent        - Launch interactive autonomous coding agent"
 	@echo "  make docker-up    - Run production platform via Docker Compose"
 	@echo "  make docker-down  - Stop Docker Compose platform"
 
@@ -43,9 +42,6 @@ list:
 
 health:
 	@./scripts/healthcheck.sh
-
-agent:
-	@$(PYTHON) apps/agentic-coder/main.py
 
 web:
 	@./apps/web-client/run_webui.sh

@@ -103,30 +103,11 @@ coverage/
 !packages/wolinet-sdk/dist/
 !packages/wolinet-sdk/dist/**
 
-# macOS / Desktop & Eclipse Theia Builds
+# Compiled Binaries & OS Bundles
 *.app/
 *.dSYM/
-apps/desktop/.build/
-apps/desktop/**/lib/
-apps/desktop/**/src-gen/
-apps/desktop/**/gen-esbuild.*.mjs
-apps/desktop/**/.test/
-apps/desktop/plugins/
-apps/desktop/**/plugins/
-apps/desktop/**/*.tsbuildinfo
-apps/desktop/**/*.vsix
-apps/desktop/**/.theia/chatSessions
-apps/desktop/**/tmp/
-apps/desktop/**/errorShots/
-apps/desktop/**/.nyc_output/
-apps/desktop/**/coverage/
-apps/desktop/electron-pack/
-apps/desktop/dist/
 xcuserdata/
 DerivedData/
-
-# Compiled Binaries (build locally from vendored source)
-apps/cli/wolinet-cli
 wolinet-cli
 
 # Large Model Weights (Keep configuration JSONs, ignore raw weights)

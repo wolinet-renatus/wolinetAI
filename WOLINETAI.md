@@ -13,7 +13,7 @@ Autonomous coding agents typically consume 20–50 turns per task (reading trees
 ```mermaid
 flowchart TD
     subgraph Clients["Client Applications & Agentic IDEs"]
-        Agent["🤖 Agentic Coding Assistant\n(apps/agentic-coder)"]
+        Agent["🤖 Standalone Agents & CLI Tools"]
         IDE["💻 IDE Extensions / Cursor / VS Code"]
         Web["🌐 Web & Mobile Dashboards"]
     end
@@ -86,16 +86,13 @@ wolinetai/
 │       ├── qwen2.5-omni-3b.json # Local voice/vision multi-modal
 │       └── qwen-image-2.1.json  # Local diffusion transformer
 │
-├── apps/                        # 🤖 Client Applications
+├── apps/                        # 🤖 Client Applications & Portals
 │   ├── web-client/              # 🌐 Wolinet AI Web Portal (Open WebUI on Port 3080)
 │   │   ├── backend/             # Python (FastAPI/uvicorn) backend with Wolinet customizations
 │   │   │   └── open_webui/routers/wolinet_docs.py  # Developer portal + auth + docs on /docs
 │   │   └── run_webui.sh         # Launcher script (PORT=3080, connects to gateway :4000)
-│   └── agentic-coder/           # Reference Autonomous Coding Agent (CLI + Tools)
-│       ├── main.py              # Interactive terminal agent loop
-│       └── src/
-│           ├── agent.py         # Autonomous multi-turn reasoning engine
-│           └── tools.py         # Workspace tools (read, write, list, bash execute)
+│   ├── dev-portal/              # 📚 Interactive Developer API Documentation
+│   └── homepage/                # 🏠 Official Homepage & Landing Page
 │
 └── scripts/                     # 🛠️ DevOps & Automation Scripts
     ├── register_models.sh       # Persistently registers all models in models/registrations/
@@ -237,14 +234,17 @@ response = client.chat.completions.create(
 
 ```
 
-### Reference Agent Implementation
-We have included a full reference autonomous agent in `apps/agentic-coder`:
+### Connecting External Agents & Tools
+Autonomous agents, CLI tools, and IDE extensions connect directly to the Wolinet Gateway using standard OpenAI-compatible endpoints:
 ```bash
-# Run the interactive agentic coder
-make agent
-
-# Or pass a direct task:
-.venv/bin/python3 apps/agentic-coder/main.py --prompt "Analyze the git status and write unit tests for tools.py"
+# Example query to the gateway via standard curl:
+curl http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer sk-wolinet-admin-2026" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "wolinex-coder",
+    "messages": [{"role": "user", "content": "Refactor this function..."}]
+  }'
 ```
 
 ---

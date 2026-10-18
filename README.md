@@ -30,8 +30,8 @@ make start
 # 4. Verify system health
 make health
 
-# 5. Launch interactive coding agent
-make agent
+# 5. Launch Wolinet AI Web Studio
+make web
 ```
 
 ---
@@ -39,7 +39,7 @@ make agent
 ## 🏗️ Architecture at a Glance
 
 ```
-Clients (Agentic Coding IDE / Apps)
+Clients (Agents, IDEs, Web & Mobile)
               │
               ▼
    AI Gateway Layer (:4000)
@@ -56,6 +56,7 @@ Clients (Agentic Coding IDE / Apps)
 * **`inference/`**: Core multi-backend inference engine (Xinference stack) powering local GGUF models.
 * **`models/`**: Quantized GGUF model weights and declarative Version 2 JSON manifests (`wolinex-coder`, `qwen2.5-omni`).
 * **`apps/web-client/`**: Wolinet AI Studio, backed by the live model catalog exposed by LiteLLM.
-* **`apps/agentic-coder/`**: Reference autonomous coding agent with full tool calling capabilities.
+* **`apps/dev-portal/`**: Interactive developer API documentation and onboarding portal.
+* **`apps/homepage/`**: Wolinet AI official landing page and portal.
 * **`scripts/`**: Automation scripts for registration, health checking, and system lifecycle.
 * **`docker-compose.yml`**: Production single-command deployment stack with PostgreSQL and Redis.
