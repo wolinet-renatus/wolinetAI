@@ -1,0 +1,22 @@
+package router
+
+import (
+	v2 "wolinet.ai/1apanel/core/app/api/v2"
+	"wolinet.ai/1apanel/core/middleware"
+
+	"github.com/gin-gonic/gin"
+)
+
+type LogRouter struct{}
+
+func (s *LogRouter) InitRouter(Router *gin.RouterGroup) {
+	operationRouter := Router.Group("logs").
+		Use(middleware.SessionAuth()).
+		Use(middleware.PasswordExpired())
+	baseApi := v2.ApiGroupApp.BaseApi
+	{
+		operationRouter.POST("/login", baseApi.GetLoginLogs)
+		operationRouter.POST("/operation", baseApi.GetOperationLogs)
+		operationRouter.POST("/clean", baseApi.CleanLogs)
+	}
+}

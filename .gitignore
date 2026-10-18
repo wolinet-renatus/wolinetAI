@@ -134,3 +134,6 @@ scratch/
 *.db
 .litellm_cache/
 apps/web-client/data/
+*.pkg
+orchestrator/1apanel/data/
+
