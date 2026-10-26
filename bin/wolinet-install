@@ -95,13 +95,8 @@ fi
 echo -e "   ${GREEN}✓ Environment configuration active.${NC}"
 
 echo -e "\n${BOLD}[4/6] STARTING SOVEREIGN SERVER SERVICES...${NC}"
-if [ -f ./bin/wolinet-system ]; then
-    echo -e "   -> Invoking system controller to start all stacks..."
-    ./bin/wolinet-system start || true
-else
-    echo -e "   -> Starting via compose..."
-    $CONTAINER_RUNTIME compose -f docker-compose.yml up -d
-fi
+echo -e "   -> Launching containers via ${CONTAINER_RUNTIME} compose..."
+$CONTAINER_RUNTIME compose -f docker-compose.yml up -d || true
 
 echo -e "\n${BOLD}[5/6] VERIFYING SERVICE HEALTHCHECKS & PORTS...${NC}"
 sleep 3
