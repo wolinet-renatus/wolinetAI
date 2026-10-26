@@ -120,3 +120,42 @@ All model execution weights are stored inside `${WORKSPACE_ROOT}/models/` (or `/
 6. **DO NOT Use Docker Commands Natively in Production Scripts:** Production automation must target rootless `podman` Quadlets (`orchestrator/podman/quadlets/`) and `podman compose`.
 7. **DO NOT Invoke Ollama Services:** Never generate templates, routes, or UI components linked to Ollama execution states. All local inference processes belong exclusively to Mitambo.
 8. **DO NOT Hardcode Credentials:** Absolutely zero plain-text database hashes, Cloudflare tokens, encryption keys, or local loop passwords may exist inside code files or configurations. Bind every secret dynamically to local environment parameters (`.env`).
+
+---
+
+## 5. RESOURCE DEDUPLICATION & ARCHITECTURAL BOUNDARIES
+
+To prevent duplicate background processes, memory fragmentation, and massive VRAM/RAM waste, responsibilities are strictly partitioned across three distinct layers:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                STRICT TASK DEDICATION & RESOURCE DEDUPLICATION              │
+├──────────────────────────────┬──────────────────────────────┬───────────────┤
+│ 1. 1Panel Control Plane      │ 2. Mitambo (Compute Core)    │ 3. Lango      │
+│    (Host Hardware & Watchdog)│    (Sole GGUF Matrix Engine) │    (Gateway)  │
+├──────────────────────────────┼──────────────────────────────┼───────────────┤
+│ • Physical CPU/RAM metrics   │ • GGUF model execution       │ • Public /v1  │
+│ • Podman socket supervisor   │ • Memory-locked VRAM/RAM     │ • API Keys &  │
+│ • Reverse proxy & ACME SSL   │ • CUDA / Metal Tensor Ops    │   Spend logs  │
+│ • Isolated Native SQLite DB  │ • Internal :9997 only        │ • Cloud Fall- │
+│ ❌ ZERO AI Inferences        │ ❌ NO API Key Management     │   back & Mesh │
+│ ❌ ZERO Model Weight Loading │ ❌ NO Public Internet Ports  │ ❌ NO Tensors │
+└──────────────────────────────┴──────────────────────────────┴───────────────┘
+```
+
+### A. Why Upstream 1Panel App Store AI Must Never Run
+Standard 1Panel includes an app store with optional AI runners (Ollama, vLLM). In the Wolinet architecture:
+* **Conflict:** If 1Panel installs Ollama or vLLM, it allocates another 8GB–32GB of VRAM and loads duplicate GGUF models into memory, crashing the system due to Out-Of-Memory (OOM) kernel panics.
+* **Enforcement:** 1Panel's AI app installer is strictly disabled. 1Panel only monitors the **container status and hardware usage** of `mitambo-inference`. It never runs its own inference daemons.
+
+### B. Boundary Matrix: Who Does What?
+
+| Operational Task | Assigned Subsystem | Prohibited Subsystems | Rationale & Resource Impact |
+| :--- | :--- | :--- | :--- |
+| **Host Resource Monitoring** (CPU, RAM, GPU temp, Disk) | **1Panel** (`:9999`/`:8888`) | Mitambo, Lango | 1Panel has bare-metal host privileges and systemd access; services inside containers only see virtual limits. |
+| **Container Auto-Healing & Lifecycle** | **1Panel** (via Podman socket) | Mitambo, Lango | Prevents nested container socket exposure; 1Panel controls the Podman daemon from the host. |
+| **Inference & Tensor Computation** (GGUF, MPS, CUDA) | **Mitambo** (`:9997`) | 1Panel, Lango, Web Client | Concentrates 100% of GPU VRAM into a single memory-locked pool (`LimitMEMLOCK=-1`, `ShmSize=8g`). |
+| **API Routing & Key Authentication** | **Lango** (`:4000`) | 1Panel, Mitambo | Single source of truth for spend tracking, rate-limiting, and PostgreSQL auditing. Mitambo has zero auth overhead. |
+| **Edge SSL & Reverse Proxy** | **1Panel** (OpenResty/Nginx) | Lango, Mitambo | 1Panel handles ACME certificates and edge routing on ports `:80`/`:443` without container network overhead. |
+| **Agent Chat & MCP Workspaces** | **Web Client** (`:8081`) / **IDE** | 1Panel | UI state and MCP client tools are strictly isolated to client frontends. |
+
