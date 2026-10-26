@@ -1,12 +1,12 @@
 # Wolinet AI: Production Deployment & Infrastructure Guide
 
-Complete, highly optimized Docker Compose network architecture, Nginx reverse proxy topology, and CI/CD deployment guide for the **Wolinet Ecosystem** on a single Contabo GPU/CPU Server using raw Docker networking or Dokploy.
+Complete Rootless Podman Quadlet architecture, DEC 1Panel Control Plane hierarchy, Nginx reverse proxy topology, and CI/CD deployment guide for the **Wolinet Ecosystem**.
 
 ---
 
 ## 1. Subdomain Topology & Product Matrix
 
-The ecosystem exposes 5 distinct public subdomains terminating TLS on an isolated edge Nginx reverse proxy. All internal inter-service traffic stays private to the Docker bridge network (`wolinet_internal`) with near-zero latency.
+The ecosystem exposes public subdomains terminating TLS on an isolated edge reverse proxy (managed via DEC 1Panel or edge Nginx). All internal inter-service traffic stays private to the unified Podman Pod network (`wolinetai-core-pod` / `wolinet_internal`) over local loopback (`127.0.0.1`) with near-zero latency.
 
 ```
                     Internet (Client Traffic)
@@ -15,74 +15,78 @@ The ecosystem exposes 5 distinct public subdomains terminating TLS on an isolate
                │ Ports 80, 443 │               │
                ▼               ▼               ▼
         ┌──────────────────────────────────────────────┐
-        │  Edge Nginx Reverse Proxy (TLS Terminator)   │
+        │  Edge Reverse Proxy / DEC 1Panel Ingress     │
         └──────────────────────┬───────────────────────┘
                                │
-       Docker Bridge Network: wolinet_internal (Private 172.x)
-        ├── ai.wolinet.com      ──► website:8080    (Bespoke Homepage & App Store Links)
-        ├── wolinex.wolinet.com ──► wolinex:8080    (Open WebUI Studio, Replicas: 2)
-        ├── lango.wolinet.com   ──► lango:4000      (LiteLLM AI Gateway, Replicas: 2)
-        ├── mitambo.wolinet.com ──► mitambo:9997    (Xinference Engine, Basic Auth)
-        └── dev.wolinet.com     ──► devportal:8080  (Docs, Key Studio & Live Assistant)
+       Podman Pod Namespace: wolinetai-core-pod (Loopback 127.0.0.1)
+        ├── panel.wolinet.com   ──► 1apanel:8888/:8089 (Stage 1 Control Plane, Native SQLite)
+        ├── ai.wolinet.com      ──► website:80/:3000   (Enterprise Homepage & Download Links)
+        ├── wolinex.wolinet.com ──► web-client:8081    (Open WebUI Sovereign Workspace)
+        ├── lango.wolinet.com   ──► lango:4000         (LiteLLM AI Gateway, /v1 & /ui)
+        ├── mitambo.wolinet.com ──► mitambo:9997       (Xinference Engine, GGUF Models)
+        └── dev.wolinet.com     ──► devportal:8082     (Docs, Key Studio & Scalar Specs)
             (docs.wolinet.com)
                                │
-        ├── postgres:5432       (Shared DB: 'litellm' & 'webui' databases)
-        └── redis:6379          (Session cache & router coordination)
+        ├── postgres:5433->5432 (Lango DB: 'litellm' database, Prisma migrations)
+        ├── redis:6379          (Session cache, token rate limits & router state)
+        └── obscura:8080        (Sandboxed Browser MCP Container for Agent Tools)
 ```
 
 | Subdomain | Upstream Target | Description & Responsibilities |
 | :--- | :--- | :--- |
-| **`ai.wolinet.com`** | `website:8080` | **Marketing Homepage & Showcase:** Custom, fast-loading, branded interface with product matrix mega-menu and App Store / Google Play / Desktop download destinations. |
-| **`wolinex.wolinet.com`** | `wolinex:8080` | **Wolinet AI Studio:** User-facing WebUI client with model chat, vision/audio streaming, file RAG, and wildcard session cookie issuance (`.wolinet.com`). |
+| **`panel.wolinet.com`** | `1apanel:8888` / `:8089` | **Stage 1 DEC 1Panel Control Plane:** Hardware supervision (CPU/RAM/GPU), storage mounts, Podman socket management, and isolated native SQLite DB. |
+| **`ai.wolinet.com`** | `website:80` / `:3000` | **Marketing Homepage & Showcase:** Custom, fast-loading branded interface with product matrix, documentation links, and client download destinations. |
+| **`wolinex.wolinet.com`** | `web-client:8081` | **Wolinet AI Studio (Open WebUI):** Sovereign chat interface, model switching, workspace tools, and session management. |
 | **`lango.wolinet.com`** | `lango:4000` | **LiteLLM AI Gateway:** Sovereign routing engine, OpenAI-compatible `/v1` endpoints, budget controls, Postgres spend logging, and CORS preflight handling. |
-| **`mitambo.wolinet.com`** | `mitambo:9997` | **Xinference Inference Engine:** High-performance local inference backend (CPU / NVIDIA CUDA). Protected by HTTP Basic Auth (`mitambo.htpasswd`). |
-| **`dev.wolinet.com`** / **`docs.wolinet.com`** | `devportal:8080` | **Developer Documentation & Key Studio:** Unified SSO session recognition, dynamic API key generation/rotation, SSE streaming assistant widget, and `/docs` interactive Scalar API specification. |
+| **`mitambo.wolinet.com`** | `mitambo:9997` | **Xinference Inference Engine:** High-performance local inference backend (Apple Silicon MPS / NVIDIA CUDA). Protected by HTTP Basic Auth. |
+| **`dev.wolinet.com`** / **`docs.wolinet.com`** | `devportal:8082` | **Developer Documentation & Key Studio:** Dynamic API key rotation, interactive Scalar API specifications, and live developer assistants. |
 
 ---
 
-## 2. Docker Compose Network & Service Isolation
+## 2. Strict Database & Data Storage Isolation
 
-All containers attach exclusively to a single user-defined bridge network (`wolinet_internal`). 
+The Wolinet architecture strictly isolates databases by functional tier to prevent cross-service corruption and security leakage:
 
-### Direct Microservice Cross-References
-* **WebUI (`wolinex`)** connects directly to LiteLLM via `http://lango:4000/v1` and database `postgresql://postgres:...@postgres:5432/webui`.
-* **LiteLLM (`lango`)** bridges to the inference engine via `http://mitambo:9997` and database `postgresql://postgres:...@postgres:5432/litellm`.
-* **Developer Portal (`devportal`)** proxies auth and session checks directly to `http://wolinex:8080/api/wolinet/auth` and streaming chat to `http://lango:4000/v1`.
-* **PostgreSQL (`postgres`)** initializes both `litellm` and `webui` databases and indexes via [`scripts/db/init-postgres.sh`](file:///Users/apple/Documents/wolinetai/scripts/db/init-postgres.sh). SQLite file creation is completely disabled.
+1. **DEC 1Panel Control Plane (Native SQLite):**
+   * Uses isolated SQLite database files in `${WORKSPACE_ROOT}/data/1panel/db/` (`1panel.db`, `alert.db`).
+   * **Strict Isolation Mandate:** Zero connection or schema sharing with PostgreSQL or application databases. Retains pure host hardware metrics, SSL certificates, container switch states, and firewall definitions.
+2. **Lango Persistent Database Layer (PostgreSQL 16 & Redis 7):**
+   * Dedicated PostgreSQL 16 cluster housing the `litellm` database on port `5433` (host) $\rightarrow$ `5432` (internal).
+   * 189 Prisma structural migrations managing `LiteLLM_UserTable`, `LiteLLM_SpendLogs`, and virtual keys.
+   * Redis 7 (`:6379`) provides an in-memory Append-Only File (AOF) cache for token rate limiting and routing.
+3. **Mitambo Historical Storage (Local SQLite Pools):**
+   * Stores model launch history and task queues in `${WORKSPACE_ROOT}/data/mitambo/` (`launch_history.db`, `token_routers.db`, `download_tasks.db`).
+4. **Quantized Model Weights (Local Disk):**
+   * Quantized GGUF models are stored in `${WORKSPACE_ROOT}/models/` (or `/var/lib/wolinet/models/`). Models execute fully within memory boundaries without cloud dependency.
 
-### Model Storage & Strict Isolation Policy
-No model weights or GGUF files are bundled into container images or manually copied to the server disk.
-* Xinference runs with `xinference_data` volume mounted to `/root/.xinference`.
-* Models are launched dynamically on-demand from **Hugging Face** or **ModelScope** via Xinference's native Model Launch API or Web UI.
-* The gateway model catalog is synchronized from running Xinference chat/generation models. The WebUI reads its available model list from LiteLLM, so a stopped model disappears after the next sync interval.
-* LiteLLM is built from the repository's `gateway/` source so the dashboard and backend expose one **Wolinet AI** provider. The sync service registers only active Xinference chat models under their live UIDs and maintains a stable **Wolinet Coder** route to the selected active UID. Set `XINFERENCE_DEFAULT_MODEL_UID` to choose that route; otherwise it selects the first active UID in sorted order.
-* The sync service uses the Docker service alias `mitambo`. For deployments where inference runs in a separate Dokploy stack, set `XINFERENCE_FALLBACK_URLS` to a reachable Xinference base URL after the domain route is configured; the fallback must serve `/v1/models` directly.
-* To enable cloud fallback after the local `Wolinet Coder` route fails, set `WOLINET_FALLBACK_MODELS` to comma-separated model IDs that are already enabled in LiteLLM (for example, the exact OpenAI or xAI/Grok IDs configured in the gateway UI). This keeps fallback targets aligned with configured credentials and available models.
+---
 
-## Lago usage billing
+## 3. Client Products & SDKs (Strict Server Decoupling)
 
-Set these secrets and values in Dokploy before deploying to send LiteLLM usage events to Lago:
+* **Wolinet Desktop IDE (`Wolinet-Dkt-Ide`):** An autonomous Tauri desktop client application that runs on developer workstations (macOS/Linux/Windows). It connects to the server purely over standard REST/WebSocket APIs (`http://<server-ip>:4000/v1`). It is **never** bundled or orchestrated into server Podman Quadlets or container images.
+* **Wolinet SDKs (`packages/`):** Python, Go, and TypeScript client libraries for integrating external applications with the Lango Gateway.
 
-```env
-LAGO_API_BASE=https://api.getlago.com
-LAGO_API_KEY=<your Lago API key>
-LAGO_API_EVENT_CODE=openai_tokens
-LAGO_API_CHARGE_BY=team_id
+---
+
+## 4. Hardware Profiles: CPU Nodes vs. Apple Silicon vs. NVIDIA GPU
+
+Wolinet AI dynamically optimizes hardware usage through native accelerator detection:
+
+### Apple Silicon Profile (macOS M-Series)
+* Utilizes **Metal Performance Shaders (MPS)** for accelerated matrix multiplication.
+* Mitambo runs with native unified memory allocation, delivering 15–35+ tokens/second on 3B–7B quantized models (`wolinex-coder`).
+
+### NVIDIA GPU Profile (Linux CUDA Server)
+* Pins GGUF model layers and tensor computations directly into GPU VRAM using NVIDIA Container Toolkit (`--gpus all` or CDI device mapping):
+```ini
+# Quadlet: mitambo-inference.container
+AddDevice=nvidia.com/gpu=all
+Environment=NVIDIA_VISIBLE_DEVICES=all
+Environment=NVIDIA_DRIVER_CAPABILITIES=compute,utility
 ```
 
-Create the `openai_tokens` billable metric in Lago, then create customers/subscriptions for the internal teams. Keys sent through LiteLLM must carry the corresponding `team_id`; LiteLLM reports model, response cost, and token counts in each event. Without `LAGO_API_KEY`, billing callbacks stay disabled.
-
-Add model providers and their credentials in LiteLLM's model catalog or `/model/new`. Lago configures billable metrics, customers, and subscriptions; it is not the model-provider registry.
-* Models persist across container restarts in the Docker named volume without host filesystem contamination.
-
----
-
-## 3. Hardware Allocations: CPU VPS vs. NVIDIA GPU Server
-
-Wolinet AI supports dual deployment topologies through Docker Compose layer composability:
-
-### Pure CPU Profile (Default: `docker-compose.prod.yml`)
-Enforces compute limits to prevent CPU starvation on general-purpose VPS nodes:
+### Pure CPU Profile (General-Purpose Cloud VPS)
+* Enforces compute thread ceilings to prevent host starvation on 8–16 vCPU nodes:
 ```yaml
 services:
   mitambo:
@@ -93,40 +97,55 @@ services:
           memory: 28G
 ```
 
-### NVIDIA GPU Profile (Override: `docker-compose.gpu.yml`)
-Pins GGUF model layers and tensor computations directly into GPU VRAM using NVIDIA Container Toolkit:
-```yaml
-services:
-  mitambo:
-    deploy:
-      resources:
-        limits:
-          cpus: "16.0"
-          memory: 28G
-        reservations:
-          memory: 8G
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    environment:
-      NVIDIA_VISIBLE_DEVICES: all
-      NVIDIA_DRIVER_CAPABILITIES: compute,utility
-```
+---
 
-To run on a Contabo NVIDIA GPU server:
+## 5. Deployment Methods
+
+### Option A: Master Sovereign Installer (Recommended)
+
+Execute the 1-command installer on any Linux or macOS server:
 ```bash
-docker compose --project-name wolinet \
-  -f docker-compose.prod.yml \
-  -f docker-compose.gpu.yml \
-  up -d --wait
+./install.sh
 ```
+This triggers the hierarchical 4-stage boot:
+1. Preflight hardware diagnostics & container engine detection (Podman/Docker).
+2. Stage 1: Boots DEC 1Panel Control Plane (`bin/1apanel`) and backing PostgreSQL 16 & Redis 7.
+3. Stage 2: Boots Mitambo Local Inference Core (:9997) with GPU/MPS accelerator.
+4. Stage 3: Boots Lango Sovereign API Gateway (:4000).
+5. Stage 4: Boots Web Client (:8081), Dev Portal (:8082), Homepage (:80), and ai-memory (:49374).
+6. Runs the synthetic Golden Loop probe to verify end-to-end transaction integrity.
+
+### Option B: Rootless Podman Quadlets (`orchestrator/podman/quadlets/`)
+
+For production systemd-managed Linux environments:
+1. Copy quadlet definitions from `orchestrator/podman/quadlets/` to `~/.config/containers/systemd/`:
+   * `wolinetai.pod` (Master Pod definition and port mappings)
+   * `postgres-cluster.container`
+   * `redis-cache.container`
+   * `mitambo-inference.container`
+   * `lango-gateway.container`
+   * `wolinet-browser.container`
+   * `wolinet-website.container`
+   * `wolinet-devportal.container`
+2. Reload systemd and start:
+   ```bash
+   systemctl --user daemon-reload
+   systemctl --user start wolinetai-pod.service
+   ```
+
+### Option C: Docker Compose / Dokploy
+
+For existing environments running Docker or Dokploy:
+```bash
+docker compose -f docker-compose.yml up -d
+```
+All services attach to the `wolinet_internal` overlay network with healthcheck dependency gates.
 
 ---
 
-## 4. Nginx Reverse Proxy & Streaming Configuration
+## 6. Nginx Reverse Proxy & Streaming Configuration
 
-The Nginx topology in [`nginx/conf.d/wolinet.conf`](file:///Users/apple/Documents/wolinetai/nginx/conf.d/wolinet.conf) enforces:
+The Nginx topology enforces:
 
 ### Real-Time SSE Streaming Optimization
 Buffer artifacts during token generation are strictly suppressed on `lango.wolinet.com` and `wolinex.wolinet.com`:
@@ -138,17 +157,8 @@ proxy_read_timeout 600s;
 add_header X-Accel-Buffering no;
 ```
 
-### Wildcard SSO Cookie Security
-Cookies set by Wolinex are scoped to the root `.wolinet.com` domain with strict transport attributes:
-```nginx
-proxy_cookie_domain wolinex.wolinet.com .wolinet.com;
-proxy_cookie_path / "/; Domain=.wolinet.com; Secure; SameSite=Lax";
-proxy_cookie_flags ~ secure httponly samesite=lax;
-```
-This enables authenticated users on `wolinex.wolinet.com` to navigate seamlessly to `dev.wolinet.com` without re-authenticating.
-
 ### CORS Preflight & External Application Access
-`lango.wolinet.com` safely handles preflight `OPTIONS` requests and sets dynamic origin reflection:
+`lango.wolinet.com` safely handles preflight `OPTIONS` requests:
 ```nginx
 if ($request_method = 'OPTIONS') {
     add_header 'Access-Control-Allow-Origin' '$http_origin' always;
@@ -164,68 +174,9 @@ if ($request_method = 'OPTIONS') {
 
 ---
 
-## 5. Deployment Options: Raw Docker vs. Dokploy
-
-### Option A: Raw Docker & Docker Compose (Standard Contabo Setup)
-
-1. **DNS Setup:** Direct A records for `ai`, `wolinex`, `lango`, `mitambo`, and `dev` pointing to server IP.
-2. **Server Initialization:**
-   ```bash
-   sudo mkdir -p /opt/wolinetai && sudo chown "$USER" /opt/wolinetai
-   git clone --branch production https://github.com/wolinet-renatus/wolinetAI.git /opt/wolinetai
-   cd /opt/wolinetai
-   cp .env.prod.example .env
-   chmod 600 .env
-   # Populate secrets (POSTGRES_PASSWORD, REDIS_PASSWORD, LITELLM_MASTER_KEY, etc.)
-   ```
-3. **Provision TLS & Passwords:**
-   ```bash
-   ./scripts/setup-tls.sh
-   ./scripts/setup_mitambo_auth.sh
-   ```
-4. **Launch Stack:**
-   * **CPU:** `WOLINET_IMAGE_TAG=latest ./scripts/deploy_production.sh latest`
-   * **GPU:** Append `-f docker-compose.gpu.yml` to compose commands.
-
-### Option B: Dokploy Deployment
-
-Dokploy can orchestrate the Wolinet stack as a native Compose project:
-
-1. **Create Compose Service in Dokploy:**
-   - In the Dokploy Dashboard, click **Create Application** ➔ select **Compose**.
-   - Set Name to `wolinet`.
-2. **Repository Configuration:**
-   - Provider: **GitHub**
-   - Repository: `wolinet-renatus/wolinetAI`
-   - Branch: `production`
-   - Compose File Path: `docker-compose.prod.yml` (or upload merged `docker-compose.prod.yml` + `docker-compose.gpu.yml`)
-3. **Environment Variables:**
-   - Copy the contents of `.env.prod.example` into Dokploy's **Environment** tab.
-   - Replace all `CHANGE_ME` tokens with cryptographically secure random values.
-4. **Port Binding / Reverse Proxy Mode:**
-   - If using Dokploy's integrated Traefik proxy, you can map domains directly to services or let the bundled `nginx` service bind host ports `80` and `443` directly.
-5. **Volume Persistence:**
-   - Named volumes `postgres_data`, `redis_data`, `xinference_data`, and `webui_data` will be automatically preserved across rebuilds.
-
----
-
-## 6. Automated CI/CD Rolling Deployment Pipeline
+## 7. Automated CI/CD Rolling Deployment Pipeline
 
 The workflow defined in [`.github/workflows/deploy.yml`](file:///Users/apple/Documents/wolinetai/.github/workflows/deploy.yml) provides an automated delivery pipeline:
-
-1. **Validate Stage:**
-   - Executes deployment contract tests: `python -m unittest discover -s tests/deployment -v`.
-   - Lints browser JavaScript: `node --check apps/homepage/app.js` and `apps/dev-portal/app.js`.
-   - Validates Compose syntax: `docker compose -f docker-compose.prod.yml config`.
-   - Tests Nginx syntax in an isolated container with temporary certificates: `nginx -t`.
-2. **Build Stage:**
-   - Builds isolated multi-stage images for `wolinet-homepage`, `wolinet-devportal`, `wolinet-lango`, and `wolinet-wolinex`.
-   - Pushes SHA-tagged artifacts to GitHub Container Registry (`ghcr.io`).
-3. **Deploy Stage (Push to `production` branch):**
-   - Establishes secure SSH tunnel to the Contabo server.
-   - Syncs Compose configurations and deployment scripts via `rsync`.
-   - Invokes [`scripts/deploy_production.sh`](file:///Users/apple/Documents/wolinetai/scripts/deploy_production.sh).
-   - Performs zero-downtime rolling restart (`replicas: 2` on stateless services).
-   - Reloads Nginx gracefully (`nginx -s reload`).
-   - Automatically rolls back to the previous tag if health checks fail.
-   - Performs public endpoint verification across all 4 services.
+1. **Validate Stage:** Tests deployment contracts, JavaScript syntax, and Compose syntax.
+2. **Build Stage:** Builds multi-stage images for `wolinet-lango`, `wolinet-wolinex`, `wolinet-homepage`, and `wolinet-devportal`.
+3. **Deploy Stage:** Syncs configuration, triggers rolling restarts, reloads reverse proxy configurations, and verifies the Golden Loop synthetic transaction.

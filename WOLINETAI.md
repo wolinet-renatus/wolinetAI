@@ -12,39 +12,53 @@ Autonomous coding agents typically consume 20–50 turns per task (reading trees
 
 ```mermaid
 flowchart TD
-    subgraph Clients["Client Applications & Agentic IDEs"]
-        Agent["🤖 Standalone Agents & CLI Tools"]
-        IDE["💻 IDE Extensions / Cursor / VS Code"]
-        Web["🌐 Web & Mobile Dashboards"]
+    subgraph Clients["Client Applications & Agentic IDEs (Pure API Clients)"]
+        IDE["💻 Wolinet Desktop IDE (Tauri Standalone Workstation Client)"]
+        Agent["🤖 Standalone Agents, CLI Tools & SDKs"]
+        Web["🌐 Sovereign Web Client (Open WebUI - :8081)"]
     end
 
-    subgraph Gateway["Wolinet AI Gateway Layer (LiteLLM Proxy - :4000)"]
+    subgraph ControlPlane["Stage 1: Infrastructure & Hardware Control Plane (DEC 1Panel - :8888/:9999)"]
+        Supervisor["⚙️ Host Hardware Supervisor (CPU, RAM, GPU/MPS, NVMe Mounts, Podman Socket)"]
+        PanelDB[("🗄️ Isolated Native SQLite DB\ndata/1panel/db/*.db\n(Zero PostgreSQL dependency)")]
+        Supervisor --- PanelDB
+        PostgresCluster[("🐘 PostgreSQL 16 (:5433->5432)\nlitellm database")]
+        RedisCluster[("⚡ Redis 7 (:6379)\nAppend-Only Cache")]
+        Supervisor --> PostgresCluster
+        Supervisor --> RedisCluster
+    end
+
+    subgraph Gateway["Stage 3: Sovereign Intelligence Gateway (Lango / LiteLLM Proxy - :4000)"]
         Router["⚡ Unified OpenAI API Gateway (/v1)"]
-        Budget["💰 Budget Guardrails & Cost Tracking"]
+        Budget["💰 Budget Guardrails & Spend Logs (PostgreSQL)"]
         Failover["🔄 Latency Routing & Cloud Fallbacks"]
+        Router --> Budget --> Failover
     end
 
-    subgraph Tier1["Tier 1: Local High-Throughput Engine (Xinference - :9997)"]
-        LocalEngine["🚀 Native C++ Engine (xllamacpp / llama.cpp)"]
+    subgraph Tier1["Stage 2: Local High-Throughput Engine (Mitambo / Xinference - :9997)"]
+        LocalEngine["🚀 Native C++ Engine (xllamacpp / llama.cpp / MPS / CUDA)"]
+        MitamboDB[("🗄️ Local SQLite Pools\ndata/mitambo/*.db")]
         Coder["wolinex-coder (GGUF 3B)\n• Fast tool calling & code edits"]
         Omni["wolinex-omni (GGUF 3B)\n• Local voice & vision"]
         Embed["bge-embeddings (Local)\n• Semantic Code Search & RAG"]
+        LocalEngine --- MitamboDB
+        LocalEngine --> Coder
+        LocalEngine --> Omni
+        LocalEngine --> Embed
         Cost1["COST: $0 / token"]
     end
 
-    subgraph Tier2["Tier 2 & 3: Cloud Provider APIs (On-Demand Pay-per-use)"]
+    subgraph Tier2["Cloud Frontier APIs (On-Demand Pay-per-use)"]
         Frontier["🧠 Frontier Reasoning & Deep Architecture\n• Claude 3.5 Sonnet\n• DeepSeek-R1 (671B)\n• OpenAI GPT-4o"]
-        Video["🎬 Heavy Compute Multi-Modal\n• Kling AI Video\n• Runway Gen-3 / Luma Dream Machine\n• Fal.ai Flux Pro"]
+        Video["🎬 Heavy Compute Multi-Modal\n• Kling AI Video\n• Runway Gen-3\n• Fal.ai Flux Pro"]
         Cost2["COST: Pay-as-you-go Credits"]
     end
 
     Clients -->|Single Endpoint: http://localhost:4000/v1| Router
-    Router --> Budget --> Failover
-    Failover -->|"80% Volume (Bulk Code/Tools)"| LocalEngine
-    LocalEngine --> Coder
-    LocalEngine --> Omni
-    LocalEngine --> Embed
-    Failover -->|"20% Volume (Complex Logic / Video)"| Tier2
+    ControlPlane -.->|Provisions & Supervises| Gateway
+    ControlPlane -.->|Provisions & Supervises| Tier1
+    Failover -->|"80% Volume (Local High-Throughput)"| LocalEngine
+    Failover -->|"20% Volume (Complex Frontier Logic)"| Tier2
     Tier2 --> Frontier
     Tier2 --> Video
 ```
@@ -55,29 +69,41 @@ flowchart TD
 
 ```text
 wolinetai/
-├── WOLINETAI.md                 # Primary Architecture & Contributor Manifesto
+├── WOLINETAI.md                 # Primary Architecture & Sovereign Manifesto
 ├── README.md                    # Quickstart & Repository Overview
+├── DEPLOYMENT.md                # Production Deployment & Subdomain Topologies
+├── products.json                # Master Catalog Manifest (12 Products & Deploy Targets)
+├── install.sh -> bin/wolinet-install # 🚀 Master Server Installer (Hierarchical 4-Stage Boot)
 ├── Makefile                     # Developer Ergonomic CLI (make start, make health, etc.)
-├── docker-compose.yml           # Production Docker deployment for Live Server
-├── .env                         # Environment variables (DB, Redis, Master Keys, Assets)
+├── docker-compose.yml           # Multi-service Compose Configuration
+├── .env                         # Sovereign Environment Variables & Master Keys
 │
-├── gateway/                     # 🛡️ Cloned Open-Source AI Gateway Layer (LiteLLM Full Source)
+├── bin/                         # 🛠️ System Executables & Product Management
+│   ├── 1apanel                  # Precompiled Go DEC Control Plane & Hardware Daemon
+│   ├── wolinet-install          # Master Sovereign Server Installer & Health Verifier
+│   ├── wolinet-product          # Product Catalog, Change Detection & Git Subtree Manager
+│   └── wolinet-system           # System Diagnostic & Golden Loop Synthetic Prober
+│
+├── orchestrator/                # ⚙️ Stage 1: DEC Orchestrator & 1Panel Control Plane
+│   ├── 1apanel/                 # Go Core & Agent Control Plane Engine (Port 9999/8888)
+│   │   ├── core/                # System supervisor, host hardware diagnostics, SQLite DB
+│   │   ├── agent/               # Container, firewall, database & runtime supervisor
+│   │   └── frontend/            # Vue 3 Administrative Management UI
+│   └── podman/                  # Rootless Podman Configuration
+│       └── quadlets/            # Native Systemd Quadlets (wolinetai.pod, *.container)
+│
+├── gateway/                     # 🛡️ Stage 3: Lango Sovereign API Gateway (LiteLLM Core)
 │   ├── litellm/                 # Full LiteLLM core Python codebase (Editable live link)
-│   │   ├── proxy/               # FastAPI proxy server, routers, auth, DB client
-│   │   ├── integrations/lago.py # Usage event callback configured by LiteLLM
+│   │   ├── proxy/               # FastAPI proxy server, routers, auth, Prisma DB client
 │   │   └── ...                  # Provider adapters, router, budget logic
 │   ├── assets/                  # 🎨 Wolinet AI Branding Assets (Logos & Favicons)
-│   │   ├── wolinet_logo.png     # Custom light logo
-│   │   ├── wolinet_logo_dark.png# Custom dark logo
-│   │   └── favicon.ico / .png   # Custom Wolinet favicon
-│   ├── ui/                      # LiteLLM Next.js Admin Management Dashboard
 │   ├── config.yaml              # Multi-tier model routing, fallbacks, & budget rules
 │   └── run_gateway.sh           # Local Gateway launcher script (Port 4000)
 │
-├── inference/                   # 🚀 Core High-Performance Engine (Xinference)
-│   ├── xinference/              # Distributed Actor-based model execution engine
+├── inference/                   # 🚀 Stage 2: Mitambo Inference Core (Xinference)
+│   ├── xinference/              # Distributed Actor-based model execution engine (:9997)
 │   ├── frontend/                # Next.js Cluster Administration Web UI
-│   └── ...                      # Multi-backend runners (llama.cpp, vLLM, SGLang, Diffusers)
+│   └── ...                      # Multi-backend runners (llama.cpp, MPS, vLLM, Diffusers)
 │
 ├── models/                      # 🧠 Local Model Weights & Specs
 │   ├── *.gguf                   # Downloaded quantized model weights
@@ -86,18 +112,19 @@ wolinetai/
 │       ├── qwen2.5-omni-3b.json # Local voice/vision multi-modal
 │       └── qwen-image-2.1.json  # Local diffusion transformer
 │
-├── apps/                        # 🤖 Client Applications & Portals
-│   ├── web-client/              # 🌐 Wolinet AI Web Portal (Open WebUI on Port 3080)
-│   │   ├── backend/             # Python (FastAPI/uvicorn) backend with Wolinet customizations
-│   │   │   └── open_webui/routers/wolinet_docs.py  # Developer portal + auth + docs on /docs
-│   │   └── run_webui.sh         # Launcher script (PORT=3080, connects to gateway :4000)
-│   ├── dev-portal/              # 📚 Interactive Developer API Documentation
-│   └── homepage/                # 🏠 Official Homepage & Landing Page
+├── apps/                        # 🌐 Stage 4: Sovereign Workspaces & Applications
+│   ├── web-client/              # 💬 Sovereign Web Client (Open WebUI Studio on Port 8081)
+│   ├── dev-portal/              # 📚 Interactive Developer API Documentation (Port 8082)
+│   └── homepage/                # 🏠 Official Homepage & Landing Page (Port 80 / :3000)
 │
-└── scripts/                     # 🛠️ DevOps & Automation Scripts
-    ├── register_models.sh       # Persistently registers all models in models/registrations/
-    ├── start_platform.sh        # One-command full platform launcher
-    └── healthcheck.sh           # End-to-end system health validator
+├── Wolinet-Dkt-Ide/             # 💻 Autonomous Client Workstation Desktop IDE (Tauri App)
+│                                # (Pure API client — NEVER deployed into server container pod)
+│
+├── packages/                    # 📦 Wolinet Multi-Language SDKs (Python, TS, Go)
+│
+└── data/                        # 🗄️ Isolated Runtime Storage Pools
+    ├── 1panel/db/               # Isolated native SQLite databases (1panel.db, alert.db)
+    └── mitambo/                 # Isolated local SQLite pools (launch_history.db, etc.)
 ```
 
 ---
@@ -199,7 +226,19 @@ OPENAI_API_KEY=sk-your-openai-key
 * **Username**: `admin`
 * **Password**: `sk-wolinet-admin-2026`
 
-### Step 2: Launch with Docker Compose
+### Step 2: Launch Sovereign Cluster (Hierarchical 4-Stage Boot)
+Deploy the full sovereign cluster with the master installer:
+```bash
+./install.sh
+```
+This automatically initiates:
+* **Stage 1**: DEC 1Panel Control Plane & Hardware Manager (Supervises CPU/RAM/GPU, rootless Podman socket, isolated SQLite DB, and backing PostgreSQL 16 & Redis 7).
+* **Stage 2**: Mitambo Local Inference Core (:9997) with GPU/MPS accelerator allocation.
+* **Stage 3**: Lango Sovereign API Gateway (:4000) with hybrid model routing and virtual key auth.
+* **Stage 4**: Web Client (:8081), Developer Portal (:8082), Enterprise Homepage (:80), and ai-memory (:49374).
+* **Validation**: Executes the Golden Loop synthetic transaction probe.
+
+Alternatively, for standard container compose environments:
 ```bash
 make docker-up
 ```
