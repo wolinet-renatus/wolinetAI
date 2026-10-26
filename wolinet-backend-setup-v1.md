@@ -159,3 +159,13 @@ Standard 1Panel includes an app store with optional AI runners (Ollama, vLLM). I
 | **Edge SSL & Reverse Proxy** | **1Panel** (OpenResty/Nginx) | Lango, Mitambo | 1Panel handles ACME certificates and edge routing on ports `:80`/`:443` without container network overhead. |
 | **Agent Chat & MCP Workspaces** | **Web Client** (`:8081`) / **IDE** | 1Panel | UI state and MCP client tools are strictly isolated to client frontends. |
 
+### C. Reverse Design: 1Panel as Sovereign AI Client & DevOps Copilot
+Rather than 1Panel managing a redundant local inference runtime, 1Panel's existing Vue 3 interface (`views/ai/agents`, `views/ai/mcp`, `views/ai/gpu`) is wired directly to **Lango Gateway** as a first-class client application:
+1. **Registered Provider (`wolinet`):** 1Panel connects to `http://127.0.0.1:4000/v1` via Bearer authentication (`LITELLM_MASTER_KEY`).
+2. **Model Routing & Auto-Failover:**
+   * **`wolinet-pro` & `wolinet-coder`:** Fast $0 inference on local hardware via Mitambo (Metal MPS / CUDA).
+   * **`wolinet-max`:** Flagship deep reasoning and 1,000,000 token context window.
+   * **Dynamic Fallbacks:** If local hardware VRAM is saturated or context exceeds 16k, Lango automatically routes requests to `wolinet-max` without crashing the 1Panel agent session.
+3. **Pre-Seeded DevOps Copilot Agent:** 1Panel automatically launches with a built-in "Wolinet DevOps Copilot" agent equipped with MCP tools (`ai-memory`, `obscura-browser`, and container inspectors) to provide autonomous server health diagnostics, error log analysis, and automated operational recommendations.
+
+

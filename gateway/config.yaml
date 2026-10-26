@@ -271,9 +271,12 @@ router_settings:
     "claude-3-5-sonnet": "Wolinet Max"
   fallbacks:
     - "Wolinet Max": ["Wolinet Pro", "Wolinet Coder"]
+    - "wolinet-max": ["Wolinet Pro", "Wolinet Coder"]
     - "gemini/gemini-3.8-flash": ["Wolinet Pro", "Wolinet Coder"]
-    - "Wolinet Pro": ["Wolinet Coder"]
-    - "Wolinet Coder": ["Wolinet Pro"]
+    - "Wolinet Pro": ["Wolinet Coder", "Wolinet Max"]
+    - "wolinet-pro": ["Wolinet Coder", "Wolinet Max"]
+    - "Wolinet Coder": ["Wolinet Pro", "Wolinet Max"]
+    - "wolinet-coder": ["Wolinet Pro", "Wolinet Max"]
     - "gemini-cloud-preview": ["Wolinet Pro"]
     - "gemini-3.5-flash": ["Wolinet Pro"]
     - "gemini-2.5-flash": ["Wolinet Pro"]
@@ -285,7 +288,9 @@ router_settings:
     - "claude-3-5-sonnet": ["Wolinet Max", "Wolinet Pro"]
   context_window_fallbacks:
     - "Wolinet Pro": ["Wolinet Max"]
+    - "wolinet-pro": ["Wolinet Max"]
     - "Wolinet Coder": ["Wolinet Max"]
+    - "wolinet-coder": ["Wolinet Max"]
   num_retries: 2
   redis_host: os.environ/REDIS_HOST
   redis_port: os.environ/REDIS_PORT
