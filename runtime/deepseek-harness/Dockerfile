@@ -1,0 +1,77 @@
+FROM caddy:2.11.4 AS caddy
+
+FROM node:24-bookworm-slim AS dsh-builder
+
+ARG DSH_VERSION=0.2.0-rc.2
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      g++ \
+      make \
+      python3 && \
+    npm install --global "@deepseek-ai/dsh@${DSH_VERSION}"
+
+COPY deepseek-harness/patch-dsh-authenticated-settings.mjs /tmp/patch-dsh-authenticated-settings.mjs
+
+RUN node /tmp/patch-dsh-authenticated-settings.mjs
+
+FROM node:24-bookworm-slim
+
+ARG PNPM_VERSION=11.7.0
+
+LABEL org.opencontainers.image.source="https://github.com/1Panel-dev/runtime" \
+      org.opencontainers.image.url="https://github.com/deepseek-ai/deepseek-harness" \
+      org.opencontainers.image.title="1Panel DeepSeek Harness" \
+      org.opencontainers.image.description="DeepSeek Harness image maintained by 1Panel with HTTPS access and persistent runtime data" \
+      org.opencontainers.image.vendor="1Panel"
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      bash \
+      bubblewrap \
+      ca-certificates \
+      curl \
+      git \
+      gosu \
+      openssh-client \
+      ripgrep \
+      tini && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=caddy /usr/bin/caddy /usr/bin/caddy
+COPY --from=dsh-builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+
+RUN node --expose-internals /usr/local/lib/node_modules/@deepseek-ai/dsh/lib/bin.js \
+      --help >/dev/null && \
+    groupadd --system --gid 1001 caddy && \
+    useradd --system --uid 1001 --gid caddy --home-dir /var/lib/caddy \
+      --create-home --shell /usr/sbin/nologin caddy && \
+    install -d -m 0700 -o node -g node /data/dsh /data/dsh/home && \
+    install -d -m 0750 -o node -g node /workspace && \
+    install -d -m 0700 -o caddy -g caddy /data/caddy /data/caddy/config
+
+RUN npm install --global "pnpm@${PNPM_VERSION}" && \
+    npm cache clean --force && \
+    test "$(gosu node env HOME=/data/dsh/home pnpm --version)" = "$PNPM_VERSION"
+
+COPY deepseek-harness/Caddyfile /etc/caddy/Caddyfile
+COPY deepseek-harness/dsh /usr/local/bin/dsh
+COPY deepseek-harness/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+RUN chmod 0755 /usr/local/bin/dsh /usr/local/bin/docker-entrypoint.sh && \
+    dsh --help >/dev/null && \
+    /usr/local/bin/docker-entrypoint.sh --self-test
+
+ENV DSH_HOME=/data/dsh \
+    DSH_TELEMETRY_DISABLED=1
+
+WORKDIR /workspace
+
+EXPOSE 8443
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -fsS --max-time 5 http://127.0.0.1:3080/ >/dev/null || exit 1
+
+STOPSIGNAL SIGTERM
+
+ENTRYPOINT ["tini", "--", "/usr/local/bin/docker-entrypoint.sh"]

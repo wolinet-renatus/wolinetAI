@@ -1,0 +1,19 @@
+services:
+  archivebox:
+    image: archivebox/archivebox:0.9.73
+    container_name: ${CONTAINER_NAME}
+    restart: always
+    networks:
+      - 1panel-network
+    ports:
+      - "${PANEL_APP_PORT_HTTP}:5797"
+    volumes:
+      - ./data:/data
+    environment:
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    labels:  
+      createdBy: "Apps"
+networks:  
+  1panel-network:  
+    external: true

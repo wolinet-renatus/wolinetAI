@@ -148,11 +148,9 @@ const search = async (req: App.AppReq) => {
     }
     await searchApp(customReq)
         .then((res) => {
-            apps.value = res.data.items;
-            paginationConfig.total = res.data.total;
-            if (noApp.value && apps.value.length > 0) {
-                noApp.value = false;
-            }
+            apps.value = res.data?.items || [];
+            paginationConfig.total = res.data?.total || 0;
+            noApp.value = apps.value.length === 0;
         })
         .finally(() => {
             loading.value = false;

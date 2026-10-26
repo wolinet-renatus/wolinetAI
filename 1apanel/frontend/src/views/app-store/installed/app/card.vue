@@ -5,7 +5,7 @@
                 <el-col class="install-card-icon-col" :xs="3" :sm="3" :md="3" :lg="4" :xl="3">
                     <AppIcon
                         @open-detail="$emit('openDetail')"
-                        :appKey="installed.appKey"
+                        :appKey="installed.appKey || installed.app?.key || ''"
                         :currentNode="currentNode"
                     ></AppIcon>
                 </el-col>

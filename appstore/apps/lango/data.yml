@@ -1,0 +1,27 @@
+name: "Lango Sovereign AI Gateway"
+tags:
+  - AI
+  - Gateway
+title: "Unified AI Gateway with LiteLLM proxy, key management, rate limits, and model routing"
+description: "Unified AI Gateway with LiteLLM proxy, key management, rate limits, and model routing"
+additionalProperties:
+  key: lango
+  name: "Lango Sovereign AI Gateway"
+  tags:
+    - AI
+    - Gateway
+  shortDescZh: "统一大模型API网关，支持密钥管理、速率限制与路由"
+  shortDescEn: "Unified AI Gateway with LiteLLM proxy, key management, and routing"
+  description:
+    en: "Unified AI Gateway with LiteLLM proxy, key management, and routing"
+    zh: "统一大模型API网关，支持密钥管理、速率限制与路由"
+  type: website
+  crossVersionUpdate: true
+  recommend: 1
+  limit: 1
+  gpuSupport: false
+  architectures:
+    - amd64
+    - arm64
+  website: https://wolinet.ai
+  github: https://github.com/wolinetai

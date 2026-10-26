@@ -1,0 +1,12 @@
+[Container]
+ContainerName=wolinet-website
+Pod=wolinetai-core-pod
+Image=docker.io/library/nginx:1.27-alpine
+Volume=/var/lib/wolinet/website:/usr/share/nginx/html:ro
+Volume=/var/lib/wolinet/website/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

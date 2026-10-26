@@ -1,0 +1,22 @@
+services:
+  mitambo:
+    image: ghcr.io/wolinet-renatus/wolinet-mitambo-cpu:latest
+    container_name: ${CONTAINER_NAME}
+    restart: unless-stopped
+    ports:
+      - ${PANEL_APP_PORT_HTTP}:9997
+    environment:
+      - XINFERENCE_HOME=/root/.xinference
+      - XINFERENCE_ADMIN_USER=${MITAMBO_ADMIN_USER}
+      - XINFERENCE_ADMIN_PASSWORD=${MITAMBO_ADMIN_PASSWORD}
+      - XINFERENCE_AUTH_ADVANCED=true
+    volumes:
+      - ./data:/root/.xinference
+    networks:
+      - 1panel-network
+    labels:
+      createdBy: "Apps"
+
+networks:
+  1panel-network:
+    external: true

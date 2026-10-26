@@ -26,8 +26,8 @@ const loadStatus = async () => {
     em('update:loading', true);
     await loadDockerStatus()
         .then((res) => {
-            isActive.value = res.data.isActive;
-            isExist.value = res.data.isExist;
+            isActive.value = !!res?.data?.isActive;
+            isExist.value = !!res?.data?.isExist;
             em('update:loading', false);
             em('update:is-active', isActive.value);
             em('update:is-exist', isExist.value);
@@ -35,6 +35,8 @@ const loadStatus = async () => {
             em('mounted');
         })
         .catch(() => {
+            isActive.value = false;
+            isExist.value = false;
             em('update:loading', false);
             em('update:is-active', false);
             em('update:is-exist', false);

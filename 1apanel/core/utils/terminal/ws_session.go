@@ -38,6 +38,7 @@ const (
 	WsMsgCmd       = "cmd"
 	WsMsgResize    = "resize"
 	WsMsgHeartbeat = "heartbeat"
+	WsMsgSession   = "session"
 )
 
 type WsMsg struct {
@@ -45,7 +46,8 @@ type WsMsg struct {
 	Data      string `json:"data,omitempty"`      // WsMsgCmd
 	Cols      int    `json:"cols,omitempty"`      // WsMsgResize
 	Rows      int    `json:"rows,omitempty"`      // WsMsgResize
-	Timestamp int    `json:"timestamp,omitempty"` // WsMsgHeartbeat
+	Timestamp int64  `json:"timestamp,omitempty"` // WsMsgHeartbeat
+	ID        string `json:"id,omitempty"`        // WsMsgSession
 }
 
 type LogicSshWsSession struct {
@@ -219,5 +221,8 @@ func (sws *LogicSshWsSession) Wait(quitChan chan bool) {
 }
 
 func setQuit(ch chan bool) {
-	ch <- true
+	select {
+	case ch <- true:
+	default:
+	}
 }

@@ -10,5 +10,7 @@ func commonGroups() []CommonRouter {
 		&GroupRouter{},
 		&ScriptRouter{},
 		&RuntimeDiagnosticsRouter{},
+		&PodmanRouter{},
+		&CloudflareRouter{},
 	}
 }

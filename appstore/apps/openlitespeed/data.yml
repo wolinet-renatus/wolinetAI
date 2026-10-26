@@ -1,0 +1,34 @@
+name: OpenLiteSpeed
+tags:
+    - Web 服务器
+title: 高性能、轻量级、开源的 HTTP 服务器
+description: 高性能、轻量级、开源的 HTTP 服务器
+additionalProperties:
+    key: openlitespeed
+    name: OpenLiteSpeed
+    tags:
+        - Server
+    shortDescZh: 高性能、轻量级、开源的 HTTP 服务器
+    shortDescEn: A high-performance, lightweight, open source HTTP server
+    type: website
+    crossVersionUpdate: true
+    limit: 1
+    recommend: 0
+    batchInstallSupport: true
+    website: https://openlitespeed.org
+    github: https://github.com/litespeedtech/openlitespeed
+    document: https://openlitespeed.org/#install
+    description:
+        en: A high-performance, lightweight, open source HTTP server
+        es-es: Un high-performance, ligero, de código abierto HTTP servidor
+        fa: 'سرور HTTP متن باز، سبک و پرکارایی'
+        zh: 高性能、轻量级、开源的 HTTP 服务器
+        zh-Hant: 高性能、輕量級、開源的 HTTP 伺服器
+        ja: 高性能で軽量、オープンソースの HTTP サーバー
+        ms: Pelayan HTTP sumber terbuka yang berprestasi tinggi dan ringan
+        pt-br: Um servidor HTTP de alto desempenho, leve e de código aberto
+        ru: Высокопроизводительный, легковесный, открытый HTTP-сервер
+        ko: 고성능, 경량, 오픈 소스 HTTP 서버
+        tr: Bir high-performance, hafif, open source HTTP sunucu
+    architectures:
+      - amd64

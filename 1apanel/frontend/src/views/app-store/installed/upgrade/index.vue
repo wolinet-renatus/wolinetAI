@@ -208,12 +208,11 @@ const acceptParams = (appInstall: App.AppInstallDto, op: string, opNode?: string
     currentAppKey.value = appInstall.appKey;
     operateReq.installId = appInstall.id;
     operateReq.operate = op;
-    resourceName.value = appInstall.name;
-    app.value = appInstall.app;
+    app.value = appInstall.app || { id: appInstall.id || 1, name: appInstall.name, key: appInstall.appKey };
     oldContent.value = appInstall.dockerCompose;
     appInstallID.value = appInstall.id;
     getVersions('');
-    ignoreAppReq.appID = appInstall.app.id;
+    ignoreAppReq.appID = appInstall.app?.id || appInstall.appID || appInstall.id || 1;
     if (op === 'ignore') {
         operateReq.detailId = -1;
     }

@@ -1,0 +1,90 @@
+package iptables_helper
+
+import (
+	"fmt"
+	"strings"
+
+	"wolinet.ai/1apanel/agent/constant"
+	"wolinet.ai/1apanel/agent/global"
+	"wolinet.ai/1apanel/agent/utils/firewall"
+	"wolinet.ai/1apanel/agent/utils/firewall/lifecycle"
+)
+
+func EnsureIPv6BaseChains(ports []firewall.PortWhitelist) error {
+	commands, err := lifecycle.ResolveIptablesCommands()
+	if err != nil || !commands.IPv6Available() {
+		return fmt.Errorf("ip6tables and ip6tables-restore are required")
+	}
+	output, err := RunIPv6WithStd(FilterTab, "-S")
+	if err != nil {
+		return err
+	}
+	if err := ensureBaseChainsFamily(true); err != nil {
+		return err
+	}
+	script, err := buildIPv6BaseInitializationScript(global.Dir.FirewallDir, ports, output)
+	if err != nil {
+		return err
+	}
+	if err := restoreRules(commands.Restore6, script); err != nil {
+		return fmt.Errorf("batch initialize IPv6 base chains: %w", err)
+	}
+	if err := setBaseChainBindings(true, true); err != nil {
+		return err
+	}
+	return saveBaseChainsFamily(true)
+}
+
+func UnbindIPv6BaseChains() error {
+	commands, err := lifecycle.ResolveIptablesCommands()
+	if err != nil || !commands.IPv6Available() {
+		return nil
+	}
+	return setBaseChainBindings(true, false)
+}
+
+func BindIPv6BaseChains() error {
+	commands, err := lifecycle.ResolveIptablesCommands()
+	if err != nil || !commands.IPv6Available() {
+		return nil
+	}
+	return setBaseChainBindings(true, true)
+}
+
+func buildIPv6BaseInitializationScript(dir string, ports []firewall.PortWhitelist, output string) (string, error) {
+	existing := iptablesRuleIndex(output)
+	for _, chain := range BasicChains() {
+		if !existing[canonicalIptablesRule("-N "+chain)] {
+			return buildBaseChainsRestoreScript(dir, true, ports...)
+		}
+	}
+	defaults, err := baseDefaultRules(ports, constant.FirewallFamilyIPv6)
+	if err != nil {
+		return "", err
+	}
+	var script strings.Builder
+	script.WriteString("*filter\n")
+	for _, rule := range defaults {
+		key := canonicalIptablesRule(rule)
+		if !existing[key] {
+			existing[key] = true
+			script.WriteString(rule + "\n")
+		}
+	}
+	script.WriteString("COMMIT\n")
+	return script.String(), nil
+}
+
+func baseDefaultRules(ports []firewall.PortWhitelist, family string) ([]string, error) {
+	ports, err := firewall.NormalizeRequiredPorts(ports)
+	if err != nil {
+		return nil, err
+	}
+	rules := []string{"-A " + BasicBeforeChain + " " + IoRuleIn, "-A " + BasicBeforeChain + " " + EstablishedRule}
+	for _, port := range firewall.ExpandPortWhitelist(ports) {
+		if port.Family == family {
+			rules = append(rules, iptablesSystemPortRuleLine(port))
+		}
+	}
+	return append(rules, "-A "+BasicAfterChain+" "+DropAllTcp, "-A "+BasicAfterChain+" "+DropAllUdp), nil
+}

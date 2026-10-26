@@ -505,6 +505,7 @@ const changeMode = async () => {
 
 const search = async () => {
     const res = await loadDaemonJson();
+    if (!res?.data) return;
     form.isSwarm = res.data.isSwarm;
     form.version = res.data.version;
     form.cgroupDriver = res.data.cgroupDriver || 'cgroupfs';
