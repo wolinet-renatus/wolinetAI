@@ -1,0 +1,25 @@
+{
+  "model_name": "Wolinet Coder v2",
+  "model_id": "wolinet-coder-v2",
+  "model_family": "qwen2.5-coder-instruct",
+  "base_checkpoint": "Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf",
+  "target_device": "mps",
+  "training_samples": 196,
+  "initial_loss": 2.3985,
+  "final_loss": 0.1851,
+  "loss_reduction_pct": 92.28,
+  "training_time_seconds": 5.44,
+  "timestamp": "2026-10-26T15:38:06.646496+00:00",
+  "lora_parameters": {
+    "r": 8,
+    "lora_alpha": 16,
+    "lora_dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj"
+    ]
+  },
+  "status": "ready_for_deployment"
+}

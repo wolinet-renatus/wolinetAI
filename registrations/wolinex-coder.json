@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "context_length": 32768,
+  "context_length": 16384,
   "model_name": "wolinex-coder",
   "model_lang": [
     "en",
