@@ -67,15 +67,32 @@ else
     echo -e "      ${YELLOW}[!] /var/run/docker.sock already exists as a non-symlink (existing Docker). Preserving.${NC}"
 fi
 
-# 3. Create Standardized Sovereign Storage Roots
-echo -e "\n${BOLD}[2/4] Provisioning Sovereign Storage Hierarchies...${NC}"
+# 3. Create Standardized Sovereign Storage Roots & Kernel Limits
+echo -e "\n${BOLD}[2/4] Provisioning Sovereign Storage Hierarchies & Kernel Tuning...${NC}"
 install -d -m 0755 -o root -g root /var/lib/wolinet
 install -d -m 0755 -o root -g root /var/lib/wolinet/data/1panel/db
 install -d -m 0755 -o root -g root /var/lib/wolinet/data/postgres
 install -d -m 0755 -o root -g root /var/lib/wolinet/data/redis
 install -d -m 0755 -o root -g root /var/lib/wolinet/data/mitambo
 install -d -m 0755 -o root -g root /var/lib/wolinet/models
+chmod -R 0755 /var/lib/wolinet/models
 echo -e "   ${GREEN}✓ Storage paths initialized under /var/lib/wolinet${NC}"
+
+# Kernel Tuning for GGUF mmap and mlock (Prevent Swapping & Map Exhaustion)
+echo -e "   -> Applying kernel memory limits for GGUF/llama.cpp inference..."
+cat > /etc/security/limits.d/99-wolinet.conf <<EOF
+* soft memlock unlimited
+* hard memlock unlimited
+* soft nofile 65535
+* hard nofile 65535
+EOF
+
+cat > /etc/sysctl.d/99-wolinet.conf <<EOF
+vm.max_map_count=262144
+fs.file-max=2097152
+EOF
+sysctl -p /etc/sysctl.d/99-wolinet.conf >/dev/null 2>&1 || true
+echo -e "   ${GREEN}✓ Kernel limits tuned: memlock=unlimited, max_map_count=262144${NC}"
 
 # 4. Generate & Install Systemd Unit File
 echo -e "\n${BOLD}[3/4] Installing /etc/systemd/system/1apanel.service...${NC}"
