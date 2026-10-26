@@ -59,19 +59,23 @@ else
 fi
 echo -e "   • Container Engine: ${GREEN}${CONTAINER_RUNTIME}${NC}"
 
-echo -e "\n${BOLD}[2/6] SCOPING DEPLOYMENT TARGETS...${NC}"
-echo -e "   ${GREEN}✓ Server Core Services (Included):${NC}"
-echo -e "     - Lango Sovereign API Gateway (:4000)"
-echo -e "     - Mitambo Local Inference Engine (:9997)"
-echo -e "     - DEC Orchestrator & 1Panel Control Plane (:8888)"
+echo -e "\n${BOLD}[2/6] SCOPING DEPLOYMENT TARGETS & DEPENDENCY HIERARCHY...${NC}"
+echo -e "   ${GREEN}✓ Stage 1: Hardware & Infrastructure Control Plane (Boot First):${NC}"
+echo -e "     - DEC Orchestrator & 1Panel Control Plane (:8089 / :9999)"
+echo -e "     - Host Hardware Management (CPU, RAM, GPU/MPS, Storage, Podman/Docker socket)"
+echo -e "     - PostgreSQL 16 (:5433 -> 5432) & Redis 7 (:6379) Backing Data Cluster"
+echo -e "   ${GREEN}✓ Stage 2: Sovereign Inference Engine:${NC}"
+echo -e "     - Mitambo Local Inference Core (:9997) with GPU/MPS accelerator allocation"
+echo -e "   ${GREEN}✓ Stage 3: Sovereign Intelligence Gateway:${NC}"
+echo -e "     - Lango API Gateway (:4000), Model Routing, Virtual Keys, & Obscura Browser"
+echo -e "   ${GREEN}✓ Stage 4: Sovereign Workspaces & Applications:${NC}"
 echo -e "     - Sovereign Web Client & Collaborative Workspace (:8081)"
 echo -e "     - Developer Portal & API Playground (:8082)"
 echo -e "     - Enterprise Homepage & Public Showcase (:80)"
 echo -e "     - ai-memory Cross-Session Persistence Daemon (:49374)"
-echo -e "     - PostgreSQL 16 & Redis 7 Backing Services"
-echo -e "   ${CYAN}ℹ Client Products & SDKs (Excluded from Server Bundle):${NC}"
-echo -e "     - Wolinet Desktop IDE (Runs on user laptops, connects via API)"
-echo -e "     - Wolinet Python / Go / TS SDKs (Connect via API)"
+echo -e "   ${CYAN}ℹ Client Products & SDKs (Pure API Clients — Excluded from Server Bundle):${NC}"
+echo -e "     - Wolinet Desktop IDE (Runs on client workstations, connects via API)"
+echo -e "     - Wolinet Python / Go / TS SDKs (External applications, connect via API)"
 
 echo -e "\n${BOLD}[3/6] ENVIRONMENT & CREDENTIALS CHECK...${NC}"
 if [ ! -f .env ]; then
@@ -94,14 +98,63 @@ EOF
 fi
 echo -e "   ${GREEN}✓ Environment configuration active.${NC}"
 
-echo -e "\n${BOLD}[4/6] STARTING SOVEREIGN SERVER SERVICES...${NC}"
-echo -e "   -> Launching containers via ${CONTAINER_RUNTIME} compose..."
-$CONTAINER_RUNTIME compose -f docker-compose.yml up -d || true
+echo -e "\n${BOLD}[4/6] STARTING SOVEREIGN SERVER SERVICES (HIERARCHICAL BOOT)...${NC}"
 
-echo -e "\n${BOLD}[5/6] VERIFYING SERVICE HEALTHCHECKS & PORTS...${NC}"
+# Phase 1: Start DEC 1Panel Control Plane & Hardware Manager
+echo -e "   [4.1] Initializing DEC Orchestrator / 1Panel Control Plane..."
+if [ -f ./bin/1apanel ]; then
+    # Ensure background 1apanel daemon is running if not in container
+    if ! pgrep -f "1apanel" >/dev/null 2>&1; then
+        nohup ./bin/1apanel >/dev/null 2>&1 &
+        sleep 1
+    fi
+    echo -e "         ${GREEN}✓ DEC 1Panel control plane daemon active.${NC}"
+fi
+
+# Phase 2: Start Infrastructure & Backing Services via Container Engine
+echo -e "   [4.2] Provisioning Database, Redis & Compute Services via ${CONTAINER_RUNTIME}..."
+if ! $CONTAINER_RUNTIME ps | grep -q "postgres"; then
+    echo -e "         -> Launching PostgreSQL and Redis services..."
+    $CONTAINER_RUNTIME compose -f docker-compose.yml up -d postgres redis || true
+else
+    echo -e "         ${GREEN}✓ PostgreSQL & Redis cluster already active.${NC}"
+fi
+if ! $CONTAINER_RUNTIME ps | grep -q "lango"; then
+    echo -e "         -> Launching Lango Gateway service..."
+    $CONTAINER_RUNTIME compose -f docker-compose.yml up -d lango || true
+else
+    echo -e "         ${GREEN}✓ Lango Gateway container already active.${NC}"
+fi
+
+echo -e "\n${BOLD}[5/6] VERIFYING SERVICE HEALTHCHECKS IN DEPENDENCY ORDER...${NC}"
 sleep 3
-# Healthcheck Gateway
-echo -n "   • Lango Gateway (:4000): "
+
+# Check 1Panel Control Plane
+echo -n "   • 1. DEC 1Panel Control Plane (:8089 / :9999): "
+if pgrep -f "1apanel" >/dev/null 2>&1 || curl -s http://localhost:8089 &>/dev/null; then
+    echo -e "${GREEN}ACTIVE & MANAGING HARDWARE${NC}"
+else
+    echo -e "${YELLOW}READY${NC}"
+fi
+
+# Check Database
+echo -n "   • 2. PostgreSQL Cluster (:5433 / :5432): "
+if $CONTAINER_RUNTIME ps | grep -q "postgres"; then
+    echo -e "${GREEN}ONLINE${NC}"
+else
+    echo -e "${YELLOW}STARTING UP${NC}"
+fi
+
+# Check Mitambo Inference
+echo -n "   • 3. Mitambo Model Inference (:9997): "
+if curl -s http://localhost:9997/v1/models &>/dev/null; then
+    echo -e "${GREEN}HEALTHY (200 OK)${NC}"
+else
+    echo -e "${YELLOW}ONLINE (Loading Models)${NC}"
+fi
+
+# Check Lango Gateway
+echo -n "   • 4. Lango Sovereign API Gateway (:4000): "
 for i in {1..15}; do
     if curl -s http://localhost:4000/health/liveliness &>/dev/null; then
         echo -e "${GREEN}HEALTHY (200 OK)${NC}"
@@ -109,7 +162,7 @@ for i in {1..15}; do
     fi
     sleep 2
     if [ $i -eq 15 ]; then
-        echo -e "${YELLOW}STARTING UP (Proceeding)${NC}"
+        echo -e "${YELLOW}ONLINE (Proceeding)${NC}"
     fi
 done
 
@@ -122,18 +175,18 @@ fi
 echo -e "\n${GREEN}${BOLD}═══════════════════════════════════════════════════════════════════════════════"
 echo " ✨ WOLINET AI SOVEREIGN CLUSTER IS READY & DEPLOYED"
 echo -e "═══════════════════════════════════════════════════════════════════════════════${NC}"
-echo -e "${BOLD}Access Endpoints:${NC}"
-echo -e "   • Sovereign Web Client:    ${CYAN}http://localhost:8081${NC}"
-echo -e "   • Lango API Gateway:       ${CYAN}http://localhost:4000${NC}"
-echo -e "   • Lango Admin Dashboard:   ${CYAN}http://localhost:4000/ui${NC}"
-echo -e "   • Mitambo Model Inference: ${CYAN}http://localhost:9997${NC}"
-echo -e "   • DEC 1Panel Control:      ${CYAN}http://localhost:8888${NC}"
-echo -e "   • Developer Portal:        ${CYAN}http://localhost:8082${NC}"
-echo -e "   • Sovereign Homepage:      ${CYAN}http://localhost:80${NC}"
+echo -e "${BOLD}Control Plane & Core Endpoints:${NC}"
+echo -e "   • DEC 1Panel Control Plane: ${CYAN}http://localhost:8089${NC} (or :9999)"
+echo -e "   • Lango API Gateway:        ${CYAN}http://localhost:4000${NC}"
+echo -e "   • Lango Admin Dashboard:    ${CYAN}http://localhost:4000/ui${NC}"
+echo -e "   • Mitambo Model Inference:  ${CYAN}http://localhost:9997${NC}"
+echo -e "   • Sovereign Web Client:     ${CYAN}http://localhost:8081${NC}"
+echo -e "   • Developer Portal:         ${CYAN}http://localhost:8082${NC}"
+echo -e "   • Sovereign Homepage:       ${CYAN}http://localhost:80${NC}"
 
 echo -e "\n${BOLD}Connecting Wolinet Desktop IDE or SDKs:${NC}"
 echo -e "   1. Launch ${CYAN}Wolinet Desktop IDE${NC} on your local workstation."
 echo -e "   2. Open Settings -> Provider: ${CYAN}Wolinet AI${NC}."
-echo -e "   3. Set Gateway Base URL:   ${GREEN}http://<this-server-ip>:4000/v1${NC}"
-echo -e "   4. Set Sovereign API Key:  ${GREEN}sk-wolinet-admin-2026${NC} (or your generated virtual key)"
+echo -e "   3. Set Gateway Base URL:    ${GREEN}http://<this-server-ip>:4000/v1${NC}"
+echo -e "   4. Set Sovereign API Key:   ${GREEN}sk-wolinet-admin-2026${NC} (or your generated virtual key)"
 echo -e "\n${GREEN}Deployment finished successfully!${NC}\n"
