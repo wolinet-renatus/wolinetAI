@@ -281,12 +281,13 @@ def sync_once() -> None:
     else:
         pro_uid = None
 
-    # Select backend for Wolinet Coder
-    coder_candidates = [k for k in active_valid if any(pref in k.lower() for pref in ("deepseek", "coder"))]
+    # Select backend for Wolinet Coder (prioritizes sovereign wolinex, then coder, then deepseek)
+    coder_candidates = [k for k in active_valid if any(pref in k.lower() for pref in ("wolinex", "coder", "deepseek"))]
     if preferred_coder_uid and preferred_coder_uid in active:
         coder_uid = preferred_coder_uid
     elif coder_candidates:
-        coder_uid = sorted(coder_candidates)[0]
+        coder_candidates.sort(key=lambda x: (0 if "wolinex" in x.lower() else 1, x))
+        coder_uid = coder_candidates[0]
     elif active_valid:
         coder_uid = sorted(active_valid)[0]
     else:

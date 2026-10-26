@@ -1,0 +1,71 @@
+# Using LiteLLM Memory
+
+LiteLLM Memory keeps a private, searchable record of your work with AI. You decide when to ask it a question and what your company can see.
+
+## Join and connect
+
+Choose **Sign in with Slack** using your company account. Your installation accepts only its configured Slack workspace and verified email domain. There is no separate LiteLLM Memory password or key to save.
+
+After joining, Company opens immediately so you can browse shared work. Choose **Connect a tool** on Activity, or open **Connections**. Copy the setup command and run it on your computer; it connects Codex and Claude Code together by default. Sign in and approve the displayed access and reminder commands on the website. Setup saves both configurations and trusts only the exact Codex hooks you reviewed, then returns you to the first-memory guide. Restart your coding tools and start a new task. No second MCP sign-in is needed. The connector preserves existing configuration. [Full connector instructions](connectors.md).
+
+Ask your agent to remember what you’re working on, then let it finish saving. Connections first shows **Connected. Waiting for work.**, then confirms when a record arrives and offers **View my work**. It checks while that page is visible; **Refresh status** refreshes immediately. Authorization alone does not confirm a saved memory. A receipt confirms saved work, not that your tool is currently running.
+
+Your agent saves useful work memories with a low bar: current work, progress, attempts, findings, decisions, blockers and next steps. It can skip acknowledgments or repetitions. Reminder hooks do not upload whole conversations, and nothing searches your history on every coding turn. Optional global instructions are described in the [connector guide](connectors.md).
+
+Live saves require a working MCP connection; the agent should tell you if a save fails. **Connections → Recording controls → Record new work** pauses hosted intake. Run `litellm-memory-connector pause` to pause local reminders too. Resuming starts reminders again without recording the paused period.
+
+## Browse and ask
+
+**Activity** opens on **Company**, showing company publications newest first, without a recommendation algorithm. **My work** is the second tab and shows your own private and shared records. Private items have a lock and a **Private** label. The Activity question box asks about the selected feed. Filters narrow the feed by person, source, type and date. Missing original dates stay unknown.
+
+**Search** (⌘K or Ctrl+K) opens a panel without leaving your page. Choose Company or My work, enter a phrase, then press Enter or Search. Opening it from a person’s activity selects their shared work. Results include titles, excerpts, owners, dates and privacy labels; open one to inspect its source, then close the source to return to your results. Escape or Close dismisses search. Saved browsing exclusions apply to search too.
+
+Use the question box on Activity or open **Ask**. Choose a model from your gateway's available models, ask about your own work or choose a person, and open citations to inspect the evidence. You can ask follow-up questions within the same scope. Changing person or audience asks before clearing an existing conversation. Browser Back returns to the previous view. Person feeds and My work have URLs that preserve their scope on reload; the home URL opens Company. Use **Refresh** to fetch the latest feed without reloading the app.
+
+**People** uses enrolled members' Slack profiles. You can see their shared activity and ask about evidence they have made available. Another person's private counts, source transcripts and metadata are not exposed.
+
+In **Settings → Preferences → Browsing → Exclude from my feed and Ask**, hide people's work, projects or sources from your feed and answers. These personal filters are saved across sign-ins. They do not change anyone's access or your sharing choices, and originals remain available through their links and in exports. Activity shows **Personal filters are on · Edit** while exclusions apply. Clear the selections and save to include everything you can access again. Saving filters starts a fresh Ask conversation so earlier excluded material is not reused.
+
+Project and source names match without regard to capitalization. Enter one per line. Existing type metadata remains searchable; older saved type exclusions are retained. Changing viewing choices does not call Jev again.
+
+**Daily summaries** lets you choose Company or My work and browse by date. Previous and Next move between days with generated summaries; the date picker opens any day. On a person’s page, switch between Activity and Daily summaries. Summaries cover completed days and generate at midnight in the workspace timezone by default. Use Activity for today’s work. Refresh checks for newly generated summaries; it does not create them. Until a summary is ready, the page says “None available yet.”
+
+Each summary reads all of that day’s permitted memories in chronological order and links back to its sources. Your private summary can include private work; a teammate’s summary contains only company-shared work. Undated live memories use their recorded time; undated historical imports are not assigned a guessed day. Missing records are not evidence that someone did no work.
+
+Ask “What did Alex work on yesterday?” in Ask or Slack. Both agents can read the same generated summaries and inspect sources for more detail. Summary generation and retries run in the background. The archive shows saved summaries without generation status or failure messages. **Connections** shows individual-memory processing failures and their retry action.
+
+**Settings → Preferences** lets you choose your display time zone or follow your device. Dates and feed date filters use that choice; original timestamps stay unchanged. A date without an original timezone is marked as incomplete and excluded from exact date ranges.
+
+In Slack, talk to **@Memory**. A verified personal DM can use your private history. Shared conversations use only company-public evidence that is safe for every participant. Slack membership failures or external/unknown participants cause the agent to withhold an answer. It cannot retract information someone already read.
+
+## Control sharing
+
+Everything starts private. **Company-public** means eligible members of your installation, never the open internet. Sharing may be disabled for the whole workspace during a pilot.
+
+Open a memory and choose **Share memory** to preview the text your company will see. Agent-written memories are shared as written; source details and metadata stay private. In **Settings → Sharing**, optionally enable **Automatically share new memories**. Previously saved work is not shared automatically.
+
+Under **Never share work about**, describe a topic to exclude. Jev checks existing and future source chunks, caching each result for the criterion and classifier version. Adding a rule checks that new rule; it does not rerun previously completed rules. Uncertain matches remain private, and the rule withdraws existing publications while checks run.
+
+Open an entry’s **More actions → Add correction** to add dated corrective evidence without overwriting the original. Deleting a memory removes access immediately and schedules storage cleanup; its deletion marker prevents an old import from bringing it back.
+
+## Move or download your history
+
+For another LiteLLM Memory installation, choose **Settings → Your data → Transfer history**, enter its HTTPS address, and sign in there with the same Slack account. Confirm receiving, return automatically, then review the destination and choose **Send my history**. There is no transfer password or key to copy.
+
+Keep the tab open while it sends. If interrupted, return to that page and retry; packets already received are skipped. Once it says **Importing privately**, you can close the tab. **View recent imports** at the destination shows progress. If recording is paused, the import waits until you resume it. A transfer must arrive within 30 minutes; accepted imports have up to 24 hours to finish. Start again if it expires.
+
+Your source copy stays in place. Imports preserve original text, dates, metadata and source identities, arrive privately, and are organized using the destination's models. Existing records are deduplicated; deletion markers and conflicts exclude records rather than overwrite them. The browser flow supports the same Slack identity on both installations, up to 100,000 records and 512 MB of staged encrypted data.
+
+You can cancel from either progress page. Cancellation stops after any record already being saved; imported records remain private. It does not undo the import or delete the source.
+
+For a file, choose **Encrypted export** or **Readable JSONL**. Only the optional encrypted file uses a password, which protects that download independently of Slack. Keep that password if you want to restore the file. JSONL is readable plaintext. [Offline restore instructions](self-hosting.md#personal-portability).
+
+## Leave or return
+
+**Settings → Your data → Leave** revokes your connections, capture and agent access and withdraws your publications. Export first if you want a copy. Leaving is not a permanent purge of every retained record.
+
+If you are still eligible, signing in again offers an explicit restore of your departed account. Old credentials remain revoked and recording/sharing stay paused until you choose otherwise.
+
+## What encryption protects
+
+Persisted work is encrypted and normal administrators cannot browse your private records through litellm-memory. The hosted application is a trusted processor: its runtime decrypts authorized content for search and inference. An operator controlling that runtime and its keys could access it. This is not protection against a malicious operator. Read the [privacy model](security.md) for that boundary and the gateway's role.

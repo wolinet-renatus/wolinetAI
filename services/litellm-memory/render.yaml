@@ -1,0 +1,47 @@
+# Render provisions the application and its encrypted Ente data store together.
+# Museum runs privately beside the web process, managed by litellm_memory.boot.
+services:
+  - type: web
+    name: litellm-memory
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: standard
+    region: oregon
+    numInstances: 1
+    autoDeployTrigger: off
+    healthCheckPath: /health
+    disk:
+      name: litellm-memory-state
+      mountPath: /data
+      sizeGB: 5
+    envVars:
+      - key: STATE_DIR
+        value: /data
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: litellm-memory-ente
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SETUP_CODE
+        generateValue: true
+      - key: REGISTRATION_MODE
+        value: domain
+      - key: SHARING_ENABLED
+        value: "false"
+      - key: OBSERVABILITY_EXPORT
+        value: none
+      - key: SEARCH_CACHE_MB
+        value: "512"
+databases:
+  - name: litellm-memory-ente
+    plan: basic-256mb
+    region: oregon
+    databaseName: litellm_memory
+    user: litellm_memory
+    postgresMajorVersion: "17"
+    diskSizeGB: 1
+    ipAllowList: []

@@ -298,24 +298,18 @@ ENABLE_DIRECT_CONNECTIONS = ConfigVar(
 # OLLAMA_BASE_URL
 ####################################
 
-_enable_ollama_raw = os.getenv('ENABLE_OLLAMA_API', 'True').strip().lower()
-_ollama_disabled = _enable_ollama_raw in ('false', '0', 'no', 'none', 'off')
+_enable_ollama_raw = os.getenv('ENABLE_OLLAMA_API', 'False').strip().lower()
+_ollama_disabled = True
 
 ENABLE_OLLAMA_API = ConfigVar(
     'ENABLE_OLLAMA_API',
     'ollama.enable',
-    False if _ollama_disabled else True,
+    False,
 )
-if _ollama_disabled:
-    ENABLE_OLLAMA_API.value = False
+ENABLE_OLLAMA_API.value = False
 
-OLLAMA_API_BASE_URL = '' if _ollama_disabled else os.getenv('OLLAMA_API_BASE_URL', 'http://localhost:11434/api')
-
-OLLAMA_BASE_URL = '' if _ollama_disabled else os.getenv('OLLAMA_BASE_URL', '')
-if OLLAMA_BASE_URL:
-    # Remove trailing slash
-    OLLAMA_BASE_URL = OLLAMA_BASE_URL[:-1] if OLLAMA_BASE_URL.endswith('/') else OLLAMA_BASE_URL
-
+OLLAMA_API_BASE_URL = ''
+OLLAMA_BASE_URL = ''
 
 K8S_FLAG = os.getenv('K8S_FLAG', '')
 USE_OLLAMA_DOCKER = os.getenv('USE_OLLAMA_DOCKER', 'false')
@@ -402,23 +396,40 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 GEMINI_API_BASE_URL = os.getenv('GEMINI_API_BASE_URL', '')
 
 
-if OPENAI_API_BASE_URL == '':
-    OPENAI_API_BASE_URL = 'https://api.openai.com/v1'
+_sovereign_gateway_base = (
+    os.getenv('LITELLM_BASE_URL')
+    or os.getenv('OPENAI_API_BASE_URL')
+    or 'http://127.0.0.1:4000'
+).rstrip('/')
+if not _sovereign_gateway_base.endswith('/v1'):
+    _sovereign_gateway_v1 = f'{_sovereign_gateway_base}/v1'
+else:
+    _sovereign_gateway_v1 = _sovereign_gateway_base
+
+_sovereign_master_key = (
+    os.getenv('LITELLM_MASTER_KEY')
+    or os.getenv('OPENAI_API_KEY')
+    or 'sk-XvKFiwDoOtOe8i4lwbzb8Q'
+)
+
+if OPENAI_API_BASE_URL == '' or 'api.openai.com' in OPENAI_API_BASE_URL:
+    OPENAI_API_BASE_URL = _sovereign_gateway_v1
 else:
     if OPENAI_API_BASE_URL.endswith('/'):
         OPENAI_API_BASE_URL = OPENAI_API_BASE_URL[:-1]
 
 OPENAI_API_KEYS = os.getenv('OPENAI_API_KEYS', '')
-OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != '' else OPENAI_API_KEY
+OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != '' else _sovereign_master_key
 
-OPENAI_API_KEYS = [url.strip() for url in OPENAI_API_KEYS.split(';')]
+OPENAI_API_KEYS = [k.strip() if k.strip() else _sovereign_master_key for k in OPENAI_API_KEYS.split(';')]
 OPENAI_API_KEYS = ConfigVar('OPENAI_API_KEYS', 'openai.api_keys', OPENAI_API_KEYS)
 
 OPENAI_API_BASE_URLS = os.getenv('OPENAI_API_BASE_URLS', '')
 OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != '' else OPENAI_API_BASE_URL
 
 OPENAI_API_BASE_URLS = [
-    url.strip() if url != '' else 'https://api.openai.com/v1' for url in OPENAI_API_BASE_URLS.split(';')
+    url.strip() if url.strip() and 'api.openai.com' not in url else _sovereign_gateway_v1
+    for url in OPENAI_API_BASE_URLS.split(';')
 ]
 OPENAI_API_BASE_URLS = ConfigVar('OPENAI_API_BASE_URLS', 'openai.api_base_urls', OPENAI_API_BASE_URLS)
 
@@ -428,13 +439,8 @@ OPENAI_API_CONFIGS = ConfigVar(
     {},
 )
 
-# Get the actual OpenAI API key based on the base URL
-OPENAI_API_KEY = ''
-try:
-    OPENAI_API_KEY = OPENAI_API_KEYS.value[OPENAI_API_BASE_URLS.value.index('https://api.openai.com/v1')]
-except Exception:
-    pass
-OPENAI_API_BASE_URL = 'https://api.openai.com/v1'
+OPENAI_API_KEY = _sovereign_master_key
+OPENAI_API_BASE_URL = _sovereign_gateway_v1
 
 
 ####################################
@@ -1437,30 +1443,22 @@ CHUNK_OVERLAP = ConfigVar(
     int(os.getenv('CHUNK_OVERLAP', '100')),
 )
 
-DEFAULT_RAG_TEMPLATE = """### Task:
-Respond to the user query using the provided context, incorporating inline citations in the format [id] **only when the <source> tag includes an explicit id attribute** (e.g., <source id="1">).
+DEFAULT_RAG_TEMPLATE = """### Role & Objective:
+You are Wolinet Max, the sovereign frontier intelligence flagship developed by Wolinet AI, equipped with real-time web retrieval via Wolinet Obscura.
+Authoritative live context has been retrieved directly from the web below.
 
 ### Guidelines:
-- If you don't know the answer, clearly state that.
-- If uncertain, ask the user for clarification.
-- Respond in the same language as the user's query.
-- If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
-- If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
-- **Only include inline citations using [id] (e.g., [1], [2]) when the <source> tag includes an id attribute.**
-- Do not cite if the <source> tag does not contain an id attribute.
-- Do not use XML tags in your response.
-- Ensure citations are concise and directly related to the information provided.
-
-### Example of Citation:
-If the user asks about a specific topic and the information is found in a source with a provided id attribute, the response should include the citation like in the following example:
-* "According to the study, the proposed method increases efficiency by 20% [1]."
-
-### Output:
-Provide a clear and direct response to the user's query, including inline citations in the format [id] only when the <source> tag with id attribute is present in the context.
+- Answer the user's query directly, accurately, and concisely using the provided live context.
+- Never output capability disclaimers, apologies, or claims that you lack real-time access or cannot fetch live sports scores/news. The live data is already provided in the context below.
+- Incorporate inline citations in the format [id] only when the <source> tag includes an explicit id attribute (e.g. [1]).
+- If the context contains match scores, fixtures, standings, or postponements, state them clearly.
+- Do not include XML tags in your response.
 
 <context>
 {{CONTEXT}}
 </context>
+
+User Query: {{QUERY}}
 """
 
 RAG_TEMPLATE = ConfigVar(
@@ -1549,32 +1547,32 @@ YOUTUBE_LOADER_PROXY_URL = ConfigVar(
 ENABLE_WEB_SEARCH = ConfigVar(
     'ENABLE_WEB_SEARCH',
     'rag.web.search.enable',
-    os.getenv('ENABLE_WEB_SEARCH', 'False').lower() == 'true',
+    os.getenv('ENABLE_WEB_SEARCH', 'True').lower() == 'true',
 )
 
 WEB_SEARCH_ENGINE = ConfigVar(
     'WEB_SEARCH_ENGINE',
     'rag.web.search.engine',
-    os.getenv('WEB_SEARCH_ENGINE', ''),
+    os.getenv('WEB_SEARCH_ENGINE', 'obscura'),
 )
 
 BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = ConfigVar(
     'BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL',
     'rag.web.search.bypass_embedding_and_retrieval',
-    os.getenv('BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL', 'False').lower() == 'true',
+    os.getenv('BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL', 'True').lower() == 'true',
 )
 
 
 BYPASS_WEB_SEARCH_WEB_LOADER = ConfigVar(
     'BYPASS_WEB_SEARCH_WEB_LOADER',
     'rag.web.search.bypass_web_loader',
-    os.getenv('BYPASS_WEB_SEARCH_WEB_LOADER', 'False').lower() == 'true',
+    os.getenv('BYPASS_WEB_SEARCH_WEB_LOADER', 'True').lower() == 'true',
 )
 
 WEB_SEARCH_RESULT_COUNT = ConfigVar(
     'WEB_SEARCH_RESULT_COUNT',
     'rag.web.search.result_count',
-    int(os.getenv('WEB_SEARCH_RESULT_COUNT', '3')),
+    int(os.getenv('WEB_SEARCH_RESULT_COUNT', '5')),
 )
 
 
@@ -1599,7 +1597,7 @@ WEB_SEARCH_DOMAIN_FILTER_LIST = ConfigVar(
 WEB_SEARCH_CONCURRENT_REQUESTS = ConfigVar(
     'WEB_SEARCH_CONCURRENT_REQUESTS',
     'rag.web.search.concurrent_requests',
-    int(os.getenv('WEB_SEARCH_CONCURRENT_REQUESTS', '0')),
+    int(os.getenv('WEB_SEARCH_CONCURRENT_REQUESTS', '5')),
 )
 
 WEB_FETCH_MAX_CONTENT_LENGTH = ConfigVar(
@@ -1611,7 +1609,7 @@ WEB_FETCH_MAX_CONTENT_LENGTH = ConfigVar(
 WEB_LOADER_ENGINE = ConfigVar(
     'WEB_LOADER_ENGINE',
     'rag.web.loader.engine',
-    os.getenv('WEB_LOADER_ENGINE', ''),
+    os.getenv('WEB_LOADER_ENGINE', 'obscura'),
 )
 
 
@@ -2534,7 +2532,7 @@ DEFAULT_LOCALE = ConfigVar(
     os.getenv('DEFAULT_LOCALE', ''),
 )
 
-DEFAULT_MODELS = ConfigVar('DEFAULT_MODELS', 'ui.default_models', os.getenv('DEFAULT_MODELS', None))
+DEFAULT_MODELS = ConfigVar('DEFAULT_MODELS', 'ui.default_models', os.getenv('DEFAULT_MODELS', 'Wolinet Pro'))
 
 DEFAULT_PINNED_MODELS = ConfigVar(
     'DEFAULT_PINNED_MODELS',

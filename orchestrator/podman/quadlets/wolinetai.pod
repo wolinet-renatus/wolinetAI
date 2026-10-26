@@ -1,0 +1,11 @@
+[Pod]
+PodName=wolinetai-core-pod
+PublishPort=3000:3000   # Wolinet AI Home / Marketing Website
+PublishPort=8080:8080   # WolinEx AI Studio UI
+PublishPort=8082:8082   # Wolinet AI Developer Portal & Docs
+PublishPort=4000:4000   # Lango Proxy API Gateway & Docs
+PublishPort=5433:5432   # PostgreSQL External Hook
+PublishPort=8089:8089   # 1apanel Core Dashboard Production Ingress
+
+[Install]
+WantedBy=default.target

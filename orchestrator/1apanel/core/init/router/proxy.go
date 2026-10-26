@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	psessionUtils "wolinet.ai/1apanel/core/init/session/psession"
 	"wolinet.ai/1apanel/core/middleware"
 	"wolinet.ai/1apanel/core/utils/req_helper/proxy_local"
+	"wolinet.ai/1apanel/core/utils/terminal"
 	terminalsession "wolinet.ai/1apanel/core/utils/terminal_session"
 	"wolinet.ai/1apanel/core/utils/xpack"
 	"github.com/gin-gonic/gin"
@@ -73,8 +75,13 @@ func Proxy() gin.HandlerFunc {
 			return
 		}
 
-		if reqPath == "/api/v2/hosts/terminal/local" && (currentNode == "local" || len(currentNode) == 0) {
-			proxyLocalAgent(c)
+		if (reqPath == "/api/v2/hosts/terminal/local" || reqPath == "/api/v2/hosts/terminal/ssh" || reqPath == "/api/v2/hosts/terminal/container") && (currentNode == "local" || len(currentNode) == 0) {
+			if _, err := os.Stat(proxy.SockPath); err == nil {
+				proxyLocalAgent(c)
+				return
+			}
+			terminal.ServeNativeLocalTerminal(c)
+			c.Abort()
 			return
 		}
 

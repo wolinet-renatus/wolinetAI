@@ -173,7 +173,7 @@
 			</div>
 
 			<p class="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-				Models shown in chat come from the LiteLLM gateway and reflect models currently enabled for this account.
+				Models shown in chat are powered by the Wolinet Sovereign Neural Gateway and reflect models currently provisioned for this workspace.
 			</p>
 		</div>
 

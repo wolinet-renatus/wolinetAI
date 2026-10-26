@@ -1507,53 +1507,117 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
     messages = form_data['messages']
     user_message = get_last_user_message(messages)
 
-    queries = []
-    try:
-        res = await generate_queries(
-            request,
+    # Fast-path for direct URLs in user prompt (e.g. check here https://...)
+    urls_in_msg = [u.rstrip('.,;!?') for u in re.findall(r'https?://[^\s<>"\'\)]+', user_message or '')]
+    if urls_in_msg:
+        await event_emitter(
             {
-                'model': form_data['model'],
-                'messages': messages,
-                'prompt': user_message,
-                'type': 'web_search',
-                'chat_id': extra_params.get('__chat_id__'),
-            },
-            user,
+                'type': 'status',
+                'data': {
+                    'action': 'web_search',
+                    'description': f'Reading {len(urls_in_msg)} webpage(s)',
+                    'urls': urls_in_msg,
+                    'done': False,
+                },
+            }
         )
-
-        # generate_queries returns a JSONResponse on error (e.g. model not
-        # found, chat completion failure).  Extract the error detail and
-        # re-raise so the outer except block falls back to using the raw
-        # user message as the search query.
-        if isinstance(res, JSONResponse):
-            try:
-                error_body = json.loads(res.body)
-                detail = error_body.get('detail', 'Query generation failed')
-            except Exception:
-                detail = 'Query generation failed'
-            raise Exception(detail)
-
-        response = res['choices'][0]['message']['content']
-
         try:
-            bracket_start = response.rfind('{')
-            bracket_end = response.rfind('}') + 1
+            from open_webui.retrieval.web.utils import get_web_loader
+            loader = get_web_loader(
+                urls_in_msg,
+                verify_ssl=getattr(request.app.state.config, 'ENABLE_WEB_LOADER_SSL_VERIFICATION', True),
+                requests_per_second=getattr(request.app.state.config, 'WEB_LOADER_CONCURRENT_REQUESTS', 5),
+                trust_env=getattr(request.app.state.config, 'WEB_SEARCH_TRUST_ENV', False),
+            )
+            docs = await loader.aload()
+            if docs:
+                files = form_data.get('files', [])
+                files.append(
+                    {
+                        'docs': [
+                            {
+                                'content': doc.page_content[:4000] if len(doc.page_content) > 4000 else doc.page_content,
+                                'metadata': doc.metadata,
+                            }
+                            for doc in docs
+                        ],
+                        'name': ', '.join(urls_in_msg),
+                        'type': 'web_search',
+                        'context': 'full',
+                        'urls': urls_in_msg,
+                        'queries': urls_in_msg,
+                    }
+                )
+                form_data['files'] = files
 
-            if bracket_start == -1 or bracket_end == -1:
-                raise Exception('No JSON object found in the response')
-
-            response = response[bracket_start:bracket_end]
-            queries = json.loads(response)
-            queries = queries.get('queries', [])
+                await event_emitter(
+                    {
+                        'type': 'status',
+                        'data': {
+                            'action': 'web_search',
+                            'description': f'Retrieved {len(docs)} webpage(s)',
+                            'urls': urls_in_msg,
+                            'items': [{'link': u, 'title': u, 'snippet': ''} for u in urls_in_msg],
+                            'done': True,
+                        },
+                    }
+                )
+                return form_data
         except Exception as e:
-            queries = [response]
+            log.exception(f'Error directly retrieving URLs: {e}')
 
-        if ENABLE_QUERIES_CACHE:
-            request.state.cached_queries = queries
+    queries = []
+    # Fast path: For direct search queries (e.g. sports scores, fixtures, standings, weather, news),
+    # use the user message directly to eliminate latency and avoid secondary LLM round-trips
+    if user_message and len(user_message.split()) <= 12 and not any(k in user_message.lower() for k in ('compare', 'difference between', 'pros and cons')):
+        queries = [user_message.strip()]
+    else:
+        try:
+            res = await generate_queries(
+                request,
+                {
+                    'model': form_data['model'],
+                    'messages': messages,
+                    'prompt': user_message,
+                    'type': 'web_search',
+                    'chat_id': extra_params.get('__chat_id__'),
+                },
+                user,
+            )
 
-    except Exception as e:
-        log.exception(e)
-        queries = [user_message or '']
+            # generate_queries returns a JSONResponse on error (e.g. model not
+            # found, chat completion failure). Extract the error detail and
+            # re-raise so the outer except block falls back to using the raw
+            # user message as the search query.
+            if isinstance(res, JSONResponse):
+                try:
+                    error_body = json.loads(res.body)
+                    detail = error_body.get('detail', 'Query generation failed')
+                except Exception:
+                    detail = 'Query generation failed'
+                raise Exception(detail)
+
+            response = res['choices'][0]['message']['content']
+
+            try:
+                bracket_start = response.rfind('{')
+                bracket_end = response.rfind('}') + 1
+
+                if bracket_start == -1 or bracket_end == -1:
+                    raise Exception('No JSON object found in the response')
+
+                response = response[bracket_start:bracket_end]
+                queries = json.loads(response)
+                queries = queries.get('queries', [])
+            except Exception as e:
+                queries = [response]
+
+            if ENABLE_QUERIES_CACHE:
+                request.state.cached_queries = queries
+
+        except Exception as e:
+            log.warning(f'Query generation fallback to raw prompt: {e}')
+            queries = [user_message or '']
 
     # Check if generated queries are empty
     if len(queries) == 1 and queries[0].strip() == '':
@@ -1613,6 +1677,7 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
                         'docs': docs,
                         'name': ', '.join(queries),
                         'type': 'web_search',
+                        'context': 'full',
                         'urls': results['filenames'],
                         'queries': queries,
                     }
@@ -2548,6 +2613,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     features = form_data.pop('features', None) or {}
     extra_params['__features__'] = features
+
+    # Autonomous real-time web search intent detection (like ChatGPT / Perplexity)
+    if not features.get('web_search'):
+        last_msg = get_last_user_message(form_data.get('messages', []))
+        if last_msg and getattr(request.app.state.config, 'ENABLE_WEB_SEARCH', True):
+            try:
+                from open_webui.retrieval.web.obscura import should_auto_search
+                if should_auto_search(last_msg):
+                    features['web_search'] = True
+            except Exception as e:
+                log.warning(f'Error evaluating auto web search intent: {e}')
+
     if features:
         if 'voice' in features and features['voice']:
             if getattr(request.app.state.config, 'ENABLE_VOICE_MODE_PROMPT', True):

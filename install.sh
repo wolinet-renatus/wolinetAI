@@ -1,0 +1,1 @@
+bin/wolinet-install

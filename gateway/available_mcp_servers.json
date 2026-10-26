@@ -1,0 +1,38 @@
+{
+    "zapier": {
+        "sse_url": "https://mcp.zapier.com/api/mcp"
+    },
+    "deepwiki": {
+        "http_url": "https://mcp.deepwiki.com/mcp",
+        "sse_url": "https://mcp.deepwiki.com/sse",
+        "description": "The DeepWiki MCP server provides programmatic access to DeepWiki's repository documentation (Devin Wiki) and search capabilities (Devin Search)."
+    },
+    "jira": {
+        "sse_url": "https://mcp.atlassian.com/v1/sse",
+        "description": "The Jira MCP server provides programmatic access to Jira's issue tracking capabilities."
+    },
+    "linear": {
+        "sse_url": "https://mcp.linear.app/sse",
+        "description": "The Linear MCP server provides programmatic access to Linear's issue tracking capabilities."
+    },
+    "scrapegraph": {
+        "http_url": "https://smithery.ai/api/mcp/scrapegraph-mcp",
+        "sse_url": "https://smithery.ai/api/mcp/scrapegraph-mcp/sse",
+        "description": "The ScrapeGraph MCP server provides programmatic access to ScrapeGraph AI's web scraping capabilities, including smart scraping, web crawling, search scraping, and agentic scraping workflows."
+    },
+    "wolinet_browser": {
+        "http_url": "http://wolinet-browser:8080/mcp",
+        "description": "Wolinet self-hosted Obscura browser and sovereign crawler/search index for local web searching, navigation, clean Markdown extraction, and interaction."
+    },
+    "ai_memory": {
+        "http_url": "http://host.containers.internal:49374/mcp",
+        "description": "Cross-harness persistent long-term memory for coding agents and web clients. Provides wiki pages, architecture decisions, session handoffs, checkpoints, and durable search."
+    },
+    "litellm_memory": {
+        "http_url": "http://host.containers.internal:8000/mcp/",
+        "description": "Sovereign Company & Team Long-Term Memory. Save useful work memories, browse timeline, search shared activity, and ask cited questions across personal and team history.",
+        "headers": {
+            "Authorization": "Bearer sk-XvKFiwDoOtOe8i4lwbzb8Q"
+        }
+    }
+}

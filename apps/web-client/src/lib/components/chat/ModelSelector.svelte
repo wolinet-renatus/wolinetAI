@@ -12,7 +12,7 @@
 	export let selectedModels = [''];
 	export let disabled = false;
 
-	export let showSetDefault = true;
+	export let showSetDefault = false;
 
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
@@ -39,9 +39,11 @@
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
-	$: if (selectedModels.length > 0 && $models.length > 0) {
-		const _selectedModels = selectedModels.map((model) =>
-			$models.map((m) => m.id).includes(model) ? model : ''
+	$: if ($models.length > 0) {
+		const modelIds = $models.map((m) => m.id);
+		const defaultFallback = modelIds.includes('Wolinet Pro') ? 'Wolinet Pro' : modelIds[0];
+		const _selectedModels = (selectedModels.length > 0 ? selectedModels : ['']).map((model) =>
+			modelIds.includes(model) ? model : defaultFallback
 		);
 
 		if (!equal(_selectedModels, selectedModels)) {
@@ -127,11 +129,3 @@
 		</div>
 	{/each}
 </div>
-
-{#if showSetDefault}
-	<div
-		class="relative text-left mt-[1px] ml-1 text-[0.7rem] text-gray-600 dark:text-gray-400 font-primary"
-	>
-		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
-	</div>
-{/if}

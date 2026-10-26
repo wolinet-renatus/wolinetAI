@@ -201,6 +201,7 @@ services:
       LAGO_API_CHARGE_BY: ${LAGO_API_CHARGE_BY:-team_id}
       WOLINET_FALLBACK_MODELS: ${WOLINET_FALLBACK_MODELS:-}
       LITELLM_DISABLE_NO_REDIS_WARNING: "true"
+      LITELLM_LOCAL_MODEL_COST_MAP: "True"
       # Inference engine (internal bridge)
       WOLINET_API_BASE: http://mitambo:9997/v1
       WOLINET_INFERENCE_URL: http://mitambo:9997
@@ -210,25 +211,33 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       XAI_API_KEY: ${XAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       # Portal
       WOLINET_COOKIE_DOMAIN: ".wolinet.com"
       UI_LOGO_PATH: "/app/assets/wolinet_logo.png"
       UI_LOGO_PATH_DARK: "/app/assets/wolinet_logo_dark.png"
       LITELLM_FAVICON_URL: "/app/assets/favicon.png"
+      WOLINET_BROWSER_URL: http://wolinet-browser:8080/mcp
+      OBSCURA_URL: http://wolinet-browser:8080/mcp
     volumes:
       - ./gateway/start-gateway.sh:/usr/local/bin/start-gateway.sh:ro
       - ./gateway/config.yaml:/app/config.yaml:ro
+      - ./gateway/wolinet_browser_adapter.py:/app/wolinet_browser_adapter.py:ro
+      - ./gateway/wolinet_browser_adapter.py:/app/.venv/lib/python3.13/site-packages/wolinet_browser_adapter.py:ro
       - ./gateway/assets:/app/assets:ro
       - ./gateway/assets/wolinet_logo.png:/app/.venv/lib/python3.13/site-packages/litellm/proxy/logo.jpg:ro
       - ./gateway/assets/wolinet_logo_dark.png:/app/.venv/lib/python3.13/site-packages/litellm/proxy/logo_dark.png:ro
       - ./gateway/assets/favicon.ico:/app/.venv/lib/python3.13/site-packages/litellm/proxy/_experimental/out/favicon.ico:ro
       - ./gateway/assets/favicon.png:/app/.venv/lib/python3.13/site-packages/litellm/proxy/_experimental/out/favicon.png:ro
       - ./gateway/litellm/proxy/swagger:/app/.venv/lib/python3.13/site-packages/litellm/proxy/swagger:ro
+      - ./gateway/litellm/litellm_core_utils/get_model_cost_map.py:/app/.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_model_cost_map.py:ro
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    ports:
+      - "4000:4000"
     command: >
       --config /app/config.yaml --port 4000 --host 0.0.0.0
     healthcheck:
@@ -238,7 +247,7 @@ services:
       retries: 8
       start_period: 60s
     deploy:
-      replicas: 2
+      replicas: 1
       resources:
         limits:
           cpus: "3.0"
@@ -255,6 +264,7 @@ services:
       XINFERENCE_BASE_URL: ${XINFERENCE_BASE_URL:-http://mitambo:9997}
       XINFERENCE_FALLBACK_URLS: ${XINFERENCE_FALLBACK_URLS:-}
       XINFERENCE_DEFAULT_MODEL_UID: ${XINFERENCE_DEFAULT_MODEL_UID:-}
+      XINFERENCE_CODER_MODEL_UID: ${XINFERENCE_CODER_MODEL_UID:-wolinex-coder}
       XINFERENCE_API_KEY: ${XINFERENCE_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       XINFERENCE_MODEL_SYNC_INTERVAL: ${XINFERENCE_MODEL_SYNC_INTERVAL:-30}
     volumes:

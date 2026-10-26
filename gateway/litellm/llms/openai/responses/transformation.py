@@ -220,7 +220,9 @@ class OpenAIResponsesAPIConfig(BaseResponsesAPIConfig):
         params: Final = dict(response_api_optional_params)
 
         if "max_output_tokens" in params:
-            params["max_output_tokens"] = self._enforce_min_max_output_tokens(params.get("max_output_tokens"))
+            params["max_output_tokens"] = self._enforce_min_max_output_tokens(
+                cast("int | None", params.get("max_output_tokens"))
+            )
 
         if (
             self.custom_llm_provider == LlmProviders.OPENAI
@@ -505,11 +507,11 @@ class OpenAIResponsesAPIConfig(BaseResponsesAPIConfig):
                     if item.get("type") == "reasoning":
                         verbose_logger.debug("Handling reasoning item: %s", item)
                         # Type assertion since we know it's a dict at this point
-                        dict_item = cast(dict[str, Any], item)
+                        dict_item = cast(dict[str, object], item)
                         filtered_item = self._handle_reasoning_item(dict_item)
                     else:
                         # For other dict items, just pass through
-                        filtered_item = cast(dict[str, Any], item)
+                        filtered_item = cast(dict[str, object], item)
                     validated_input.append(filtered_item)
                 else:
                     validated_input.append(item)
@@ -517,7 +519,7 @@ class OpenAIResponsesAPIConfig(BaseResponsesAPIConfig):
         # Input is expected to be either str or List, no single BaseModel expected
         return input
 
-    def _handle_reasoning_item(self, item: dict[str, Any]) -> dict[str, Any]:
+    def _handle_reasoning_item(self, item: dict[str, object]) -> dict[str, object]:
         """
         Handle reasoning items specifically to filter out status=None using OpenAI's model.
         Issue: https://github.com/BerriAI/litellm/issues/13484
@@ -531,17 +533,21 @@ class OpenAIResponsesAPIConfig(BaseResponsesAPIConfig):
                 # Ensure required fields are present for ResponseReasoningItem
                 item_data: Final = dict(item)
                 if "summary" not in item_data:
-                    item_data["summary"] = (
-                        item_data.get("reasoning_content", "")[:100] + "..."
-                        if len(item_data.get("reasoning_content", "")) > 100
-                        else item_data.get("reasoning_content", "")
+                    raw_reasoning = item_data.get("reasoning_content")
+                    reasoning_content: Final[str] = raw_reasoning if isinstance(raw_reasoning, str) else ""
+                    summary_text: Final[str] = (
+                        reasoning_content[:100] + "..."
+                        if len(reasoning_content) > 100
+                        else reasoning_content
                     )
+                    item_data["summary"] = [{"text": summary_text, "type": "summary_text"}]
 
-                # Create ResponseReasoningItem object from the item data
-                reasoning_item: Final = ResponseReasoningItem(**item_data)
+                # Create ResponseReasoningItem object from the item data using model_construct
+                # Passing None explicitly for _fields_set prevents Pyright from binding unpacked object kwargs to _fields_set
+                reasoning_item: Final = ResponseReasoningItem.model_construct(None, **item_data)
 
                 # Convert back to dict with exclude_none=True to exclude None fields
-                dict_reasoning_item: Final = reasoning_item.model_dump(exclude_none=True)
+                dict_reasoning_item: Final[dict[str, object]] = reasoning_item.model_dump(exclude_none=True)
 
                 return dict_reasoning_item
             except Exception as e:

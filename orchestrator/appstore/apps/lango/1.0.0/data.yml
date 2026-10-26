@@ -1,0 +1,43 @@
+additionalProperties:
+  formFields:
+    - default: 4000
+      edit: true
+      envKey: PANEL_APP_PORT_HTTP
+      labelEn: Port
+      labelZh: 端口
+      label:
+        en: Port
+        zh: 端口
+      required: true
+      rule: paramPort
+      type: number
+    - default: sk-XvKFiwDoOtOe8i4lwbzb8Q
+      edit: true
+      envKey: LITELLM_MASTER_KEY
+      labelEn: Master API Key
+      labelZh: 主 API 密钥
+      label:
+        en: Master API Key
+        zh: 主 API 密钥
+      required: true
+      type: password
+    - default: admin
+      edit: true
+      envKey: UI_USERNAME
+      labelEn: Dashboard Username
+      labelZh: 控制台用户名
+      label:
+        en: Dashboard Username
+        zh: 控制台用户名
+      required: true
+      type: text
+    - default: Wolinet@2026!
+      edit: true
+      envKey: UI_PASSWORD
+      labelEn: Dashboard Password
+      labelZh: 控制台密码
+      label:
+        en: Dashboard Password
+        zh: 控制台密码
+      required: true
+      type: password

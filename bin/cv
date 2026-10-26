@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Curvine CLI Host Wrapper (CNCF Sandbox Project)
+# Proxies native `cv` filesystem, cache, and mount commands through the sovereign Podman container.
+set -euo pipefail
+
+exec /opt/podman/bin/podman run --rm -i \
+  --network=host \
+  -v "${PWD}:${PWD}" \
+  -w "${PWD}" \
+  docker.io/curvine/curvine:latest /app/curvine/bin/cv "$@"

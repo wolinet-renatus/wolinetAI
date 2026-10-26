@@ -1,0 +1,95 @@
+name: Verify LiteLLM Memory
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  host-capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [codex, claude]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.9"
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: uv sync --frozen
+      - name: Install pinned host CLI
+        run: |
+          if [ '${{ matrix.host }}' = codex ]; then
+            npm install -g @openai/codex@0.155.1
+          else
+            npm install -g @anthropic-ai/claude-code@2.1.278
+          fi
+      - name: Verify memory guidance reaches each host without transcript uploads
+        env:
+          LITELLM_MEMORY_DISPOSABLE_HOST_TEST: "1"
+        run: uv run python tests/smoke_hosts.py '${{ matrix.host }}'
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.9"
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run pytest -q
+      - run: node --check static/memory.js && node --check static/setup.js && node --check static/migration.js && node --check static/ui.js && node --check static/oauth-callback.js && node --check static/device-setup.js
+  portable-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      POSTGRES_PASSWORD: ci_disposable_database_only
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify isolated deployment state
+        run: python3 tests/check_compose_names.py
+      - name: Build and start the documented stack
+        run: docker compose up --build --wait --wait-timeout 240 -d
+      - name: Verify encrypted storage, bootstrap hardening, and setup access
+        run: docker compose exec -T litellm-memory python - < tests/smoke_bundle.py
+      - name: Restart and verify persistent state
+        run: |
+          docker compose restart litellm-memory
+          docker compose up --wait --wait-timeout 180 -d
+          docker compose exec -T litellm-memory python - < tests/smoke_bundle.py
+      - name: Back up consistent app and Ente state
+        run: |
+          umask 077
+          docker compose stop litellm-memory
+          docker compose exec -T postgres pg_dump -U litellm_memory -d litellm_memory -Fc > /tmp/litellm-memory-ente.dump
+          docker compose run --rm --no-deps -T litellm-memory sh -c 'tar -cf - -C /data .' > /tmp/litellm-memory-state.tar
+      - name: Restore into clean volumes and verify data and tombstones
+        run: |
+          docker compose -p litellm-memory-restored build litellm-memory
+          docker compose -p litellm-memory-restored up -d --wait postgres
+          docker compose -p litellm-memory-restored exec -T postgres pg_restore -U litellm_memory -d litellm_memory < /tmp/litellm-memory-ente.dump
+          docker compose -p litellm-memory-restored run --rm --no-deps -T litellm-memory sh -c 'tar -xf - -C /data' < /tmp/litellm-memory-state.tar
+          RECOVERY_MODE=true docker compose -p litellm-memory-restored up -d --wait --wait-timeout 180
+          docker compose -p litellm-memory-restored exec -T litellm-memory python -c "import httpx; c=httpx.Client(base_url='http://127.0.0.1:8000'); assert c.get('/health').json()['status']=='recovery'; assert c.post('/slack/events',json={}).status_code==503; assert c.post('/mcp',json={}).status_code==503"
+          docker compose -p litellm-memory-restored up -d --wait --wait-timeout 180
+          docker compose -p litellm-memory-restored exec -T litellm-memory python - < tests/smoke_bundle.py
+      - name: Exercise the deployed SDK and tools within the production memory limit
+        run: |
+          docker update --memory 512m --memory-swap 512m "$(docker compose -p litellm-memory-restored ps -q litellm-memory)"
+          docker compose -p litellm-memory-restored restart litellm-memory
+          docker compose -p litellm-memory-restored up --wait --wait-timeout 180 -d
+          docker compose -p litellm-memory-restored exec -T litellm-memory python - < tests/smoke_agent_deployment.py
+      - name: Show content-free service status
+        if: always()
+        run: docker compose ps
+      - name: Remove disposable CI resources
+        if: always()
+        run: |
+          docker compose down -v
+          docker compose -p litellm-memory-restored down -v

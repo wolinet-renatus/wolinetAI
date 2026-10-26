@@ -165,19 +165,13 @@
 			route: '/admin/settings/web',
 			keywords: [
 				'web search',
-				'google',
-				'bing',
-				'duckduckgo',
-				'serp',
-				'searxng',
-				'moojeh',
-				'yacy',
-				'serper',
-				'serply',
-				'tavily',
-				'exa',
-				'perplexity',
-				'firecrawl'
+				'obscura',
+				'sovereign browser',
+				'browsing',
+				'live web',
+				'grounding',
+				'internet',
+				'fast fetch'
 			]
 		},
 		{

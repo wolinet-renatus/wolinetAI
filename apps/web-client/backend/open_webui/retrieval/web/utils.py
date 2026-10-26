@@ -47,9 +47,6 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL, USER_AGENT
-from open_webui.retrieval.loaders.external_web import ExternalWebLoader
-from open_webui.retrieval.loaders.tavily import TavilyLoader
-from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
 from open_webui.utils.misc import is_string_allowed
 
 log = logging.getLogger(__name__)
@@ -303,34 +300,15 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         self.params = params or {}
 
     def lazy_load(self) -> Iterator[Document]:
-        try:
-            for url in self.web_paths:
-                doc = scrape_firecrawl_url(
-                    self.api_url,
-                    self.api_key,
-                    url,
-                    verify_ssl=self.verify_ssl,
-                    timeout=self.timeout,
-                    params=self.params,
-                )
-                if doc is not None:
-                    yield doc
-        except Exception as e:
-            if self.continue_on_failure:
-                log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
-            else:
-                raise e
+        from open_webui.retrieval.web.obscura import SafeObscuraLoader
+        loader = SafeObscuraLoader(web_paths=self.web_paths, verify_ssl=self.verify_ssl)
+        return loader.lazy_load()
 
     async def alazy_load(self):
-        try:
-            docs = await run_in_threadpool(lambda: list(self.lazy_load()))
-            for doc in docs:
-                yield doc
-        except Exception as e:
-            if self.continue_on_failure:
-                log.warning(f'Error extracting content from URLs with Firecrawl: {e}')
-            else:
-                raise e
+        from open_webui.retrieval.web.obscura import SafeObscuraLoader
+        loader = SafeObscuraLoader(web_paths=self.web_paths, verify_ssl=self.verify_ssl)
+        async for doc in loader.alazy_load():
+            yield doc
 
 
 class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
@@ -430,10 +408,10 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             raise ValueError('No valid URLs to process after SSL verification')
 
         try:
-            loader = TavilyLoader(
-                urls=valid_urls,
-                api_key=self.api_key,
-                extract_depth=self.extract_depth,
+            from open_webui.retrieval.web.obscura import SafeObscuraLoader
+            loader = SafeObscuraLoader(
+                web_paths=valid_urls,
+                verify_ssl=self.verify_ssl,
                 continue_on_failure=self.continue_on_failure,
             )
             async for document in loader.alazy_load():
@@ -739,78 +717,24 @@ class SafeWebBaseLoader(WebBaseLoader):
 def get_web_loader(
     urls: Union[str, Sequence[str]],
     verify_ssl: bool = True,
-    requests_per_second: int = 2,
+    requests_per_second: int = 5,
     trust_env: bool = False,
 ):
-    # Check if the URLs are valid
-    safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
+    """
+    Returns the high-performance native sovereign Wolinet Obscura document loader.
+    Supports parallel concurrent streaming, content distillation, and caching.
+    """
+    from open_webui.retrieval.web.obscura import SafeObscuraLoader
 
+    safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
     if not safe_urls:
         log.warning(f'All provided URLs were blocked or invalid: {urls}')
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
-    web_loader_args = {
-        'web_paths': safe_urls,
-        'verify_ssl': verify_ssl,
-        'requests_per_second': requests_per_second,
-        'continue_on_failure': True,
-        'trust_env': trust_env,
-    }
-
-    if WEB_LOADER_ENGINE.value == '' or WEB_LOADER_ENGINE.value == 'safe_web':
-        WebLoaderClass = SafeWebBaseLoader
-
-        request_kwargs = {}
-        if WEB_LOADER_TIMEOUT.value:
-            try:
-                timeout_value = float(WEB_LOADER_TIMEOUT.value)
-            except ValueError:
-                timeout_value = None
-
-            if timeout_value:
-                request_kwargs['timeout'] = timeout_value
-
-        if request_kwargs:
-            web_loader_args['requests_kwargs'] = request_kwargs
-
-    if WEB_LOADER_ENGINE.value == 'playwright':
-        WebLoaderClass = SafePlaywrightURLLoader
-        web_loader_args['playwright_timeout'] = PLAYWRIGHT_TIMEOUT.value
-        if PLAYWRIGHT_WS_URL.value:
-            web_loader_args['playwright_ws_url'] = PLAYWRIGHT_WS_URL.value
-
-    if WEB_LOADER_ENGINE.value == 'firecrawl':
-        WebLoaderClass = SafeFireCrawlLoader
-        web_loader_args['api_key'] = FIRECRAWL_API_KEY.value
-        web_loader_args['api_url'] = FIRECRAWL_API_BASE_URL.value
-        if FIRECRAWL_TIMEOUT.value:
-            try:
-                web_loader_args['timeout'] = int(FIRECRAWL_TIMEOUT.value)
-            except ValueError:
-                pass
-
-    if WEB_LOADER_ENGINE.value == 'tavily':
-        WebLoaderClass = SafeTavilyLoader
-        web_loader_args['api_key'] = TAVILY_API_KEY.value
-        web_loader_args['extract_depth'] = TAVILY_EXTRACT_DEPTH.value
-
-    if WEB_LOADER_ENGINE.value == 'external':
-        WebLoaderClass = ExternalWebLoader
-        web_loader_args['external_url'] = EXTERNAL_WEB_LOADER_URL.value
-        web_loader_args['external_api_key'] = EXTERNAL_WEB_LOADER_API_KEY.value
-
-    if WebLoaderClass:
-        web_loader = WebLoaderClass(**web_loader_args)
-
-        log.debug(
-            'Using WEB_LOADER_ENGINE %s for %s URLs',
-            web_loader.__class__.__name__,
-            len(safe_urls),
-        )
-
-        return web_loader
-    else:
-        raise ValueError(
-            f'Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE.value}. '
-            "Please set it to 'safe_web', 'playwright', 'firecrawl', or 'tavily'."
-        )
+    return SafeObscuraLoader(
+        web_paths=safe_urls,
+        verify_ssl=verify_ssl,
+        requests_per_second=requests_per_second,
+        continue_on_failure=True,
+        trust_env=trust_env,
+    )

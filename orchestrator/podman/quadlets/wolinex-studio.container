@@ -1,0 +1,34 @@
+[Container]
+ContainerName=wolinet-wolinex
+Pod=wolinetai-core-pod
+Image=ghcr.io/wolinet-renatus/wolinet-wolinex:latest
+Volume=/var/lib/wolinet/data/wolinex:/app/backend/data:Z
+Environment=PORT=8080
+Environment=HOST=0.0.0.0
+Environment=WEBUI_NAME=Wolinet AI
+Environment=WEBUI_SECRET_KEY=dev-secret-key-32-chars-minimum-length-change-in-prod
+Environment=OPENAI_API_BASE_URL=http://127.0.0.1:4000/v1
+Environment=OPENAI_API_KEY=sk-XvKFiwDoOtOe8i4lwbzb8Q
+Environment=LITELLM_BASE_URL=http://127.0.0.1:4000
+Environment=LITELLM_MASTER_KEY=sk-XvKFiwDoOtOe8i4lwbzb8Q
+Environment=DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/webui
+Environment=WEBUI_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/webui
+Environment=REDIS_URL=redis://:redis@127.0.0.1:6379
+Environment=ENABLE_OLLAMA_API=False
+Environment=ENABLE_OPENAI_API=True
+Environment=ENABLE_FORWARD_USER_INFO_HEADERS=True
+Environment=DEFAULT_MODELS=Wolinet Pro
+Environment=BYPASS_MODEL_ACCESS_CONTROL=True
+Environment=RAG_EMBEDDING_ENGINE=openai
+Environment=RAG_EMBEDDING_MODEL=wolinex-embed
+Environment=RAG_OPENAI_API_BASE_URL=http://127.0.0.1:4000/v1
+Environment=RAG_OPENAI_API_KEY=sk-XvKFiwDoOtOe8i4lwbzb8Q
+Environment=SCARF_NO_ANALYTICS=true
+Environment=DO_NOT_TRACK=true
+Environment=ANONYMIZED_TELEMETRY=false
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

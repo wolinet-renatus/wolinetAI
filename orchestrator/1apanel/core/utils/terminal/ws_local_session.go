@@ -32,6 +32,15 @@ func NewLocalWsSession(cols, rows int, wsConn *websocket.Conn, slave *LocalComma
 }
 
 func (sws *LocalWsSession) Start(quitChan chan bool) {
+	// Announce session with ID so frontend sets sessionId and transitions to online immediately
+	sessionMsg, _ := json.Marshal(WsMsg{
+		Type: WsMsgSession,
+		ID:   "local-session",
+	})
+	sws.writeMutex.Lock()
+	_ = sws.wsConn.WriteMessage(websocket.TextMessage, sessionMsg)
+	sws.writeMutex.Unlock()
+
 	go sws.handleSlaveEvent(quitChan)
 	go sws.receiveWsMsg(quitChan)
 }
@@ -40,14 +49,19 @@ func (sws *LocalWsSession) handleSlaveEvent(exitCh chan bool) {
 	defer setQuit(exitCh)
 	defer global.LOG.Debug("thread of handle slave event has exited now")
 
-	buffer := make([]byte, 1024)
+	buffer := make([]byte, 4096)
 	for {
 		select {
 		case <-exitCh:
 			return
 		default:
-			n, _ := sws.slave.Read(buffer)
-			_ = sws.masterWrite(buffer[:n])
+			n, err := sws.slave.Read(buffer)
+			if err != nil {
+				return
+			}
+			if n > 0 {
+				_ = sws.masterWrite(buffer[:n])
+			}
 		}
 	}
 }
@@ -91,11 +105,19 @@ func (sws *LocalWsSession) receiveWsMsg(exitCh chan bool) {
 		default:
 			_, wsData, err := wsConn.ReadMessage()
 			if err != nil {
-				global.LOG.Errorf("reading webSocket message failed, err: %v", err)
 				return
 			}
-			msgObj := WsMsg{}
-			_ = json.Unmarshal(wsData, &msgObj)
+			var msgObj struct {
+				Type      string `json:"type"`
+				Data      string `json:"data"`
+				Line      string `json:"line"`
+				Cols      int    `json:"cols"`
+				Rows      int    `json:"rows"`
+				Timestamp int64  `json:"timestamp"`
+			}
+			if err := json.Unmarshal(wsData, &msgObj); err != nil {
+				continue
+			}
 			switch msgObj.Type {
 			case WsMsgResize:
 				if msgObj.Cols > 0 && msgObj.Rows > 0 {
@@ -107,15 +129,15 @@ func (sws *LocalWsSession) receiveWsMsg(exitCh chan bool) {
 				decodeBytes, err := base64.StdEncoding.DecodeString(msgObj.Data)
 				if err != nil {
 					global.LOG.Errorf("websock cmd string base64 decoding failed, err: %v", err)
+					continue
 				}
 				if string(decodeBytes) != "\x03" || sws.allowCtrlC {
 					sws.sendWebsocketInputCommandToSshSessionStdinPipe(decodeBytes)
 				}
 			case WsMsgHeartbeat:
-				err = wsConn.WriteMessage(websocket.TextMessage, wsData)
-				if err != nil {
-					global.LOG.Errorf("ssh sending heartbeat to webSocket failed, err: %v", err)
-				}
+				sws.writeMutex.Lock()
+				_ = wsConn.WriteMessage(websocket.TextMessage, wsData)
+				sws.writeMutex.Unlock()
 			}
 		}
 	}

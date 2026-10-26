@@ -1,0 +1,193 @@
+{
+  "version": "1.0.0",
+  "organization": "Wolinet AI",
+  "products": [
+    {
+      "id": "lango",
+      "name": "Wolinet Lango Gateway",
+      "category": "server_core",
+      "deployable_to_server": true,
+      "path": "gateway",
+      "sub_branch": "stack/lango",
+      "description": "Sovereign API Gateway, proxy router, MCP host, Obscura adapter, rate limiting, and auth",
+      "ports": [4000],
+      "healthcheck": "http://localhost:4000/health/liveliness",
+      "build": {
+        "type": "container",
+        "image": "wolinet-lango:latest",
+        "context": "gateway",
+        "dockerfile": "gateway/Dockerfile"
+      }
+    },
+    {
+      "id": "mitambo",
+      "name": "Wolinet Mitambo Inference",
+      "category": "server_core",
+      "deployable_to_server": true,
+      "path": "inference",
+      "sub_branch": "stack/mitambo",
+      "description": "Sovereign local model inference engine with Apple Silicon MPS & NVIDIA CUDA acceleration",
+      "ports": [9997],
+      "healthcheck": "http://localhost:9997/v1/models",
+      "build": {
+        "type": "binary_service",
+        "script": "inference/start-mitambo.sh",
+        "image": "wolinet-mitambo:latest"
+      }
+    },
+    {
+      "id": "web-client",
+      "name": "Wolinet Web Client & Chat",
+      "category": "web_app",
+      "deployable_to_server": true,
+      "path": "apps/web-client",
+      "sub_branch": "stack/web-client",
+      "description": "Sovereign conversational interface, collaborative workspace, and MCP Hub UI",
+      "ports": [8081],
+      "healthcheck": "http://localhost:8081/health",
+      "build": {
+        "type": "node_python",
+        "script": "apps/web-client/run_webui.sh",
+        "image": "wolinet-web-client:latest"
+      }
+    },
+    {
+      "id": "dev-portal",
+      "name": "Wolinet Developer Portal",
+      "category": "web_app",
+      "deployable_to_server": true,
+      "path": "apps/dev-portal",
+      "sub_branch": "stack/dev-portal",
+      "description": "Interactive developer documentation, API key onboarding, and playground",
+      "ports": [8082],
+      "build": {
+        "type": "static_nginx",
+        "image": "wolinet-dev-portal:latest",
+        "dockerfile": "apps/dev-portal/Dockerfile"
+      }
+    },
+    {
+      "id": "homepage",
+      "name": "Wolinet Homepage & Showcase",
+      "category": "web_app",
+      "deployable_to_server": true,
+      "path": "apps/homepage",
+      "sub_branch": "stack/homepage",
+      "description": "Enterprise sovereign showcase, landing page, and product documentation",
+      "ports": [80],
+      "build": {
+        "type": "static_nginx",
+        "image": "wolinet-homepage:latest",
+        "dockerfile": "apps/homepage/Dockerfile"
+      }
+    },
+    {
+      "id": "orchestrator",
+      "name": "Wolinet DEC & Orchestrator",
+      "category": "server_core",
+      "deployable_to_server": true,
+      "path": "orchestrator",
+      "sub_branch": "stack/orchestrator",
+      "description": "DEC sovereign OS control plane (1Panel Go core, AI portal, AppStore, Podman Quadlets)",
+      "ports": [8888],
+      "build": {
+        "type": "go_binary",
+        "output": "bin/1apanel",
+        "command": "make -C orchestrator/1apanel/core"
+      }
+    },
+    {
+      "id": "memory",
+      "name": "Wolinet Memory Service",
+      "category": "server_core",
+      "deployable_to_server": true,
+      "path": "services/litellm-memory",
+      "sub_branch": "stack/memory",
+      "description": "ai-memory persistent vector & cross-session continuity daemon",
+      "ports": [49374],
+      "healthcheck": "http://localhost:49374/health",
+      "build": {
+        "type": "python_daemon",
+        "script": "services/litellm-memory/start-memory.sh",
+        "image": "wolinet-memory:latest"
+      }
+    },
+    {
+      "id": "desktop-ide",
+      "name": "Wolinet Desktop IDE",
+      "category": "client_desktop",
+      "deployable_to_server": false,
+      "path": "Wolinet-Dkt-Ide",
+      "sub_branch": "stack/desktop-ide",
+      "remote_url": "https://github.com/wolinet-renatus/WolinetIDE.git",
+      "description": "Sovereign desktop IDE for AI-assisted engineering and autonomous agent swarms",
+      "api_dependency": "Connects via REST/SSE to Lango Gateway (:4000/v1 or https://lango.wolinet.com)",
+      "build": {
+        "type": "tauri_desktop",
+        "command": "cd Wolinet-Dkt-Ide && npm run build",
+        "artifacts": [
+          "Wolinet-Dkt-Ide/src-tauri/target/release/bundle/dmg/*.dmg",
+          "Wolinet-Dkt-Ide/src-tauri/target/release/bundle/appimage/*.AppImage",
+          "Wolinet-Dkt-Ide/src-tauri/target/release/bundle/deb/*.deb"
+        ]
+      }
+    },
+    {
+      "id": "wolinex",
+      "name": "Wolinet Wolinex Model Ops",
+      "category": "model_asset",
+      "deployable_to_server": false,
+      "path": "models",
+      "sub_branch": "stack/wolinex",
+      "description": "Sovereign model checkpoints (Wolinet Pro, Coder v2), registrations, and self-training pipelines",
+      "build": {
+        "type": "model_manifest",
+        "command": "python3 scripts/self_training/register_checkpoint.py"
+      }
+    },
+    {
+      "id": "sdks",
+      "name": "Wolinet Developer SDKs",
+      "category": "sdk_package",
+      "deployable_to_server": false,
+      "path": "packages",
+      "sub_branch": "stack/sdks",
+      "description": "Official client SDK libraries for Python, Go, and TypeScript/JavaScript",
+      "api_dependency": "Connects via REST to Lango Gateway (:4000/v1)",
+      "build": {
+        "type": "multi_sdk",
+        "packages": [
+          "packages/wolinet-python",
+          "packages/wolinet-go",
+          "packages/wolinet-sdk"
+        ]
+      }
+    },
+    {
+      "id": "ide-tools",
+      "name": "Wolinet Agentic Tools & Skills",
+      "category": "tooling",
+      "deployable_to_server": true,
+      "path": "tools",
+      "sub_branch": "stack/ide-tools",
+      "description": "Claude / Antigravity agentic skill packs (ECC, curvine, scientific agent skills, rules)",
+      "build": {
+        "type": "skill_manifest"
+      }
+    },
+    {
+      "id": "ingress",
+      "name": "Wolinet Edge Ingress",
+      "category": "server_core",
+      "deployable_to_server": true,
+      "path": "nginx",
+      "sub_branch": "stack/ingress",
+      "description": "Edge reverse proxy, SSL termination, domain routing to internal services",
+      "ports": [80, 443],
+      "build": {
+        "type": "container",
+        "image": "wolinet-nginx:latest"
+      }
+    }
+  ]
+}

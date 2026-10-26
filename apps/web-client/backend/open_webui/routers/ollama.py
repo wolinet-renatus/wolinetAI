@@ -257,21 +257,16 @@ async def update_config(
     form_data: OllamaConfigForm,
     user=Depends(get_admin_user),
 ) -> dict:
-    """Persist updated Ollama connection settings."""
-    request.app.state.config.ENABLE_OLLAMA_API = form_data.ENABLE_OLLAMA_API
-    request.app.state.config.OLLAMA_BASE_URLS = form_data.OLLAMA_BASE_URLS
-    request.app.state.config.OLLAMA_API_CONFIGS = form_data.OLLAMA_API_CONFIGS
-
-    # Prune stale config entries that no longer map to a URL index
-    valid_keys = {str(i) for i in range(len(request.app.state.config.OLLAMA_BASE_URLS))}
-    request.app.state.config.OLLAMA_API_CONFIGS = {
-        k: v for k, v in request.app.state.config.OLLAMA_API_CONFIGS.items() if k in valid_keys
-    }
+    """Ollama is disabled in Wolinet AI Sovereign Architecture."""
+    request.app.state.config.ENABLE_OLLAMA_API = False
+    request.app.state.config.OLLAMA_BASE_URLS = []
+    request.app.state.config.OLLAMA_API_CONFIGS = {}
 
     return {
-        'ENABLE_OLLAMA_API': request.app.state.config.ENABLE_OLLAMA_API,
-        'OLLAMA_BASE_URLS': request.app.state.config.OLLAMA_BASE_URLS,
-        'OLLAMA_API_CONFIGS': request.app.state.config.OLLAMA_API_CONFIGS,
+        'ENABLE_OLLAMA_API': False,
+        'OLLAMA_BASE_URLS': [],
+        'OLLAMA_API_CONFIGS': {},
+        'detail': 'Local Ollama is disabled in Wolinet AI Sovereign Architecture. All model routing is managed via Lango Gateway.',
     }
 
 

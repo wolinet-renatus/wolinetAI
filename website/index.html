@@ -3,192 +3,565 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f4f2e9" />
-    <meta name="description" content="Wolinet AI gives people and teams practical assistants for writing, analysis, coding, voice, and everyday work." />
-    <title>Wolinet AI — Good work, moving forward</title>
-    <link rel="icon" href="/assets/wolinet-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/styles.css?v=20260930" />
-    <script src="/app.js?v=20260930" defer></script>
+    <meta name="theme-color" content="#08090d" />
+    <meta
+      name="description"
+      content="Wolinet AI delivers sovereign foundation models, an enterprise AI workspace, and a high-speed OpenAI-compatible API with complete data privacy and zero unauthorized retention."
+    />
+    <meta property="og:title" content="Wolinet AI — Sovereign Intelligence & Developer Platform" />
+    <meta
+      property="og:description"
+      content="Deploy private foundation models, orchestrate collaborative agent workflows, and access developer endpoints with total data ownership."
+    />
+    <meta property="og:image" content="/logo.png" />
+    <meta property="og:type" content="website" />
+    <title>Wolinet AI — Sovereign Intelligence & Developer Platform</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="stylesheet" href="/styles.css?v=20261019_v2" />
   </head>
   <body>
-    <a class="skip-link" href="#main-content">Skip to content</a>
-    <div class="utility-bar">
-      <div class="shell utility-bar__inner">
-        <p>Wolinet AI for every kind of work</p>
-        <a href="https://dev.wolinet.com">Developer Studio <span aria-hidden="true">↗</span></a>
-      </div>
+    <!-- Ambient Lighting Effects -->
+    <div class="bg-ambient" aria-hidden="true">
+      <div class="glow-orb glow-orb-1"></div>
+      <div class="glow-orb glow-orb-2"></div>
+      <div class="glow-orb glow-orb-3"></div>
+      <div class="grid-overlay"></div>
     </div>
 
-    <header class="site-header" data-header>
+    <!-- Site Header -->
+    <header class="site-header">
       <div class="shell nav-shell">
-        <a class="brand" href="/" aria-label="Wolinet AI home">
-          <svg class="brand__mark" viewBox="0 0 44 44" aria-hidden="true">
-            <path d="M2 2h18v18H2zM24 2h18v18H24zM2 24h18v18H2z" />
-            <path class="brand__cut" d="M30 24h12v18H24V30z" />
-          </svg>
-          <span>Wolinet <strong>AI</strong></span>
+        <a class="brand" href="/" aria-label="Wolinet AI Home">
+          <img src="/logo.png" alt="Wolinet AI Logo" class="brand-logo" />
+          <span class="brand-text">WOLINET<span style="color: var(--brand-cyan);">AI</span></span>
         </a>
-        <nav class="desktop-nav" aria-label="Primary navigation">
-          <div class="nav-group">
-            <button class="nav-trigger" type="button" data-menu-trigger="products" aria-expanded="false">Products <svg viewBox="0 0 12 8" aria-hidden="true"><path d="m1 1 5 5 5-5" /></svg></button>
-          </div>
-          <div class="nav-group">
-            <button class="nav-trigger" type="button" data-menu-trigger="solutions" aria-expanded="false">Solutions <svg viewBox="0 0 12 8" aria-hidden="true"><path d="m1 1 5 5 5-5" /></svg></button>
-          </div>
-          <a class="nav-link" href="#enterprise">Enterprise</a>
-          <a class="nav-link" href="#downloads">Downloads</a>
+
+        <nav class="desktop-nav" aria-label="Main Navigation">
+          <a class="nav-item" href="#capabilities">Capabilities</a>
+          <a class="nav-item" href="#models">Models</a>
+          <a class="nav-item" href="#developer-studio">Developer Studio</a>
+          <a class="nav-item" href="/docs" data-portal="docs">API Reference</a>
+          <a class="nav-item" href="#security">Sovereignty & Security</a>
         </nav>
+
         <div class="nav-actions">
-          <a class="text-link nav-login" href="https://wolinex.wolinet.com">Sign in</a>
-          <a class="button button--small" href="https://wolinex.wolinet.com">Start using Wolinet</a>
-          <button class="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" data-mobile-toggle><span></span><span></span></button>
+          <a class="btn btn-secondary btn-sm" href="#developer-studio">API Key</a>
+          <a class="btn btn-primary btn-sm" href="http://localhost:8080" data-portal="wolinex">Launch Studio ↗</a>
         </div>
-      </div>
-
-      <div class="mega-menu" data-menu="products" aria-hidden="true">
-        <div class="shell mega-menu__grid">
-          <div class="mega-intro">
-            <span class="eyebrow">Product family / 04</span>
-            <h2>One place for all the ways you think and make.</h2>
-            <a class="arrow-link" href="#products">Explore all products <span aria-hidden="true">→</span></a>
-          </div>
-          <a class="mega-card" href="#products" data-index="01">
-            <span class="mega-card__icon" aria-hidden="true"><svg viewBox="0 0 28 28"><path d="M5 5h18v18H5zM9 10h10M9 14h7M9 18h5" /></svg></span>
-            <strong>Creative Assistants</strong><span>Draft, refine, research, and bring your ideas into focus.</span>
-          </a>
-          <a class="mega-card" href="#products" data-index="02">
-            <span class="mega-card__icon" aria-hidden="true"><svg viewBox="0 0 28 28"><path d="m11 8-6 6 6 6M17 8l6 6-6 6" /></svg></span>
-            <strong>Coding Companions</strong><span>Move from a blank file to dependable software with less friction.</span>
-          </a>
-          <a class="mega-card" href="#products" data-index="03">
-            <span class="mega-card__icon" aria-hidden="true"><svg viewBox="0 0 28 28"><rect x="9" y="4" width="10" height="15" rx="5"/><path d="M5 14a9 9 0 0 0 18 0M14 23v3" /></svg></span>
-            <strong>Voice Agents</strong><span>Handle conversations with calm, natural, round-the-clock support.</span>
-          </a>
-          <a class="mega-card" href="#enterprise" data-index="04">
-            <span class="mega-card__icon" aria-hidden="true"><svg viewBox="0 0 28 28"><path d="M4 9h20v15H4zM9 9V4h10v5M4 15h20" /></svg></span>
-            <strong>Team Workspaces</strong><span>Give every function a secure, shared place to work with AI.</span>
-          </a>
-        </div>
-      </div>
-
-      <div class="mega-menu" data-menu="solutions" aria-hidden="true">
-        <div class="shell mega-menu__grid mega-menu__grid--solutions">
-          <div class="mega-intro">
-            <span class="eyebrow">Built around outcomes</span>
-            <h2>Fit Wolinet to the work already on your desk.</h2>
-            <a class="arrow-link" href="#workflows">See how teams use Wolinet <span aria-hidden="true">→</span></a>
-          </div>
-          <div class="link-column"><span class="link-column__title">By team</span><a href="#workflows">Marketing &amp; brand <span>→</span></a><a href="#workflows">Customer operations <span>→</span></a><a href="#workflows">Product &amp; engineering <span>→</span></a><a href="#workflows">Leadership <span>→</span></a></div>
-          <div class="link-column"><span class="link-column__title">By goal</span><a href="#workflows">Create clearer content <span>→</span></a><a href="#workflows">Resolve requests faster <span>→</span></a><a href="#workflows">Turn knowledge into action <span>→</span></a><a href="#workflows">Build better software <span>→</span></a></div>
-          <aside class="menu-note"><span class="signal-dot"></span><p>Need a tailored workspace?</p><a href="mailto:enterprise@wolinet.com">Talk with our team</a></aside>
-        </div>
-      </div>
-
-      <div class="mobile-panel" data-mobile-panel aria-hidden="true">
-        <nav aria-label="Mobile navigation"><a href="#products"><span>01</span> Products</a><a href="#workflows"><span>02</span> Solutions</a><a href="#enterprise"><span>03</span> Enterprise</a><a href="#downloads"><span>04</span> Downloads</a><a href="https://dev.wolinet.com"><span>05</span> Developer Studio</a></nav>
-        <a class="button" href="https://wolinex.wolinet.com">Start using Wolinet</a>
       </div>
     </header>
 
-    <main id="main-content">
+    <main>
+      <!-- Hero Section -->
       <section class="hero">
-        <div class="shell hero__grid">
-          <div class="hero__copy reveal">
-            <p class="kicker"><span class="signal-dot"></span> Available for individuals and teams</p>
-            <h1>Good work,<br /><em>moving forward.</em></h1>
-            <p class="hero__lede">A thoughtful AI partner for the work that matters—helping you write, decide, build, and serve people with more clarity.</p>
-            <div class="button-row"><a class="button" href="https://wolinex.wolinet.com">Start a conversation <span aria-hidden="true">→</span></a><a class="button button--outline" href="#products">See what it can do</a></div>
-            <p class="quiet-note">Begin free. No card required.</p>
-          </div>
-          <div class="hero-console reveal" aria-label="Interactive Wolinet AI product preview">
-            <div class="console-topbar"><div class="console-brand"><svg viewBox="0 0 44 44" aria-hidden="true"><path d="M2 2h18v18H2zM24 2h18v18H24zM2 24h18v18H2zM30 24h12v18H24V30z" /></svg><span>Workspace / New</span></div><span class="console-status"><span></span> Ready</span></div>
-            <div class="console-body">
-              <div class="prompt-card">
-                <div class="prompt-card__meta"><span>Your brief</span><div class="custom-select" data-select><button type="button" aria-haspopup="listbox" aria-expanded="false" data-select-trigger><span data-select-value>Explore</span><svg viewBox="0 0 12 8" aria-hidden="true"><path d="m1 1 5 5 5-5" /></svg></button><div class="select-options" role="listbox" aria-label="Choose a capability" data-select-options><button type="button" role="option" aria-selected="true" data-value="Explore">Explore</button><button type="button" role="option" aria-selected="false" data-value="Create">Create</button><button type="button" role="option" aria-selected="false" data-value="Analyze">Analyze</button><button type="button" role="option" aria-selected="false" data-value="Build">Build</button></div></div></div>
-                <p data-demo-prompt>Turn our scattered customer notes into three clear priorities for next quarter.</p>
-                <button class="send-button" type="button" aria-label="Send prompt" data-demo-send><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5" /></svg></button>
+        <div class="shell hero-grid">
+          <div class="hero-content">
+            <div class="pill-badge">
+              <span class="status-dot"></span>
+              <span>Enterprise Foundation Models & Sovereign AI Platform</span>
+            </div>
+            <h1 class="hero-title">
+              Intelligent Infrastructure.<br />
+              <span class="gradient-text">Engineered for Sovereign Scale.</span>
+            </h1>
+            <p class="hero-description">
+              Build, deploy, and scale with private foundation models. Access high-speed OpenAI-compatible APIs, orchestrate collaborative agent workflows, and keep 100% of your proprietary enterprise data under your direct control.
+            </p>
+            <div class="hero-buttons">
+              <a class="btn btn-primary btn-lg" href="http://localhost:8080" data-portal="wolinex">
+                Launch WolinEx Studio <span aria-hidden="true">→</span>
+              </a>
+              <a class="btn btn-secondary btn-lg" href="#developer-studio">
+                Developer Console ↓
+              </a>
+              <a class="btn btn-outline btn-lg" href="/docs" data-portal="docs">
+                Interactive API Docs ↗
+              </a>
+            </div>
+            <div class="hero-stats">
+              <div class="stat-item">
+                <span class="stat-value">100%</span>
+                <span class="stat-label">Data Sovereignty</span>
               </div>
-              <div class="insight-card" data-demo-output>
-                <div class="insight-card__header"><span class="tiny-label">Wolinet / Synthesis</span><span>07 sources considered</span></div><h2>Three priorities stand out.</h2>
-                <div class="priority-list"><div><span>01</span><p><strong>Faster first value</strong>Reduce the steps between sign-up and a useful outcome.</p></div><div><span>02</span><p><strong>One clear home</strong>Bring guidance and activity into a single customer view.</p></div><div><span>03</span><p><strong>Human follow-through</strong>Make ownership visible after every support conversation.</p></div></div>
+              <div class="stat-item">
+                <span class="stat-value">OpenAI</span>
+                <span class="stat-label">SDK Compatible</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value">&lt; 50ms</span>
+                <span class="stat-label">First-Token Latency</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value">Zero</span>
+                <span class="stat-label">External Telemetry</span>
               </div>
             </div>
-            <div class="console-footer"><span>Private by design</span><span>Wolinet adapts to your way of working</span></div>
           </div>
-        </div>
-        <div class="hero-index" aria-hidden="true">01</div>
-      </section>
 
-      <section class="proof-strip" aria-label="Teams Wolinet supports"><div class="shell proof-strip__inner"><p>One working language across</p><div class="proof-list"><span>Product</span><span>Support</span><span>Marketing</span><span>Operations</span><span>Leadership</span></div></div></section>
-
-      <section class="section products" id="products">
-        <div class="shell">
-          <div class="section-heading reveal"><div><span class="eyebrow">01 / The product family</span><h2>Useful from the<br />very first ask.</h2></div><p>Choose a focused assistant or bring the full set into one workspace. Each experience is designed to feel familiar, direct, and easy to trust.</p></div>
-          <div class="product-filter reveal" role="tablist" aria-label="Filter products"><button class="is-active" type="button" role="tab" aria-selected="true" data-filter="all">All products <sup>04</sup></button><button type="button" role="tab" aria-selected="false" data-filter="individual">For individuals <sup>03</sup></button><button type="button" role="tab" aria-selected="false" data-filter="teams">For teams <sup>03</sup></button></div>
-          <div class="product-grid">
-            <article class="product-card product-card--feature reveal" data-product="individual teams">
-              <div class="product-card__top"><span class="product-number">01</span><span class="tag tag--lime">Most versatile</span></div>
-              <div class="product-visual product-visual--writer" aria-hidden="true"><div class="document-sheet"><span class="document-sheet__label">Working draft</span><div class="type-line type-line--strong"></div><div class="type-line"></div><div class="type-line type-line--short"></div><span class="edit-mark">Make this<br />more direct</span><div class="selection-block"></div><div class="type-line"></div><div class="type-line type-line--short"></div></div></div>
-              <div class="product-card__body"><span class="eyebrow">Wolinet Create</span><h3>Turn the rough thought into the clear one.</h3><p>Plan, write, research, and refine with an assistant that keeps your voice intact.</p><a class="circle-link" href="https://wolinex.wolinet.com" aria-label="Open Wolinet Create">→</a></div>
-            </article>
-            <article class="product-card reveal" data-product="individual teams">
-              <div class="product-card__top"><span class="product-number">02</span><span class="tag">For builders</span></div>
-              <div class="product-visual product-visual--code" aria-hidden="true"><div class="code-window"><div><span>01</span><code>function welcome(name) {</code></div><div><span>02</span><code>&nbsp;&nbsp;return `Good morning, ${name}`</code></div><div class="code-highlight"><span>03</span><code>}</code></div><div><span>04</span><code></code></div><div><span>05</span><code>export { welcome }</code></div></div></div>
-              <div class="product-card__body"><span class="eyebrow">Wolinex Code</span><h3>A coding companion that stays in context.</h3><p>Move through ideas, edits, tests, and reviews without losing your train of thought.</p><a class="circle-link" href="https://wolinex.wolinet.com" aria-label="Open Wolinex Code">→</a></div>
-            </article>
-            <article class="product-card reveal" data-product="teams">
-              <div class="product-card__top"><span class="product-number">03</span><span class="tag">Always present</span></div>
-              <div class="product-visual product-visual--voice" aria-hidden="true"><div class="voice-orbit"><div class="voice-core"></div></div><div class="waveform"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span>00:42 / Conversation active</span></div>
-              <div class="product-card__body"><span class="eyebrow">Wolinet Voice</span><h3>Every caller heard. Every next step captured.</h3><p>Give customers a natural voice experience while your team stays informed.</p><a class="circle-link" href="mailto:hello@wolinet.com?subject=Wolinet%20Voice" aria-label="Learn about Wolinet Voice">→</a></div>
-            </article>
-            <article class="product-card reveal" data-product="individual">
-              <div class="product-card__top"><span class="product-number">04</span><span class="tag">Everyday clarity</span></div>
-              <div class="product-visual product-visual--focus" aria-hidden="true"><div class="focus-list"><span>Today / 4 items</span><b class="done">Clarify the brief</b><b>Compare the options</b><b>Prepare the client note</b><b>Plan tomorrow</b></div></div>
-              <div class="product-card__body"><span class="eyebrow">Wolinet Focus</span><h3>Make a complicated day feel manageable.</h3><p>Sort information, choose priorities, and move into action with a calm second mind.</p><a class="circle-link" href="https://wolinex.wolinet.com" aria-label="Open Wolinet Focus">→</a></div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="section workflow" id="workflows">
-        <div class="shell workflow__grid">
-          <div class="workflow__intro reveal"><span class="eyebrow">02 / Work, connected</span><h2>From loose signal<br />to useful action.</h2><p>Wolinet helps teams keep the meaning as work moves between people, tools, and decisions.</p><a class="arrow-link" href="mailto:hello@wolinet.com?subject=Plan%20my%20workflow">Plan your workflow <span aria-hidden="true">→</span></a></div>
-          <div class="workflow-map reveal"><div class="map-stage"><span class="map-stage__number">A</span><div><strong>Listen</strong><p>Bring in the brief, call, document, or question.</p></div></div><div class="map-connector"><span>Context stays attached</span></div><div class="map-stage map-stage--active"><span class="map-stage__number">B</span><div><strong>Understand</strong><p>Find the pattern, tension, and useful next move.</p></div></div><div class="map-connector"><span>Your standards guide it</span></div><div class="map-stage"><span class="map-stage__number">C</span><div><strong>Act</strong><p>Create the answer, handoff, plan, or finished work.</p></div></div></div>
-        </div>
-      </section>
-
-      <section class="section enterprise" id="enterprise">
-        <div class="shell">
-          <div class="enterprise__top reveal"><span class="eyebrow eyebrow--light">03 / Wolinet for organizations</span><span class="enterprise__note">Your people stay in control</span></div>
-          <div class="enterprise__main reveal"><h2>Give every team a<br /><em>better way through.</em></h2><div><p>A shared AI workspace shaped around your organization—its knowledge, permissions, quality standards, and people.</p><a class="button button--lime" href="mailto:enterprise@wolinet.com">Talk to enterprise <span aria-hidden="true">→</span></a></div></div>
-          <div class="enterprise__pillars"><article class="reveal"><span>01</span><h3>Knowledge that works</h3><p>Help people find and apply what the organization already knows.</p></article><article class="reveal"><span>02</span><h3>Designed for trust</h3><p>Clear access, dependable controls, and visibility for the people responsible.</p></article><article class="reveal"><span>03</span><h3>Made to fit</h3><p>Start with one valuable workflow, then grow at the pace that suits your team.</p></article></div>
-        </div>
-      </section>
-
-      <section class="section downloads" id="downloads">
-        <div class="shell">
-          <div class="section-heading section-heading--downloads reveal"><div><span class="eyebrow">04 / Wolinet everywhere</span><h2>Your work can<br />move with you.</h2></div><p>Continue the same conversation at your desk, on the move, or wherever the next thought finds you.</p></div>
-          <div class="device-stage reveal" aria-hidden="true"><div class="desktop-device"><div class="device-bar"><i></i><i></i><i></i><span>Wolinet / Daily workspace</span></div><div class="desktop-device__body"><div class="device-sidebar"><b>W</b><span></span><span></span><span></span></div><div class="device-copy"><small>FRIDAY / 08:42</small><strong>Where should we<br />begin today?</strong><div class="device-input">Ask anything <i>→</i></div></div></div></div><div class="phone-device"><div class="phone-speaker"></div><span class="phone-wordmark">Wolinet</span><div class="phone-orb"></div><p>Listening</p><div class="phone-nav"><i></i><i></i><i></i></div></div></div>
-          <div class="download-grid">
-            <a class="download-card reveal" href="/downloads/macos" data-platform="macOS"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M22.8 17.1c0-4 3.3-5.9 3.5-6-1.9-2.8-4.9-3.1-5.9-3.1-2.5-.3-4.9 1.5-6.1 1.5S11.2 8 9.3 8C6.7 8 4.4 9.5 3 11.8c-2.7 4.7-.7 11.6 1.9 15.4 1.3 1.9 2.8 3.9 4.8 3.8 1.9-.1 2.7-1.2 5-1.2s3 1.2 5 1.2c2.1 0 3.4-1.9 4.7-3.8 1.5-2.2 2.1-4.4 2.1-4.5-.1 0-3.7-1.4-3.7-5.6ZM18.8 5.4c1.1-1.3 1.8-3.2 1.6-5-1.6.1-3.5 1.1-4.6 2.4-1 1.1-1.9 3-1.6 4.8 1.8.1 3.5-.9 4.6-2.2Z" /></svg><div><small>Download for</small><strong>macOS</strong><span>Apple silicon &amp; Intel</span></div><b>↓</b></a>
-            <a class="download-card reveal" href="/downloads/windows" data-platform="Windows"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M2 5.5 14.4 3.8v11.5H2V5.5Zm13.8-1.9L30 1.5v13.8H15.8V3.6ZM2 16.7h12.4v11.5L2 26.5v-9.8Zm13.8 0H30v13.8l-14.2-2V16.7Z" /></svg><div><small>Download for</small><strong>Windows</strong><span>Windows 10 or later</span></div><b>↓</b></a>
-            <a class="download-card reveal" href="/downloads/ios" data-platform="iOS"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="2" width="18" height="28" rx="4"/><path d="M13 6h6M14 26h4" /></svg><div><small>Get it on the</small><strong>App Store</strong><span>For iPhone &amp; iPad</span></div><b>↗</b></a>
-            <a class="download-card reveal" href="/downloads/android" data-platform="Android"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m5 3 19 13L5 29V3Z"/><path d="m5 3 14 18M5 29l14-18M24 16h5" /></svg><div><small>Get it on</small><strong>Google Play</strong><span>Phones &amp; tablets</span></div><b>↗</b></a>
+          <!-- Interactive Live Console -->
+          <div class="hero-console" aria-label="Interactive AI Sandbox Preview">
+            <div class="console-header">
+              <div class="window-dots">
+                <span class="dot-red"></span>
+                <span class="dot-yellow"></span>
+                <span class="dot-green"></span>
+              </div>
+              <span class="console-title">wolinet-assistant // live-inference</span>
+              <span class="pill-badge" style="margin-bottom: 0; padding: 2px 8px; font-size: 11px;">● Ready</span>
+            </div>
+            <div class="console-tabs">
+              <button class="console-tab active" type="button" data-scenario="synthesis">Enterprise Synthesis</button>
+              <button class="console-tab" type="button" data-scenario="code">Code Generation</button>
+              <button class="console-tab" type="button" data-scenario="rag">Document Retrieval</button>
+            </div>
+            <div class="console-body">
+              <div class="console-prompt-box">
+                <div class="console-prompt-header">
+                  <span>SAMPLE INPUT</span>
+                  <span id="active-model-tag" style="color: var(--brand-cyan);">Model: Wolinet Pro</span>
+                </div>
+                <p class="prompt-text" id="demo-prompt-text">
+                  Turn our scattered enterprise notes into three actionable operational priorities for next quarter.
+                </p>
+                <div class="prompt-tags">
+                  <span class="prompt-tag active" data-preset="synthesis">Executive Summary</span>
+                  <span class="prompt-tag" data-preset="code">API Stream</span>
+                  <span class="prompt-tag" data-preset="rag">Semantic Search</span>
+                </div>
+              </div>
+              <div class="console-output-box">
+                <div class="output-header">
+                  <span>STREAMING MODEL OUTPUT</span>
+                  <span id="output-latency">42 ms • 120 t/s</span>
+                </div>
+                <div class="output-content" id="demo-output-text">
+                  1. <strong>Accelerate First Value</strong>: Unify developer onboarding with drop-in SDK compatibility to slash time-to-market.<br />
+                  2. <strong>Enforce Zero-Trust Sovereignty</strong>: Run all model inferences on private infrastructure with isolated database persistence.<br />
+                  3. <strong>Autonomous Workflows</strong>: Deploy collaborative agent loops with real-time multi-model fallback routines.
+                </div>
+                <div class="output-footer">
+                  <span>Prompt: 48 tokens • Output: 184 tokens</span>
+                  <span>Privacy: Local Zero-Retention Boundary</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="closing"><div class="shell closing__inner reveal"><span class="eyebrow">Ready when you are</span><h2>Bring your next idea.<br /><em>We’ll help it move.</em></h2><a class="button button--lime" href="https://wolinex.wolinet.com">Start using Wolinet <span aria-hidden="true">→</span></a></div></section>
+      <!-- Platform Capabilities -->
+      <section id="capabilities" class="section">
+        <div class="shell">
+          <div class="section-header">
+            <span class="section-tag">Core Capabilities</span>
+            <h2 class="section-title">What Wolinet AI Does For You</h2>
+            <p class="section-description">
+              A comprehensive intelligence suite engineered to power enterprise productivity, agentic workflows, and mission-critical applications.
+            </p>
+          </div>
+
+          <div class="capabilities-grid">
+            <!-- WolinEx Studio Card -->
+            <article class="capability-card">
+              <div class="capability-top">
+                <div class="capability-icon">⚡</div>
+                <span class="capability-badge">Enterprise Workspace</span>
+              </div>
+              <h3>Collaborative AI Studio (WolinEx)</h3>
+              <p>
+                A unified, private workspace where teams collaborate with foundation models, analyze documents, refine prompts, and automate daily tasks with complete security.
+              </p>
+              <div class="capability-features">
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Multi-Model Switching</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Document Analysis (RAG)</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Team Shared Workspaces</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Role-Based Permissions</span>
+              </div>
+              <div class="capability-footer">
+                <span style="font-size: 13px; color: var(--text-muted);">Workspace for Teams &amp; Individuals</span>
+                <a class="btn btn-primary btn-sm" href="http://localhost:8080" data-portal="wolinex">Launch Studio ↗</a>
+              </div>
+            </article>
+
+            <!-- High-Speed API Card -->
+            <article class="capability-card">
+              <div class="capability-top">
+                <div class="capability-icon">🔌</div>
+                <span class="capability-badge">Universal API</span>
+              </div>
+              <h3>OpenAI-Compatible Developer API</h3>
+              <p>
+                Drop-in replacement for OpenAI API endpoints. Seamlessly connect existing LangChain, LlamaIndex, AutoGen, or custom applications with zero code rewrites.
+              </p>
+              <div class="capability-features">
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Standard /v1 Endpoints</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Streaming Completions</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Virtual Key Budgeting</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Automatic High Availability</span>
+              </div>
+              <div class="capability-footer">
+                <span style="font-size: 13px; color: var(--text-muted);">Python, Node.js, Go, cURL</span>
+                <a class="btn btn-secondary btn-sm" href="/docs" data-portal="docs">Explore API Docs ↗</a>
+              </div>
+            </article>
+
+            <!-- Document Intelligence & RAG -->
+            <article class="capability-card">
+              <div class="capability-top">
+                <div class="capability-icon">📚</div>
+                <span class="capability-badge">Semantic Search</span>
+              </div>
+              <h3>Private Enterprise Retrieval (RAG)</h3>
+              <p>
+                Connect organizational knowledge bases, technical manuals, contracts, and internal repositories. Transform raw enterprise data into instant, grounded answers.
+              </p>
+              <div class="capability-features">
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Local Embedding Models</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Vector Similarity Indexing</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Source Document Attribution</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Zero Document Leakage</span>
+              </div>
+              <div class="capability-footer">
+                <span style="font-size: 13px; color: var(--text-muted);">Grounded on Your Content</span>
+                <a class="btn btn-secondary btn-sm" href="http://localhost:8080" data-portal="wolinex">Try in Studio ↗</a>
+              </div>
+            </article>
+
+            <!-- Technical & Code Assistance -->
+            <article class="capability-card">
+              <div class="capability-top">
+                <div class="capability-icon">💻</div>
+                <span class="capability-badge">Technical Problem Solving</span>
+              </div>
+              <h3>Context-Aware Coding Companions</h3>
+              <p>
+                Specialized models built for software engineering. Accelerate refactoring, write robust unit tests, debug runtime issues, and generate production-grade code.
+              </p>
+              <div class="capability-features">
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 16K Context Memory</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Syntax &amp; Logic Verification</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Polyglot Language Support</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Offline Self-Hosted Mode</span>
+              </div>
+              <div class="capability-footer">
+                <span style="font-size: 13px; color: var(--text-muted);">Wolinet Coder Foundation Model</span>
+                <a class="btn btn-outline btn-sm" href="#developer-studio">Test in Console ↓</a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Model Catalog -->
+      <section id="models" class="section" style="background: rgba(255, 255, 255, 0.01); border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);">
+        <div class="shell">
+          <div class="section-header">
+            <span class="section-tag">Model Roster</span>
+            <h2 class="section-title">Foundation Models Available</h2>
+            <p class="section-description">
+              Optimized models ready for immediate inference through WolinEx Studio or the universal API.
+            </p>
+          </div>
+
+          <div class="models-grid">
+            <!-- Wolinet Pro -->
+            <article class="model-card">
+              <div class="model-header">
+                <div>
+                  <h4 class="model-name">Wolinet Pro</h4>
+                  <span style="font-size: 12px; color: var(--text-muted);">Flagship Enterprise Intelligence</span>
+                </div>
+                <span class="model-tag">GENERAL AI</span>
+              </div>
+              <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+                High-capacity model for reasoning, document synthesis, multilingual business writing, and strategic decision support.
+              </p>
+              <div style="flex-grow: 1;">
+                <div class="model-spec-row">
+                  <span class="model-spec-label">Model ID</span>
+                  <span class="model-spec-value">Wolinet Pro</span>
+                </div>
+                <div class="model-spec-row">
+                  <span class="model-spec-label">Context Window</span>
+                  <span class="model-spec-value">16,384 tokens</span>
+                </div>
+                <div class="model-spec-row">
+                  <span class="model-spec-label">Modalities</span>
+                  <span class="model-spec-value">Chat &amp; Completions</span>
+                </div>
+              </div>
+              <div style="margin-top: 20px;">
+                <a class="btn btn-secondary btn-sm" style="width: 100%;" href="http://localhost:8080" data-portal="wolinex">Select in Studio ↗</a>
+              </div>
+            </article>
+
+            <!-- Wolinet Coder -->
+            <article class="model-card">
+              <div class="model-header">
+                <div>
+                  <h4 class="model-name">Wolinet Coder</h4>
+                  <span style="font-size: 12px; color: var(--text-muted);">Technical &amp; Software Engineering</span>
+                </div>
+                <span class="model-tag">CODE &amp; LOGIC</span>
+              </div>
+              <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+                Tuned specifically for code generation, software architecture, refactoring, unit testing, and complex algorithms.
+              </p>
+              <div style="flex-grow: 1;">
+                <div class="model-spec-row">
+                  <span class="model-spec-label">Model ID</span>
+                  <span class="model-spec-value">Wolinet Coder</span>
+                </div>
+                <div class="model-spec-row">
+                  <span class="model-spec-label">Context Window</span>
+                  <span class="model-spec-value">16,384 tokens</span>
+                </div>
+                <div class="model-spec-row">
+                  <span class="model-spec-label">Modalities</span>
+                  <span class="model-spec-value">Code, Chat &amp; Diff</span>
+                </div>
+              </div>
+              <div style="margin-top: 20px;">
+                <a class="btn btn-secondary btn-sm" style="width: 100%;" href="#developer-studio">Test in Developer Console ↓</a>
+              </div>
+            </article>
+
+            <!-- Wolinet Embeddings -->
+            <article class="model-card">
+              <div class="model-header">
+                <div>
+                  <h4 class="model-name">Wolinet Embed</h4>
+                  <span style="font-size: 12px; color: var(--text-muted);">Semantic Vector Representations</span>
+                </div>
+                <span class="model-tag">VECTOR RAG</span>
+              </div>
+              <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+                High-density text vector embeddings engineered for semantic similarity, classification, and retrieval-augmented generation.
+              </p>
+              <div style="flex-grow: 1;">
+                <div class="model-spec-row">
+                  <span class="model-spec-label">Model ID</span>
+                  <span class="model-spec-value">wolinex-embed</span>
+                </div>
+                <div class="model-spec-row">
+                  <span class="model-spec-label">Input Limit</span>
+                  <span class="model-spec-value">4,096 tokens</span>
+                </div>
+                <div class="model-spec-row">
+                  <span class="model-spec-label">Endpoint</span>
+                  <span class="model-spec-value">/v1/embeddings</span>
+                </div>
+              </div>
+              <div style="margin-top: 20px;">
+                <a class="btn btn-secondary btn-sm" style="width: 100%;" href="/docs#POST/v1/embeddings" data-portal="docs">Inspect Specs ↗</a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Developer Studio Section (Merged From dev-portal) -->
+      <section id="developer-studio" class="section developer-studio">
+        <div class="shell">
+          <div class="section-header">
+            <span class="section-tag">Developer Console</span>
+            <h2 class="section-title">Developer Access &amp; Interactive Assistant</h2>
+            <p class="section-description">
+              Manage your developer credentials, query the technical assistant live, and grab drop-in code snippets for your applications.
+            </p>
+          </div>
+
+          <div class="studio-grid">
+            <!-- Left Column: Credentials & Quickstart -->
+            <div class="studio-col">
+              <!-- Key Management Panel -->
+              <div class="studio-panel">
+                <div class="panel-header">
+                  <div>
+                    <span style="font-size: 11px; font-weight: 700; color: var(--brand-cyan); letter-spacing: 0.08em; text-transform: uppercase;">Credentials</span>
+                    <h3>Developer API Key</h3>
+                  </div>
+                  <span id="key-state" class="pill-badge" style="margin-bottom: 0;">CHECKING SESSION</span>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary);">
+                  Use this key in your applications and backend services. Keep it private and rotate it anytime.
+                </p>
+                
+                <div class="key-field">
+                  <code id="api-key">Checking active session…</code>
+                  <button id="copy-key" class="btn btn-outline btn-sm" type="button">Copy</button>
+                </div>
+
+                <div class="key-actions">
+                  <button id="reveal-key" class="btn btn-secondary btn-sm" type="button">Reveal Key</button>
+                  <button id="rotate-key" class="btn btn-outline btn-sm" type="button">Rotate Key</button>
+                  <a class="btn btn-secondary btn-sm" href="http://localhost:8080" data-portal="wolinex">Studio Account ↗</a>
+                </div>
+                <p id="key-message" style="font-size: 12px; color: var(--brand-cyan); margin-top: 10px; min-height: 18px;" aria-live="polite"></p>
+              </div>
+
+              <!-- Quickstart Code Box -->
+              <div class="quickstart-box">
+                <div class="quickstart-header">
+                  <div class="code-tabs">
+                    <button class="code-tab active" type="button" data-lang="python">Python</button>
+                    <button class="code-tab" type="button" data-lang="ts">TypeScript</button>
+                    <button class="code-tab" type="button" data-lang="curl">cURL</button>
+                  </div>
+                  <button class="copy-btn" id="copy-code-btn" type="button">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span>Copy</span>
+                  </button>
+                </div>
+                <pre class="quickstart-pre"><code id="quickstart-code-content">from openai import OpenAI
+
+# Initialize client pointing to Wolinet API
+client = OpenAI(
+    base_url="https://api.wolinet.com/v1",  # Local dev: http://localhost:3000/v1
+    api_key="YOUR_WOLINET_KEY"
+)
+
+response = client.chat.completions.create(
+    model="Wolinet Pro",
+    messages=[
+        {"role": "system", "content": "You are Wolinet AI, an enterprise assistant."},
+        {"role": "user", "content": "Explain our sovereign infrastructure in one sentence."}
+    ]
+)
+
+print(response.choices[0].message.content)</code></pre>
+              </div>
+            </div>
+
+            <!-- Right Column: Interactive Developer Assistant & Docs -->
+            <div class="studio-col">
+              <div class="studio-panel assistant-box">
+                <div class="panel-header">
+                  <div>
+                    <span style="font-size: 11px; font-weight: 700; color: var(--brand-cyan); letter-spacing: 0.08em; text-transform: uppercase;">Live Technical Assistant</span>
+                    <h3>Ask Wolinet Assistant</h3>
+                  </div>
+                  <span class="pill-badge" style="margin-bottom: 0; padding: 2px 8px; font-size: 11px;">Model: Wolinet Coder</span>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+                  Test the model directly. Ask for code examples, API parameters, or architecture recommendations.
+                </p>
+
+                <!-- Live Chat Log -->
+                <div id="chat-log" class="chat-log">
+                  <div class="chat-bubble assistant-bubble">
+                    Hello! I am the Wolinet Developer Assistant. Ask me how to make your first completion request, choose a model, or stream responses in Python or Node.js.
+                  </div>
+                </div>
+
+                <!-- Input Form -->
+                <form id="chat-form" class="chat-form">
+                  <input
+                    id="chat-input"
+                    class="chat-input"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Ask a technical question (e.g. How do I stream completions?)..."
+                  />
+                  <button class="btn btn-primary btn-sm" type="submit" id="chat-submit-btn">Send ↑</button>
+                </form>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; font-size: 12px; color: var(--text-muted);">
+                  <span>Endpoint: <code>POST /v1/chat/completions</code></span>
+                  <a href="/docs" data-portal="docs" style="color: var(--brand-cyan);">View API Reference ↗</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Enterprise Security & Sovereignty -->
+      <section id="security" class="section">
+        <div class="shell">
+          <div class="section-header">
+            <span class="section-tag">Enterprise Sovereignty</span>
+            <h2 class="section-title">Your Data Stays Strictly Yours</h2>
+            <p class="section-description">
+              Engineered from the ground up for organizations with strict compliance, confidentiality, and data governance mandates.
+            </p>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+            <div style="background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 28px;">
+              <div style="font-size: 28px; margin-bottom: 16px;">🛡️</div>
+              <h4 style="font-family: var(--font-display); font-size: 18px; margin-bottom: 10px;">Zero Training on Customer Data</h4>
+              <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                Your prompts, document embeddings, and model responses are never stored for training or shared across organizational boundaries.
+              </p>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 28px;">
+              <div style="font-size: 28px; margin-bottom: 16px;">🔒</div>
+              <h4 style="font-family: var(--font-display); font-size: 18px; margin-bottom: 10px;">Isolated Persistence</h4>
+              <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                All operational state, user permissions, and conversational histories remain in dedicated, private database clusters under your governance.
+              </p>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 28px;">
+              <div style="font-size: 28px; margin-bottom: 16px;">📋</div>
+              <h4 style="font-family: var(--font-display); font-size: 18px; margin-bottom: 10px;">Full Audit Logs &amp; Budgets</h4>
+              <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                Granular token quotas, virtual key expiration, and request traceability ensure total oversight across engineering and business units.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
+    <!-- Site Footer -->
     <footer class="site-footer">
-      <div class="shell footer-grid">
-        <div class="footer-brand"><a class="brand brand--footer" href="/" aria-label="Wolinet AI home"><svg class="brand__mark" viewBox="0 0 44 44" aria-hidden="true"><path d="M2 2h18v18H2zM24 2h18v18H24zM2 24h18v18H2z"/><path class="brand__cut" d="M30 24h12v18H24V30z"/></svg><span>Wolinet <strong>AI</strong></span></a><p>AI for good work,<br />wherever it happens.</p></div>
-        <div class="footer-column"><strong>Products</strong><a href="#products">Create</a><a href="#products">Code</a><a href="#products">Voice</a><a href="#products">Focus</a></div>
-        <div class="footer-column"><strong>Company</strong><a href="#enterprise">Enterprise</a><a href="mailto:hello@wolinet.com">Contact</a><a href="#downloads">Downloads</a></div>
-        <div class="footer-column"><strong>Build</strong><a href="https://dev.wolinet.com">Developer Studio ↗</a><a href="https://lango.wolinet.com/docs">API documentation ↗</a><a href="https://lango.wolinet.com">API access ↗</a><a href="https://github.com/wolinet-renatus/wolinetAI">Wolinet AI on GitHub ↗</a></div>
+      <div class="shell">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <div class="brand">
+              <img src="/logo.png" alt="Wolinet AI" class="brand-logo" style="height: 32px;" />
+              <span class="brand-text">WOLINET<span style="color: var(--brand-cyan);">AI</span></span>
+            </div>
+            <p>
+              Autonomous, high-performance artificial intelligence platform for sovereign enterprises and developers.
+            </p>
+          </div>
+          <div class="footer-col">
+            <h5>Platform Services</h5>
+            <ul class="footer-links">
+              <li><a href="http://localhost:8080" data-portal="wolinex">WolinEx AI Studio</a></li>
+              <li><a href="#developer-studio">Developer Console &amp; Keys</a></li>
+              <li><a href="/docs" data-portal="docs">Interactive API Docs</a></li>
+              <li><a href="#models">Model Catalog</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h5>Developer Reference</h5>
+            <ul class="footer-links">
+              <li><a href="/docs#POST/v1/chat/completions" data-portal="docs">Chat Completions API</a></li>
+              <li><a href="/docs#POST/v1/embeddings" data-portal="docs">Embeddings API</a></li>
+              <li><a href="#developer-studio">Python &amp; TypeScript SDKs</a></li>
+              <li><a href="https://github.com/wolinet-renatus/wolinetAI" target="_blank" rel="noopener">GitHub Repository ↗</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h5>Sovereignty &amp; Contact</h5>
+            <ul class="footer-links">
+              <li><a href="#security">Data Protection Policy</a></li>
+              <li><a href="mailto:contact@wolinet.com">Enterprise Support</a></li>
+              <li><a href="mailto:hello@wolinet.com">Contact Sales</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>© <span id="year">2026</span> Wolinet Tech. Independent Intelligence Infrastructure.</span>
+          <span>Zero external telemetry • All processing governed by client policy</span>
+        </div>
       </div>
-      <div class="shell footer-bottom"><span>© <span data-year></span> Wolinet. All rights reserved.</span><div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/security">Security</a></div><span>Built for people who make things happen.</span></div>
     </footer>
+
+    <script src="/app.js?v=20261019_v2" defer></script>
   </body>
 </html>

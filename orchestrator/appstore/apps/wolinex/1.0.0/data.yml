@@ -1,0 +1,33 @@
+additionalProperties:
+  formFields:
+    - default: 8080
+      edit: true
+      envKey: PANEL_APP_PORT_HTTP
+      labelEn: Port
+      labelZh: 端口
+      label:
+        en: Port
+        zh: 端口
+      required: true
+      rule: paramPort
+      type: number
+    - default: "http://lango:4000/v1"
+      edit: true
+      envKey: OPENAI_API_BASE_URL
+      labelEn: API Base URL
+      labelZh: API 基础地址
+      label:
+        en: API Base URL
+        zh: API 基础地址
+      required: true
+      type: text
+    - default: sk-XvKFiwDoOtOe8i4lwbzb8Q
+      edit: true
+      envKey: OPENAI_API_KEY
+      labelEn: API Key
+      labelZh: API 密钥
+      label:
+        en: API Key
+        zh: API 密钥
+      required: true
+      type: password

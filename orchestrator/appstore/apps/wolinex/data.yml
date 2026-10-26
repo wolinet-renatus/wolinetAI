@@ -1,0 +1,27 @@
+name: "WolinEx AI Studio"
+tags:
+  - AI
+  - Studio
+title: "Self-hosted AI collaboration studio, chat interface, and workflow builder"
+description: "Self-hosted AI collaboration studio, chat interface, and workflow builder"
+additionalProperties:
+  key: wolinex
+  name: "WolinEx AI Studio"
+  tags:
+    - AI
+    - Studio
+  shortDescZh: "企业级自主可控的 AI 交互与工作流工作室"
+  shortDescEn: "Self-hosted AI collaboration studio, chat interface, and workflow builder"
+  description:
+    en: "Self-hosted AI collaboration studio, chat interface, and workflow builder"
+    zh: "企业级自主可控的 AI 交互与工作流工作室"
+  type: website
+  crossVersionUpdate: true
+  recommend: 1
+  limit: 1
+  gpuSupport: false
+  architectures:
+    - amd64
+    - arm64
+  website: https://wolinet.ai
+  github: https://github.com/wolinetai

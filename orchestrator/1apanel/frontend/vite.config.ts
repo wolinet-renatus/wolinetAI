@@ -85,7 +85,7 @@ export default defineConfig(async ({ mode }: ConfigEnv): Promise<UserConfig> => 
             },
             proxy: {
                 '/api/v2': {
-                    target: 'http://127.0.0.1:9999/',
+                    target: 'http://127.0.0.1:9999',
                     changeOrigin: true,
                     ws: true,
                     configure(proxy) {

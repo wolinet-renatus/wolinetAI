@@ -82,7 +82,10 @@ else:
             n_gpu_layers=0,
             n_ctx=4096,
             n_parallel=1,
-            n_threads=4,
+            n_threads=8,
+            n_batch=2048,
+            n_ubatch=512,
+            cache_ram_mib=4096,
         )
         print(f"🎉 SUCCESS! Wolinet Coder launched (UID: {c_uid})")
     except Exception as ce:
@@ -162,7 +165,10 @@ else:
                 n_gpu_layers=0,
                 n_ctx=4096,
                 n_parallel=1,
-                n_threads=4,
+                n_threads=8,
+                n_batch=2048,
+                n_ubatch=512,
+                cache_ram_mib=8192,
             )
             print(f"🎉 SUCCESS! Wolinet Pro launched (UID: {p_uid}) with quant={quant_candidate}")
             launched = True
@@ -183,7 +189,7 @@ else:
             "--quantization", "q4_k_m",
             "--n_ctx", "4096",
             "--n_parallel", "1",
-            "--n_threads", "4",
+            "--n_threads", "8",
         ]
         res = subprocess.run(cli_cmd, capture_output=True, text=True)
         if res.returncode == 0:

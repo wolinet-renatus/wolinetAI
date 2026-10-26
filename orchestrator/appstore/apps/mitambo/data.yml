@@ -1,0 +1,27 @@
+name: "Mitambo Sovereign Inference"
+tags:
+  - AI
+  - Runtime
+title: "High-throughput local LLM & multi-modal inference runtime powered by llama.cpp / vLLM"
+description: "High-throughput local LLM & multi-modal inference runtime powered by llama.cpp / vLLM"
+additionalProperties:
+  key: mitambo
+  name: "Mitambo Sovereign Inference"
+  tags:
+    - AI
+    - Runtime
+  shortDescZh: "高性能本地大语言模型与多模态推理引擎"
+  shortDescEn: "High-throughput local LLM & multi-modal inference runtime powered by llama.cpp / vLLM"
+  description:
+    en: "High-throughput local LLM & multi-modal inference runtime powered by llama.cpp / vLLM"
+    zh: "高性能本地大语言模型与多模态推理引擎"
+  type: website
+  crossVersionUpdate: true
+  recommend: 1
+  limit: 1
+  gpuSupport: true
+  architectures:
+    - amd64
+    - arm64
+  website: https://wolinet.ai
+  github: https://github.com/wolinetai

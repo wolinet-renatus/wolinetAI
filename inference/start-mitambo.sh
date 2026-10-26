@@ -201,7 +201,10 @@ try:
                     n_gpu_layers=0,
                     n_ctx=4096,
                     n_parallel=1,
-                    n_threads=4,
+                    n_threads=int(os.environ.get("XINFERENCE_THREADS", "8")),
+                    n_batch=2048,
+                    n_ubatch=512,
+                    cache_ram_mib=8192,
                 )
                 print("==> [mitambo-init] Wolinet Pro auto-launched successfully.")
             except Exception as pe:
@@ -221,7 +224,10 @@ try:
                 n_gpu_layers=0,
                 n_ctx=4096,
                 n_parallel=1,
-                n_threads=4,
+                n_threads=int(os.environ.get("XINFERENCE_THREADS", "8")),
+                n_batch=2048,
+                n_ubatch=512,
+                cache_ram_mib=4096,
             )
             print("==> [mitambo-init] Wolinet Coder auto-launched successfully.")
         except Exception as ce:

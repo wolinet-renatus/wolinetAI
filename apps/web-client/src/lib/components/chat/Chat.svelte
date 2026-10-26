@@ -1220,12 +1220,14 @@
 					selectedModels = JSON.parse(sessionStorage.selectedModels);
 					sessionStorage.removeItem('selectedModels');
 				} else {
-					if ($settings?.models) {
+					if ($settings?.models && $settings?.models.length > 0) {
 						// Set from user settings
 						selectedModels = $settings?.models;
 					} else if (defaultModels && defaultModels.length > 0) {
 						// Set from default models
 						selectedModels = defaultModels;
+					} else {
+						selectedModels = availableModels?.includes('Wolinet Pro') ? ['Wolinet Pro'] : [availableModels?.at(0) ?? ''];
 					}
 				}
 			}
@@ -1245,8 +1247,8 @@
 					selectedModels.length === 0 ||
 					(selectedModels.length === 1 && selectedModels[0] === '')
 				) {
-					// Only fall back to first available model if default models didn't resolve
-					selectedModels = [availableModels?.at(0) ?? ''];
+					// Fall back to Wolinet Pro, then first available model
+					selectedModels = [availableModels?.includes('Wolinet Pro') ? 'Wolinet Pro' : (availableModels?.at(0) ?? '')];
 				}
 			} else {
 				selectedModels = [''];

@@ -50,7 +50,7 @@ router = APIRouter(tags=['Wolinet Developer Portal'])
 def _gateway_base() -> str:
     url = (os.getenv('LITELLM_BASE_URL') or os.getenv('OPENAI_API_BASE_URL', '').replace('/v1', '')).rstrip('/')
     if not url:
-        raise HTTPException(status_code=503, detail='LiteLLM gateway URL is not configured')
+        raise HTTPException(status_code=503, detail='Wolinet Sovereign Gateway URL is not configured')
     if url.endswith('/v1'):
         url = url[:-3]
     return url
@@ -59,7 +59,7 @@ def _gateway_base() -> str:
 def _master_key() -> str:
     key = os.getenv('LITELLM_MASTER_KEY') or os.getenv('OPENAI_API_KEY')
     if not key:
-        raise HTTPException(status_code=503, detail='LiteLLM gateway credentials are not configured')
+        raise HTTPException(status_code=503, detail='Wolinet Sovereign Gateway credentials are not configured')
     return key
 
 
@@ -118,7 +118,7 @@ async def _generate_gateway_key(user_id: str, email: str = '', name: str = '', d
         log.warning('Gateway /key/generate unreachable for %s: %s', user_id, exc)
 
     if not generated:
-        raise HTTPException(status_code=502, detail='LiteLLM did not return a developer key')
+        raise HTTPException(status_code=502, detail='Wolinet Gateway did not return a developer key')
     await Users.update_user_api_key_by_id(user_id, generated, db=db)
     return generated
 

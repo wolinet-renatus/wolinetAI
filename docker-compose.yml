@@ -132,22 +132,30 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       XAI_API_KEY: ${XAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       STORE_MODEL_IN_DB: "true"
+      PROXY_DB_LOOKUP_DEADLINE_SECONDS: "60"
+      PROXY_DB_LOOKUP_MAX_CONCURRENCY: "100"
       DOCS_URL: /docs
       ROOT_REDIRECT_URL: /ui
       DOCS_TITLE: "Wolinet AI — Sovereign Gateway API Reference"
       UI_LOGO_PATH: "/app/assets/wolinet_logo.png"
       UI_LOGO_PATH_DARK: "/app/assets/wolinet_logo_dark.png"
       LITELLM_FAVICON_URL: "/app/assets/favicon.png"
+      WOLINET_BROWSER_URL: http://wolinet-browser:8080/mcp
+      OBSCURA_URL: http://wolinet-browser:8080/mcp
     volumes:
       - ./gateway/start-gateway.sh:/usr/local/bin/start-gateway.sh:ro
       - ./gateway/config.yaml:/app/config.yaml:ro
+      - ./gateway/mcp_servers.json:/app/mcp_servers.json:ro
+      - ./gateway/wolinet_browser_adapter.py:/app/wolinet_browser_adapter.py:ro
       - ./gateway/assets:/app/assets:ro
       - ./gateway/assets/wolinet_logo.png:/app/.venv/lib/python3.13/site-packages/litellm/proxy/logo.jpg:ro
       - ./gateway/assets/wolinet_logo_dark.png:/app/.venv/lib/python3.13/site-packages/litellm/proxy/logo_dark.png:ro
       - ./gateway/assets/favicon.ico:/app/.venv/lib/python3.13/site-packages/litellm/proxy/_experimental/out/favicon.ico:ro
       - ./gateway/assets/favicon.png:/app/.venv/lib/python3.13/site-packages/litellm/proxy/_experimental/out/favicon.png:ro
       - ./gateway/litellm/proxy/swagger:/app/.venv/lib/python3.13/site-packages/litellm/proxy/swagger:ro
+      - ./gateway/litellm/litellm_core_utils/get_model_cost_map.py:/app/.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_model_cost_map.py:ro
     networks:
       default:
         aliases:
@@ -157,6 +165,8 @@ services:
         aliases:
           - lango
           - wolinet-lango
+    ports:
+      - "4000:4000"
     expose: ["4000"]
     command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
     healthcheck:
@@ -182,6 +192,46 @@ services:
         monitor: 60s
         failure_action: rollback
         order: start-first
+
+  wolinet-browser:
+    image: ${WOLINET_BROWSER_IMAGE:-ghcr.io/wolinet-renatus/wolinet-browser:latest}
+    container_name: wolinet-browser
+    command:
+      - mcp
+      - --http
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8080"
+      - --stealth
+    environment:
+      OBSCURA_ALLOW_ANONYMOUS_MCP: "1"
+      OBSCURA_SEARCH_INDEX_DIR: "/data/search_index"
+      PORT: "8080"
+    volumes:
+      - obscura_search_index:/data/search_index
+    expose:
+      - "8080"
+    networks:
+      - default
+      - wolinet_internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/obscura-probe"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 5
+        window: 60s
+      resources:
+        limits:
+          cpus: ${WOLINET_BROWSER_CPU_LIMIT:-2.0}
+          memory: ${WOLINET_BROWSER_MEMORY_LIMIT:-4G}
 
   # The developer portal is served by the existing LiteLLM portal routes at
   # dev.wolinet.com; a second LiteLLM container would duplicate state and keys.
@@ -272,6 +322,7 @@ services:
       XINFERENCE_BASE_URL: ${XINFERENCE_BASE_URL:-http://mitambo:9997}
       XINFERENCE_FALLBACK_URLS: ${XINFERENCE_FALLBACK_URLS:-}
       XINFERENCE_DEFAULT_MODEL_UID: ${XINFERENCE_DEFAULT_MODEL_UID:-}
+      XINFERENCE_CODER_MODEL_UID: ${XINFERENCE_CODER_MODEL_UID:-wolinex-coder}
       XINFERENCE_API_KEY: ${XINFERENCE_API_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}
       XINFERENCE_MODEL_SYNC_INTERVAL: ${XINFERENCE_MODEL_SYNC_INTERVAL:-30}
     volumes:
@@ -305,12 +356,12 @@ services:
           - wolinet-website
           - homepage
           - wolinet-homepage
-    expose: ["80", "8080"]
+    expose: ["80", "3000"]
     volumes:
       - ./website:/usr/share/nginx/html:ro
       - ./website/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || wget -qO- http://127.0.0.1:3000/healthz >/dev/null 2>&1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -330,6 +381,40 @@ services:
         monitor: 30s
         failure_action: rollback
         order: start-first
+
+  devportal:
+    image: ${DEVPORTAL_IMAGE:-nginx:1.27-alpine}
+    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - devportal
+          - wolinet-devportal
+          - dev
+      wolinet_internal:
+        aliases:
+          - devportal
+          - wolinet-devportal
+          - dev
+    expose: ["80", "8082"]
+    volumes:
+      - ./apps/dev-portal:/usr/share/nginx/html:ro
+      - ./apps/dev-portal/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8082/healthz >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 5
+        window: 60s
+      resources:
+        limits:
+          cpus: ${DEVPORTAL_CPU_LIMIT:-1.0}
+          memory: ${DEVPORTAL_MEMORY_LIMIT:-512M}
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in Dokploy}", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", "60", "1000"]
@@ -367,3 +452,4 @@ volumes:
   redis_data:
   xinference_data:
   webui_data:
+  obscura_search_index:
