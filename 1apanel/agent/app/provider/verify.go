@@ -34,7 +34,7 @@ const (
 
 func SkipVerification(provider string) bool {
 	switch provider {
-	case "vllm", "ollama", "llmman", "kimi-coding":
+	case "wolinet", "vllm", "ollama", "llmman", "kimi-coding":
 		return true
 	default:
 		return false

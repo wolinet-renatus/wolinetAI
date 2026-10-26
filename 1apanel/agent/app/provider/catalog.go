@@ -38,6 +38,20 @@ type Meta struct {
 }
 
 var catalog = map[string]Meta{
+	"wolinet": {
+		Key: "wolinet", DisplayName: "Wolinet AI (Lango Gateway)", Sort: 1, DefaultAPIType: "openai-completions", EnvKey: "WOLINET_API_KEY",
+		APIConfigs: []APIConfig{
+			{APIType: "openai-completions", BaseURL: "http://127.0.0.1:4000/v1", EditableBaseURL: true, DiscoverModels: true, DefaultAuthMode: AuthModeBearer, AuthModes: []string{AuthModeBearer}},
+			{APIType: "openai-responses", BaseURL: "http://127.0.0.1:4000/v1", EditableBaseURL: true, DiscoverModels: true, DefaultAuthMode: AuthModeBearer, AuthModes: []string{AuthModeBearer}},
+			{APIType: "openai-embeddings", BaseURL: "http://127.0.0.1:4000/v1", EditableBaseURL: true, DiscoverModels: true, DefaultAuthMode: AuthModeBearer, AuthModes: []string{AuthModeBearer}},
+		},
+		Models: []Model{
+			{ID: "wolinet-max", Name: "Wolinet Max (Reasoning & Architecture)"},
+			{ID: "wolinet-pro", Name: "Wolinet Pro (Sovereign Local Hardware Engine)"},
+			{ID: "wolinet-coder", Name: "Wolinet Coder (Sovereign Systems & DevOps)"},
+			{ID: "wolinet-turbo", Name: "Wolinet Turbo (Sub-Second Ultra Fast Ops)"},
+		},
+	},
 	"custom": {
 		Key: "custom", DisplayName: "Custom", Sort: 10, DefaultAPIType: "openai-completions", EnvKey: "CUSTOM_API_KEY",
 		APIConfigs: editableAPIConfigs(true, "openai-completions", "openai-responses", "anthropic-messages", "openai-images", "dashscope-images", "openai-embeddings"),

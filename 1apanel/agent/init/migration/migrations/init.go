@@ -1888,3 +1888,111 @@ var AddVLLMSampleInterval = &gormigrate.Migration{
 		return global.VLLMMonitorDB.AutoMigrate(&model.MonitorVLLM{})
 	},
 }
+
+var InitWolinetAgentAndProvider = &gormigrate.Migration{
+	ID: "20261027-init-wolinet-agent-and-provider",
+	Migrate: func(tx *gorm.DB) error {
+		if err := tx.AutoMigrate(&model.AgentAccount{}, &model.AgentAccountModel{}, &model.Agent{}, &model.McpServer{}); err != nil {
+			return err
+		}
+
+		apiKey := os.Getenv("LITELLM_MASTER_KEY")
+		if apiKey == "" {
+			apiKey = os.Getenv("WOLINET_GATEWAY_MASTER_KEY")
+		}
+		if apiKey == "" {
+			apiKey = "sk-XvKFiwDoOtOe8i4lwbzb8Q"
+		}
+
+		var account model.AgentAccount
+		err := tx.Where("provider = ?", "wolinet").First(&account).Error
+		if err != nil {
+			account = model.AgentAccount{
+				Provider:       "wolinet",
+				Name:           "Wolinet AI Gateway (Lango)",
+				APIKey:         apiKey,
+				BaseURL:        "http://127.0.0.1:4000/v1",
+				APIType:        "openai-completions",
+				AuthMode:       "bearer",
+				VerifyModel:    "wolinet-pro",
+				RememberAPIKey: true,
+				Verified:       true,
+				Remark:         "Sovereign Lango AI Gateway with local Mitambo acceleration and cloud failovers",
+			}
+			if err := tx.Create(&account).Error; err != nil {
+				return err
+			}
+		}
+
+		models := []struct {
+			Model     string
+			Name      string
+			SortOrder int
+		}{
+			{"wolinet-max", "Wolinet Max (Reasoning & Architecture)", 1},
+			{"wolinet-pro", "Wolinet Pro (Sovereign Local Hardware Engine)", 2},
+			{"wolinet-coder", "Wolinet Coder (Sovereign Systems & DevOps)", 3},
+			{"wolinet-turbo", "Wolinet Turbo (Sub-Second Ultra Fast Ops)", 4},
+		}
+		for _, m := range models {
+			var count int64
+			tx.Model(&model.AgentAccountModel{}).Where("account_id = ? AND model = ?", account.ID, m.Model).Count(&count)
+			if count == 0 {
+				rec := &model.AgentAccountModel{
+					AccountID: account.ID,
+					Model:     m.Model,
+					Name:      m.Name,
+					SortOrder: m.SortOrder,
+				}
+				_ = tx.Create(rec).Error
+			}
+		}
+
+		var agentCount int64
+		tx.Model(&model.Agent{}).Where("name = ?", "Wolinet DevOps Copilot").Count(&agentCount)
+		if agentCount == 0 {
+			copilot := &model.Agent{
+				Name:          "Wolinet DevOps Copilot",
+				Remark:        "Autonomous Sovereign Server Automation & Diagnostic Copilot",
+				AgentType:     "openclaw",
+				Provider:      "wolinet",
+				Model:         "wolinet-pro",
+				APIType:       "openai-completions",
+				MaxTokens:     4096,
+				ContextWindow: 32768,
+				BaseURL:       "http://127.0.0.1:4000/v1",
+				APIKey:        account.APIKey,
+				Status:        "Running",
+				AccountID:     account.ID,
+			}
+			_ = tx.Create(copilot).Error
+		}
+
+		mcpTools := []struct {
+			Name    string
+			URL     string
+			SsePath string
+			Type    string
+		}{
+			{"Wolinet Obscura Browser", "http://127.0.0.1:8080", "/mcp", "sse"},
+			{"ai-memory Persistence", "http://127.0.0.1:49374", "/sse", "sse"},
+		}
+		for _, tool := range mcpTools {
+			var count int64
+			tx.Model(&model.McpServer{}).Where("name = ?", tool.Name).Count(&count)
+			if count == 0 {
+				srv := &model.McpServer{
+					Name:            tool.Name,
+					BaseURL:         tool.URL,
+					SsePath:         tool.SsePath,
+					Type:            tool.Type,
+					Status:          "running",
+					ProtocolVersion: "2024-11-05",
+				}
+				_ = tx.Create(srv).Error
+			}
+		}
+
+		return nil
+	},
+}
