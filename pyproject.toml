@@ -1,0 +1,50 @@
+[project]
+name = "litellm-memory"
+version = "0.2.0"
+description = "Private, queryable work history for your team, built with Ente and LiteLLM"
+requires-python = ">=3.12"
+dependencies = [
+  "liteagents @ https://github.com/BerriAI/liteagents/archive/5ef862aae2158de710fa9c6ce06f443df14c10be.tar.gz",
+  "fastapi>=0.115",
+  "uvicorn>=0.34",
+  "httpx>=0.28",
+  "pydantic-settings>=2.8",
+  "itsdangerous>=2.2",
+  "authlib>=1.5",
+  "slack-sdk>=3.35",
+  "aiosqlite>=0.21",
+  "beautifulsoup4>=4.13",
+  "python-multipart>=0.0.20",
+  "pynacl>=1.6.2",
+  "pyyaml>=6.0.3",
+  "mcp>=2.2.0",
+  "logfire>=5.1.0",
+  "tomlkit>=0.15.1",
+  "tzdata>=2025.2",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "pytest-asyncio>=0.25", "ruff>=0.11"]
+
+[project.scripts]
+litellm-memory-connector = "litellm_memory.connector:main"
+litellm-memory-transfer = "litellm_memory.transfer_cli:main"
+litellm-memory-evaluate = "litellm_memory.evaluation:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["litellm_memory*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP"]
