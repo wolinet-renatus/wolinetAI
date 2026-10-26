@@ -2,9 +2,21 @@
 ContainerName=wolinet-mitambo
 Pod=wolinetai-core-pod
 Image=ghcr.io/wolinet-renatus/wolinet-mitambo-cpu:latest
-Volume=/var/lib/wolinet/models:/models:ro
-Volume=/var/lib/wolinet/data/mitambo:/root/.xinference:Z
+
+# 1. Memory Locking Fix: Prevent OS kernel from swapping GGUF weights to disk
+LimitMEMLOCK=-1
+
+# 2. Shared Memory Allocation: Prevent bus errors during prompt batching & tensor parallelism
 ShmSize=8g
+
+# 3. User Namespace & Volume Permissions: Map host UID to container for seamless model file reads
+UserNS=keep-id
+Volume=/var/lib/wolinet/models:/models:ro,z
+Volume=/var/lib/wolinet/data/mitambo:/root/.xinference:Z
+
+# Hardware Accelerators (Uncomment on NVIDIA Linux bare-metal hosts)
+# AddDevice=nvidia.com/gpu=all
+
 Environment=XINFERENCE_HOME=/root/.xinference
 Environment=XINFERENCE_AUTH_DB_PATH=/root/.xinference/auth/auth.db
 Environment=XINFERENCE_MODEL_SRC=huggingface
