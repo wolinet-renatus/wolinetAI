@@ -188,8 +188,8 @@ async def get_headers_and_cookies(
         'Content-Type': 'application/json',
         **(
             {
-                'HTTP-Referer': 'https://openwebui.com/',
-                'X-Title': 'Open WebUI',
+                'HTTP-Referer': 'https://wolinet.com/',
+                'X-Title': 'Wolinet AI',
             }
             if 'openrouter.ai' in url
             else {}
@@ -284,21 +284,38 @@ class OpenAIConfigForm(BaseModel):
 
 @router.post('/config/update')
 async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depends(get_admin_user)):
-    request.app.state.config.ENABLE_OPENAI_API = form_data.ENABLE_OPENAI_API
-    request.app.state.config.OPENAI_API_BASE_URLS = form_data.OPENAI_API_BASE_URLS
-    request.app.state.config.OPENAI_API_KEYS = form_data.OPENAI_API_KEYS
+    # Sovereign Guardrail: enforce all model connections route through sovereign Lango Gateway
+    gateway_url = (
+        getattr(request.app.state.config, 'LITELLM_BASE_URL', None)
+        or os.getenv('LITELLM_BASE_URL')
+        or 'http://127.0.0.1:4000'
+    ).rstrip('/')
+    gateway_v1 = f"{gateway_url}/v1" if not gateway_url.endswith('/v1') else gateway_url
+    master_key = (
+        getattr(request.app.state.config, 'LITELLM_MASTER_KEY', None)
+        or os.getenv('LITELLM_MASTER_KEY')
+        or 'sk-XvKFiwDoOtOe8i4lwbzb8Q'
+    )
 
-    # Check if API KEYS length is same than API URLS length
-    if len(request.app.state.config.OPENAI_API_KEYS) != len(request.app.state.config.OPENAI_API_BASE_URLS):
-        if len(request.app.state.config.OPENAI_API_KEYS) > len(request.app.state.config.OPENAI_API_BASE_URLS):
-            request.app.state.config.OPENAI_API_KEYS = request.app.state.config.OPENAI_API_KEYS[
-                : len(request.app.state.config.OPENAI_API_BASE_URLS)
-            ]
+    sanitized_urls = []
+    sanitized_keys = []
+    for idx, u in enumerate(form_data.OPENAI_API_BASE_URLS):
+        u_clean = u.strip().rstrip('/')
+        if not u_clean or 'api.openai.com' in u_clean or ':9997' in u_clean or ':9998' in u_clean:
+            sanitized_urls.append(gateway_v1)
+            sanitized_keys.append(master_key)
         else:
-            request.app.state.config.OPENAI_API_KEYS += [''] * (
-                len(request.app.state.config.OPENAI_API_BASE_URLS) - len(request.app.state.config.OPENAI_API_KEYS)
-            )
+            sanitized_urls.append(u_clean)
+            key_val = form_data.OPENAI_API_KEYS[idx] if idx < len(form_data.OPENAI_API_KEYS) and form_data.OPENAI_API_KEYS[idx] else master_key
+            sanitized_keys.append(key_val)
 
+    if not sanitized_urls:
+        sanitized_urls = [gateway_v1]
+        sanitized_keys = [master_key]
+
+    request.app.state.config.ENABLE_OPENAI_API = form_data.ENABLE_OPENAI_API if form_data.ENABLE_OPENAI_API is not None else True
+    request.app.state.config.OPENAI_API_BASE_URLS = sanitized_urls
+    request.app.state.config.OPENAI_API_KEYS = sanitized_keys
     request.app.state.config.OPENAI_API_CONFIGS = form_data.OPENAI_API_CONFIGS
 
     # Remove the API configs that are not in the API URLS
@@ -380,7 +397,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
             raise HTTPException(
                 status_code=r.status if r else 500,
-                detail=detail if detail else 'Open WebUI: Server Connection Error',
+                detail=detail if detail else 'Wolinet AI: Server Connection Error',
             )
 
     except ValueError:
@@ -529,8 +546,9 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
         return None
 
     def is_supported_openai_models(model_id):
+        m_id = str(model_id).lower()
         if any(
-            name in model_id
+            name in m_id
             for name in [
                 'babbage',
                 'dall-e',
@@ -538,9 +556,11 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                 'embedding',
                 'tts',
                 'whisper',
+                'image',
             ]
         ):
-            return False
+            if 'max' not in m_id:
+                return False
         return True
 
     def get_merged_models(model_lists):
@@ -552,10 +572,13 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                 for model in model_list:
                     model_id = model.get('id') or model.get('name')
 
-                    base_url = api_base_urls[idx]
-                    hostname = urlparse(base_url).hostname if base_url else None
-                    if hostname == 'api.openai.com' and not is_supported_openai_models(model_id):
-                        # Skip unwanted OpenAI models
+                    if not is_supported_openai_models(model_id):
+                        # Skip unwanted/auxiliary models
+                        continue
+
+                    model_mode = model.get('mode') or model.get('model_info', {}).get('mode')
+                    if model_mode in ('image_generation', 'embedding', 'audio_transcription'):
+                        # Skip non-chat endpoints from chat model selection
                         continue
 
                     if model_id and model_id not in models:
@@ -664,7 +687,7 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
             except aiohttp.ClientError as e:
                 # ClientError covers all aiohttp requests issues
                 log.exception(f'Client error: {str(e)}')
-                raise HTTPException(status_code=500, detail='Open WebUI: Server Connection Error')
+                raise HTTPException(status_code=500, detail='Wolinet AI: Server Connection Error')
             except Exception as e:
                 log.exception(f'Unexpected error: {e}')
                 error_detail = f'Unexpected error: {str(e)}'
@@ -1652,7 +1675,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         log.exception(e)
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail='Open WebUI: Server Connection Error',
+            detail='Wolinet AI: Server Connection Error',
         )
     finally:
         if not streaming:

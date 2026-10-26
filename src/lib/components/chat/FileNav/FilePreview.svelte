@@ -536,6 +536,7 @@
 		position: sticky;
 		top: 0;
 		background: rgba(243, 244, 246, 0.95);
+		-webkit-backdrop-filter: blur(4px);
 		backdrop-filter: blur(4px);
 		font-weight: 600;
 		color: #374151;

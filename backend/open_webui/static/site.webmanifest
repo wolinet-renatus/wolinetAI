@@ -1,6 +1,6 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "Wolinet AI",
+  "short_name": "Wolinet",
   "icons": [
     {
       "src": "/static/web-app-manifest-192x192.png",

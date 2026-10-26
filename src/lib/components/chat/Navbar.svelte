@@ -122,7 +122,7 @@
 			"
 				>
 					{#if showModelSelector}
-						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+						<ModelSelector bind:selectedModels showSetDefault={false} />
 					{/if}
 				</div>
 

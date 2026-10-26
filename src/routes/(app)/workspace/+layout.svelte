@@ -144,6 +144,20 @@
 								{$i18n.t('Tools')}
 							</a>
 						{/if}
+
+						{#if $user?.role === 'admin'}
+							<a
+								draggable="false"
+								aria-current={$page.url.pathname === '/mcp' ? 'page' : null}
+								class="min-w-fit p-1.5 {$page.url.pathname === '/mcp'
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none flex items-center gap-1.5"
+								href="/mcp"
+							>
+								<span>{$i18n.t('MCP Hub')}</span>
+								<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+							</a>
+						{/if}
 					</div>
 				</div>
 

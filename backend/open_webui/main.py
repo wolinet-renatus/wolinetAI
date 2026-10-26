@@ -606,6 +606,9 @@ RETIRED_LOCAL_MODEL_IDS = frozenset(
         'wolinex-coder-lite',
         'wolinex-omni',
         'wolinet-coder',
+        'wolinet coder',
+        'wolinet-pro',
+        'wolinet pro',
         'tiny-llama',
         'tinyllama',
     }
@@ -1623,10 +1626,32 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
     all_models = await get_all_models(request, refresh=refresh, user=user)
 
     models = []
+    seen_ids = set()
     for model in all_models:
         # Filter out filter pipelines
         if 'pipeline' in model and model['pipeline'].get('type', None) == 'filter':
             continue
+
+        model_id = str(model.get('id', ''))
+        model_name = str(model.get('name', ''))
+        model_mode = model.get('mode') or model.get('info', {}).get('mode')
+
+        # Filter out non-chat modes (image generation, embeddings, audio transcription)
+        if model_mode in ('image_generation', 'embedding', 'audio_transcription'):
+            continue
+
+        m_id_lower = model_id.lower()
+        m_name_lower = model_name.lower()
+
+        # Filter out auxiliary utility models that shouldn't appear in chat dropdown
+        if any(aux in m_id_lower or aux in m_name_lower for aux in ['dall-e', 'embedding', 'whisper', 'image']):
+            if 'max' not in m_id_lower and 'max' not in m_name_lower:
+                continue
+
+        # Deduplicate
+        if model_id in seen_ids:
+            continue
+        seen_ids.add(model_id)
 
         # Remove profile image URL to reduce payload size
         if model.get('info', {}).get('meta', {}).get('profile_image_url'):
@@ -1645,7 +1670,39 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
 
         models.append(model)
 
-    model_order_list = request.app.state.config.MODEL_ORDER_LIST
+    # Restrict dropdown presentation strictly to the 3 canonical models in priority order:
+    # 1. Wolinet Pro (Default Sovereign Conversational Flagship)
+    # 2. Wolinex Coder (Sovereign Code Intelligence)
+    # 3. Wolinet Max (Multimodal Frontier Heavy-Duty)
+    pro_model = next((m for m in models if 'pro' in str(m.get('id', '')).lower() or 'pro' in str(m.get('name', '')).lower()), None)
+    coder_model = next((m for m in models if any(k in str(m.get('id', '')).lower() or k in str(m.get('name', '')).lower() for k in ('coder', 'wolinex'))), None)
+    max_model = next((m for m in models if 'max' in str(m.get('id', '')).lower() or 'max' in str(m.get('name', '')).lower()), None)
+
+    canonical_models = []
+    if pro_model:
+        pro_model['id'] = 'Wolinet Pro'
+        pro_model['name'] = 'Wolinet Pro'
+        canonical_models.append(pro_model)
+    elif models:
+        canonical_models.append({'id': 'Wolinet Pro', 'name': 'Wolinet Pro', 'mode': 'chat'})
+
+    if coder_model:
+        coder_model['id'] = 'Wolinet Coder'
+        coder_model['name'] = 'Wolinex Coder'
+        canonical_models.append(coder_model)
+    elif models:
+        canonical_models.append({'id': 'Wolinet Coder', 'name': 'Wolinex Coder', 'mode': 'chat'})
+
+    if max_model:
+        max_model['id'] = 'Wolinet Max'
+        max_model['name'] = 'Wolinet Max'
+        canonical_models.append(max_model)
+    elif models:
+        canonical_models.append({'id': 'Wolinet Max', 'name': 'Wolinet Max', 'mode': 'chat'})
+
+    models = canonical_models
+
+    model_order_list = request.app.state.config.MODEL_ORDER_LIST or ['Wolinet Pro', 'Wolinet Coder', 'Wolinet Max']
     if model_order_list:
         model_order_dict = {model_id: i for i, model_id in enumerate(model_order_list)}
         # Sort models by order list priority, with fallback for those not in the list
@@ -1826,48 +1883,46 @@ async def chat_completion(
                         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                         detail=PUBLIC_MODEL_UNAVAILABLE_MESSAGE,
                     )
-                fallback_model = next(
+
+                # 1. Try case-insensitive / normalized lookup
+                matched_model = next(
                     (
-                        available_model
-                        for available_model in request.app.state.MODELS.values()
-                        if str(available_model.get('id', '')).casefold() == 'wolinet pro'
-                        or str(available_model.get('name', '')).casefold() == 'wolinet pro'
-                    ),
-                    None,
-                ) or next(
-                    (
-                        available_model
-                        for available_model in request.app.state.MODELS.values()
-                        if str(available_model.get('id', '')).casefold() == 'wolinet coder'
-                        or str(available_model.get('name', '')).casefold() == 'wolinet coder'
+                        k for k, v in request.app.state.MODELS.items()
+                        if k.casefold() == str(model_id).casefold()
+                        or str(v.get('name', '')).casefold() == str(model_id).casefold()
                     ),
                     None,
                 )
-                if (
-                    isinstance(model_id, str)
-                    and model_id.casefold() in RETIRED_LOCAL_MODEL_IDS
-                    and fallback_model
-                ):
-                    fallback_model_id = str(fallback_model['id'])
-                    log.warning(
-                        'Routing retired local model selection %s to active gateway model %s',
-                        model_id,
-                        fallback_model_id,
-                    )
-                    model_id = fallback_model_id
-                    form_data['model'] = fallback_model_id
-                elif isinstance(model_id, str) and model_id.casefold() in RETIRED_LOCAL_MODEL_IDS:
-                    raise HTTPException(
-                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                        detail=PUBLIC_MODEL_UNAVAILABLE_MESSAGE,
-                    )
+                if matched_model:
+                    model_id = matched_model
+                    form_data['model'] = matched_model
                 else:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=(
-                            'That model is no longer available. Please choose an available model and try again.'
+                    fallback_model = next(
+                        (
+                            available_model
+                            for available_model in request.app.state.MODELS.values()
+                            if 'max' in str(available_model.get('id', '')).casefold()
+                            or 'max' in str(available_model.get('name', '')).casefold()
                         ),
-                    )
+                        None,
+                    ) or next(iter(request.app.state.MODELS.values()), None)
+
+                    if fallback_model:
+                        fallback_model_id = str(fallback_model['id'])
+                        log.warning(
+                            'Routing model selection %s to active gateway model %s',
+                            model_id,
+                            fallback_model_id,
+                        )
+                        model_id = fallback_model_id
+                        form_data['model'] = fallback_model_id
+                    else:
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=(
+                                'That model is no longer available. Please choose an available model and try again.'
+                            ),
+                        )
 
             model = request.app.state.MODELS[model_id]
             model_info = await Models.get_model_by_id(model_id)
@@ -3193,6 +3248,206 @@ async def serve_cache_file(
     if not inline_safe:
         headers['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}"'
     return FileResponse(file_path, headers=headers)
+
+
+# ==============================================================================
+# Sovereign MCP Hub & Protocol Proxy Routes
+# ==============================================================================
+OBSCURA_MCP_URL = os.environ.get("OBSCURA_MCP_URL", "http://127.0.0.1:8080/mcp")
+LITELLM_MCP_URL = os.environ.get("LITELLM_MCP_URL", "http://127.0.0.1:4000/mcp")
+
+
+@app.api_route("/api/v1/mcp/status", methods=["GET"])
+async def get_mcp_hub_status(request: Request, user=Depends(get_admin_user)):
+    """Returns connectivity and ping status for Sovereign MCP servers (Admin only)."""
+    results = {
+        "obscura": {"url": OBSCURA_MCP_URL, "online": False, "latency_ms": None, "info": None},
+        "litellm": {"url": LITELLM_MCP_URL, "online": False, "latency_ms": None, "status": "offline"},
+        "tool_servers": [],
+    }
+
+    # 1. Ping Obscura MCP (port 8080)
+    try:
+        t0 = time.time()
+        timeout = aiohttp.ClientTimeout(total=2)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            payload = {
+                "jsonrpc": "2.0",
+                "id": "ping",
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "wolinet-hub", "version": "1.0"},
+                },
+            }
+            async with session.post(OBSCURA_MCP_URL, json=payload) as resp:
+                lat = round((time.time() - t0) * 1000, 1)
+                if resp.status == 200:
+                    data = await resp.json()
+                    results["obscura"]["online"] = True
+                    results["obscura"]["latency_ms"] = lat
+                    results["obscura"]["info"] = data.get("result", {})
+                else:
+                    results["obscura"]["online"] = False
+                    results["obscura"]["status_code"] = resp.status
+    except Exception as e:
+        results["obscura"]["online"] = False
+        results["obscura"]["error"] = str(e)
+
+    # 2. Ping LiteLLM MCP (port 4000)
+    try:
+        t0 = time.time()
+        timeout = aiohttp.ClientTimeout(total=2)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(LITELLM_MCP_URL) as resp:
+                lat = round((time.time() - t0) * 1000, 1)
+                results["litellm"]["latency_ms"] = lat
+                if resp.status in (200, 401):
+                    results["litellm"]["online"] = True
+                    results["litellm"]["status"] = "active"
+    except Exception as e:
+        results["litellm"]["online"] = False
+        results["litellm"]["error"] = str(e)
+
+    # 3. Tool servers from config
+    try:
+        connections = getattr(request.app.state.config, "TOOL_SERVER_CONNECTIONS", []) or []
+        for conn in connections:
+            results["tool_servers"].append(
+                {
+                    "id": conn.get("info", {}).get("id") or conn.get("id"),
+                    "name": conn.get("info", {}).get("name") or conn.get("name", "Tool Server"),
+                    "type": conn.get("type", "openapi"),
+                    "url": conn.get("url"),
+                    "enabled": conn.get("config", {}).get("enable", True),
+                    "auth_type": conn.get("auth_type", "none"),
+                }
+            )
+    except Exception:
+        pass
+
+    return JSONResponse(content=results)
+
+
+@app.api_route("/mcp", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"])
+@app.api_route("/mcp/", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"])
+@app.api_route("/mcp/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"])
+async def mcp_proxy_or_spa(request: Request, full_path: str = ""):
+    """Handles /mcp:
+    - If accessed from browser (GET), serves Open WebUI SPA so SvelteKit renders the MCP page cleanly.
+    - If accessed via MCP protocol (POST, SSE, JSON-RPC, or application/json GET), proxies or returns MCP protocol response.
+    """
+    if request.method == "OPTIONS":
+        return Response(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS, HEAD",
+                "Access-Control-Allow-Headers": "*",
+            },
+        )
+
+    accept_header = request.headers.get("accept", "")
+
+    # GET requests: Return JSON metadata only if explicitly requested without HTML, else serve UI
+    if request.method == "GET":
+        if "application/json" in accept_header and "text/html" not in accept_header:
+            return JSONResponse(
+                content={
+                    "jsonrpc": "2.0",
+                    "status": "ok",
+                    "name": "Wolinet MCP Sovereign Hub",
+                    "version": "1.0.0",
+                    "protocolVersion": "2024-11-05",
+                    "endpoints": {
+                        "obscura_browser": OBSCURA_MCP_URL,
+                        "litellm_gateway": LITELLM_MCP_URL,
+                        "hub_proxy": "/mcp",
+                    },
+                },
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+
+        index_file = os.path.join(FRONTEND_BUILD_DIR, "index.html")
+        if os.path.isfile(index_file):
+            return FileResponse(index_file, media_type="text/html")
+
+    # POST or MCP protocol request -> proxy to Obscura Sovereign Browser MCP
+    if request.method == "POST":
+        try:
+            body = await request.body()
+            # Strip origin, referer, host, and connection headers so upstream doesn't reject with origin errors
+            headers = {
+                k: v
+                for k, v in request.headers.items()
+                if k.lower() not in (
+                    "host",
+                    "content-length",
+                    "connection",
+                    "origin",
+                    "referer",
+                    "sec-fetch-mode",
+                    "sec-fetch-site",
+                    "sec-fetch-dest",
+                )
+            }
+            timeout = aiohttp.ClientTimeout(total=60)
+            target_url = (
+                f"{OBSCURA_MCP_URL.rstrip('/')}/{full_path.lstrip('/')}"
+                if full_path
+                else OBSCURA_MCP_URL
+            )
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(target_url, data=body, headers=headers) as upstream:
+                    resp_body = await upstream.read()
+                    resp_headers = {
+                        k: v
+                        for k, v in upstream.headers.items()
+                        if k.lower()
+                        not in (
+                            "transfer-encoding",
+                            "content-encoding",
+                            "content-length",
+                            "connection",
+                        )
+                    }
+                    resp_headers["Access-Control-Allow-Origin"] = "*"
+                    return Response(
+                        content=resp_body,
+                        status_code=upstream.status,
+                        headers=resp_headers,
+                        media_type=upstream.content_type,
+                    )
+        except Exception as e:
+            return JSONResponse(
+                status_code=502,
+                content={
+                    "jsonrpc": "2.0",
+                    "error": {
+                        "code": -32000,
+                        "message": f"Failed to forward to sovereign MCP server: {str(e)}",
+                    },
+                },
+                headers={"Access-Control-Allow-Origin": "*"},
+            )
+
+    # Fallback
+    return JSONResponse(
+        content={
+            "jsonrpc": "2.0",
+            "status": "ok",
+            "name": "Wolinet MCP Sovereign Hub",
+            "version": "1.0.0",
+            "protocolVersion": "2024-11-05",
+            "endpoints": {
+                "obscura_browser": OBSCURA_MCP_URL,
+                "litellm_gateway": LITELLM_MCP_URL,
+                "hub_proxy": "/mcp",
+            },
+        },
+        headers={"Access-Control-Allow-Origin": "*"},
+    )
 
 
 if os.path.exists(FRONTEND_BUILD_DIR):

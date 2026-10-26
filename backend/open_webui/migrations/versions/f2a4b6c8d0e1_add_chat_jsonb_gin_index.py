@@ -16,6 +16,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     with op.get_context().autocommit_block():
+        op.execute('ALTER TABLE chat ALTER COLUMN chat TYPE jsonb USING chat::jsonb')
         op.execute('CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_content_gin ON chat USING GIN (chat)')
 
 

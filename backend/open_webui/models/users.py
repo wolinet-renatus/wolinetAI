@@ -109,9 +109,9 @@ class UserModel(BaseModel):
     oauth: dict | None = None
     scim: dict | None = None
 
-    last_active_at: int  # timestamp in epoch
-    updated_at: int  # timestamp in epoch
-    created_at: int  # timestamp in epoch
+    last_active_at: int | None = None  # timestamp in epoch
+    updated_at: int | None = None  # timestamp in epoch
+    created_at: int | None = None  # timestamp in epoch
 
     model_config = ConfigDict(
         from_attributes=True,
