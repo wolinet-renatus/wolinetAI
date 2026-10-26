@@ -102,8 +102,31 @@ echo -e "\n${BOLD}[4/6] STARTING SOVEREIGN SERVER SERVICES (HIERARCHICAL BOOT)..
 
 # Phase 1: Start DEC 1Panel Control Plane & Hardware Manager
 echo -e "   [4.1] Initializing DEC Orchestrator / 1Panel Control Plane (Hardware & Infra Supervisor)..."
-if [ -f ./bin/1apanel ]; then
-    # Ensure background 1apanel daemon is running to supervise hardware, storage mounts, and container engine socket
+
+# Linux Native Systemd Daemon Integration
+SYSTEMD_ACTIVE=false
+if [ "$OS_TYPE" = "Linux" ] && command -v systemctl &>/dev/null; then
+    # Ensure podman.socket is active and /var/run/docker.sock bridge exists
+    systemctl enable --now podman.socket >/dev/null 2>&1 || true
+    if [ ! -e /var/run/docker.sock ] && [ -S /run/podman/podman.sock ]; then
+        ln -sf /run/podman/podman.sock /var/run/docker.sock 2>/dev/null || true
+    fi
+
+    if systemctl is-active --quiet 1apanel.service 2>/dev/null; then
+        echo -e "         ${GREEN}✓ 1apanel.service active via systemd (Host Root Daemon & Podman Socket wired).${NC}"
+        SYSTEMD_ACTIVE=true
+    elif [ -f /etc/systemd/system/1apanel.service ]; then
+        systemctl start 1apanel.service 2>/dev/null || true
+        echo -e "         ${GREEN}✓ Started 1apanel.service via systemd.${NC}"
+        SYSTEMD_ACTIVE=true
+    elif [ "$(id -u)" -eq 0 ] && [ -f ./scripts/setup-systemd-1apanel.sh ]; then
+        ./scripts/setup-systemd-1apanel.sh
+        SYSTEMD_ACTIVE=true
+    fi
+fi
+
+if [ "$SYSTEMD_ACTIVE" = false ] && [ -f ./bin/1apanel ]; then
+    # Fallback for macOS development or non-root environments: local daemon
     if ! pgrep -f "1apanel" >/dev/null 2>&1; then
         export PANEL_BASE_DIR="${PANEL_BASE_DIR:-./data}"
         export ORIGINAL_PORT="${PANEL_PORT:-8888}"
