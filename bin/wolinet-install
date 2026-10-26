@@ -61,9 +61,9 @@ echo -e "   • Container Engine: ${GREEN}${CONTAINER_RUNTIME}${NC}"
 
 echo -e "\n${BOLD}[2/6] SCOPING DEPLOYMENT TARGETS & DEPENDENCY HIERARCHY...${NC}"
 echo -e "   ${GREEN}✓ Stage 1: Hardware & Infrastructure Control Plane (Boot First):${NC}"
-echo -e "     - DEC Orchestrator & 1Panel Control Plane (:8089 / :9999)"
-echo -e "     - Host Hardware Management (CPU, RAM, GPU/MPS, Storage, Podman/Docker socket)"
-echo -e "     - PostgreSQL 16 (:5433 -> 5432) & Redis 7 (:6379) Backing Data Cluster"
+echo -e "     - DEC Orchestrator & 1Panel Control Plane (:8888 / :9999 / :8089)"
+echo -e "     - Host Hardware Supervisor (CPU, RAM, GPU/MPS, Storage, Podman/Docker socket)"
+echo -e "     - Backing Data Cluster: PostgreSQL 16 (:5433 -> 5432) & Redis 7 (:6379)"
 echo -e "   ${GREEN}✓ Stage 2: Sovereign Inference Engine:${NC}"
 echo -e "     - Mitambo Local Inference Core (:9997) with GPU/MPS accelerator allocation"
 echo -e "   ${GREEN}✓ Stage 3: Sovereign Intelligence Gateway:${NC}"
@@ -101,18 +101,20 @@ echo -e "   ${GREEN}✓ Environment configuration active.${NC}"
 echo -e "\n${BOLD}[4/6] STARTING SOVEREIGN SERVER SERVICES (HIERARCHICAL BOOT)...${NC}"
 
 # Phase 1: Start DEC 1Panel Control Plane & Hardware Manager
-echo -e "   [4.1] Initializing DEC Orchestrator / 1Panel Control Plane..."
+echo -e "   [4.1] Initializing DEC Orchestrator / 1Panel Control Plane (Hardware & Infra Supervisor)..."
 if [ -f ./bin/1apanel ]; then
-    # Ensure background 1apanel daemon is running if not in container
+    # Ensure background 1apanel daemon is running to supervise hardware, storage mounts, and container engine socket
     if ! pgrep -f "1apanel" >/dev/null 2>&1; then
+        export PANEL_BASE_DIR="${PANEL_BASE_DIR:-./data}"
+        export ORIGINAL_PORT="${PANEL_PORT:-8888}"
         nohup ./bin/1apanel >/dev/null 2>&1 &
         sleep 1
     fi
-    echo -e "         ${GREEN}✓ DEC 1Panel control plane daemon active.${NC}"
+    echo -e "         ${GREEN}✓ DEC 1Panel control plane daemon active (Managing hardware & engine socket).${NC}"
 fi
 
 # Phase 2: Start Infrastructure & Backing Services via Container Engine
-echo -e "   [4.2] Provisioning Database, Redis & Compute Services via ${CONTAINER_RUNTIME}..."
+echo -e "   [4.2] Provisioning Database, Redis & Compute Services under 1Panel supervision..."
 if ! $CONTAINER_RUNTIME ps | grep -q "postgres"; then
     echo -e "         -> Launching PostgreSQL and Redis services..."
     $CONTAINER_RUNTIME compose -f docker-compose.yml up -d postgres redis || true
@@ -130,8 +132,8 @@ echo -e "\n${BOLD}[5/6] VERIFYING SERVICE HEALTHCHECKS IN DEPENDENCY ORDER...${N
 sleep 3
 
 # Check 1Panel Control Plane
-echo -n "   • 1. DEC 1Panel Control Plane (:8089 / :9999): "
-if pgrep -f "1apanel" >/dev/null 2>&1 || curl -s http://localhost:8089 &>/dev/null; then
+echo -n "   • 1. DEC 1Panel Control Plane (:8888 / :9999 / :8089): "
+if curl -s http://localhost:8888 &>/dev/null || curl -s http://localhost:9999 &>/dev/null || curl -s http://localhost:8089 &>/dev/null || pgrep -f "1apanel" >/dev/null 2>&1; then
     echo -e "${GREEN}ACTIVE & MANAGING HARDWARE${NC}"
 else
     echo -e "${YELLOW}READY${NC}"
@@ -176,7 +178,7 @@ echo -e "\n${GREEN}${BOLD}══════════════════
 echo " ✨ WOLINET AI SOVEREIGN CLUSTER IS READY & DEPLOYED"
 echo -e "═══════════════════════════════════════════════════════════════════════════════${NC}"
 echo -e "${BOLD}Control Plane & Core Endpoints:${NC}"
-echo -e "   • DEC 1Panel Control Plane: ${CYAN}http://localhost:8089${NC} (or :9999)"
+echo -e "   • DEC 1Panel Control Plane: ${CYAN}http://localhost:8888${NC} (or :9999 / :8089)"
 echo -e "   • Lango API Gateway:        ${CYAN}http://localhost:4000${NC}"
 echo -e "   • Lango Admin Dashboard:    ${CYAN}http://localhost:4000/ui${NC}"
 echo -e "   • Mitambo Model Inference:  ${CYAN}http://localhost:9997${NC}"
