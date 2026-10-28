@@ -12,7 +12,7 @@ import shutil
 import sys
 import time
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import Any, Literal, Optional, cast
 from urllib.parse import parse_qs, urlencode, urlparse
 from uuid import uuid4
 
@@ -646,7 +646,7 @@ def _public_chat_error(message: str, status_code: int | None = None) -> tuple[in
                        status.HTTP_503_SERVICE_UNAVAILABLE, status.HTTP_504_GATEWAY_TIMEOUT):
         return status.HTTP_503_SERVICE_UNAVAILABLE, PUBLIC_MODEL_UNAVAILABLE_MESSAGE
     if status_code == status.HTTP_403_FORBIDDEN:
-        return status_code, 'You do not have permission to use this model.'
+        return status.HTTP_403_FORBIDDEN, 'You do not have permission to use this model.'
     if status_code is not None and 400 <= status_code < 500:
         return status_code, 'We could not process that request. Please check your input and try again.'
     return status.HTTP_500_INTERNAL_SERVER_ERROR, 'Sorry, we could not complete your request. Please try again later.'
@@ -753,7 +753,7 @@ async def lifespan(app: FastAPI):
                         'app': app,
                     }
                 ),
-                None,
+                refresh=False,
             )
         except Exception as e:
             log.warning(f'Failed to pre-fetch models at startup: {e}')
@@ -1062,14 +1062,14 @@ app.state.config.EVALUATION_ARENA_MODELS = EVALUATION_ARENA_MODELS
 # Migrate legacy access_control → access_grants on boot
 from open_webui.utils.access_control import has_permission, migrate_access_control
 
-connections = app.state.config.TOOL_SERVER_CONNECTIONS
-if any('access_control' in c.get('config', {}) for c in connections):
+connections = getattr(app.state.config.TOOL_SERVER_CONNECTIONS, 'value', app.state.config.TOOL_SERVER_CONNECTIONS)
+if connections and isinstance(connections, list) and any('access_control' in c.get('config', {}) for c in connections):
     for connection in connections:
         migrate_access_control(connection.get('config', {}))
     app.state.config.TOOL_SERVER_CONNECTIONS = connections
 
-arena_models = app.state.config.EVALUATION_ARENA_MODELS
-if any('access_control' in m.get('meta', {}) for m in arena_models):
+arena_models = getattr(app.state.config.EVALUATION_ARENA_MODELS, 'value', app.state.config.EVALUATION_ARENA_MODELS)
+if arena_models and isinstance(arena_models, list) and any('access_control' in m.get('meta', {}) for m in arena_models):
     for model in arena_models:
         migrate_access_control(model.get('meta', {}))
     app.state.config.EVALUATION_ARENA_MODELS = arena_models
@@ -1297,15 +1297,28 @@ app.state.rf = None
 app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 
+def _to_int(val: Any, default: int = 1) -> int:
+    try:
+        if hasattr(val, 'value'):
+            val = val.value
+        return int(val) if val is not None else default
+    except (ValueError, TypeError):
+        return default
+
+
 try:
-    app.state.ef = get_ef(app.state.config.RAG_EMBEDDING_ENGINE, app.state.config.RAG_EMBEDDING_MODEL)
-    if app.state.config.ENABLE_RAG_HYBRID_SEARCH and not app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+    rag_embed_engine = str(getattr(app.state.config.RAG_EMBEDDING_ENGINE, 'value', app.state.config.RAG_EMBEDDING_ENGINE))
+    rag_embed_model = str(getattr(app.state.config.RAG_EMBEDDING_MODEL, 'value', app.state.config.RAG_EMBEDDING_MODEL))
+    app.state.ef = get_ef(rag_embed_engine, rag_embed_model)
+    if bool(getattr(app.state.config.ENABLE_RAG_HYBRID_SEARCH, 'value', app.state.config.ENABLE_RAG_HYBRID_SEARCH)) and not bool(getattr(app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL, 'value', app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL)):
+        raw_rerank_model = getattr(app.state.config.RAG_RERANKING_MODEL, 'value', app.state.config.RAG_RERANKING_MODEL)
+        rag_rerank_model: Optional[str] = str(raw_rerank_model) if raw_rerank_model is not None else None
         app.state.rf = get_rf(
-            app.state.config.RAG_RERANKING_ENGINE,
-            app.state.config.RAG_RERANKING_MODEL,
-            app.state.config.RAG_EXTERNAL_RERANKER_URL,
-            app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
-            app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
+            str(getattr(app.state.config.RAG_RERANKING_ENGINE, 'value', app.state.config.RAG_RERANKING_ENGINE)),
+            rag_rerank_model,
+            str(getattr(app.state.config.RAG_EXTERNAL_RERANKER_URL, 'value', app.state.config.RAG_EXTERNAL_RERANKER_URL)),
+            str(getattr(app.state.config.RAG_EXTERNAL_RERANKER_API_KEY, 'value', app.state.config.RAG_EXTERNAL_RERANKER_API_KEY)),
+            str(getattr(app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT, 'value', app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT)),
         )
     else:
         app.state.rf = None
@@ -1315,42 +1328,42 @@ except Exception as e:
 
 
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
-    app.state.config.RAG_EMBEDDING_ENGINE,
-    app.state.config.RAG_EMBEDDING_MODEL,
+    str(getattr(app.state.config.RAG_EMBEDDING_ENGINE, 'value', app.state.config.RAG_EMBEDDING_ENGINE)),
+    str(getattr(app.state.config.RAG_EMBEDDING_MODEL, 'value', app.state.config.RAG_EMBEDDING_MODEL)),
     embedding_function=app.state.ef,
     url=(
-        app.state.config.RAG_OPENAI_API_BASE_URL
-        if app.state.config.RAG_EMBEDDING_ENGINE == 'openai'
+        str(getattr(app.state.config.RAG_OPENAI_API_BASE_URL, 'value', app.state.config.RAG_OPENAI_API_BASE_URL))
+        if str(getattr(app.state.config.RAG_EMBEDDING_ENGINE, 'value', app.state.config.RAG_EMBEDDING_ENGINE)) == 'openai'
         else (
-            app.state.config.RAG_OLLAMA_BASE_URL
-            if app.state.config.RAG_EMBEDDING_ENGINE == 'ollama'
-            else app.state.config.RAG_AZURE_OPENAI_BASE_URL
+            str(getattr(app.state.config.RAG_OLLAMA_BASE_URL, 'value', app.state.config.RAG_OLLAMA_BASE_URL))
+            if str(getattr(app.state.config.RAG_EMBEDDING_ENGINE, 'value', app.state.config.RAG_EMBEDDING_ENGINE)) == 'ollama'
+            else str(getattr(app.state.config.RAG_AZURE_OPENAI_BASE_URL, 'value', app.state.config.RAG_AZURE_OPENAI_BASE_URL))
         )
     ),
     key=(
-        app.state.config.RAG_OPENAI_API_KEY
-        if app.state.config.RAG_EMBEDDING_ENGINE == 'openai'
+        str(getattr(app.state.config.RAG_OPENAI_API_KEY, 'value', app.state.config.RAG_OPENAI_API_KEY))
+        if str(getattr(app.state.config.RAG_EMBEDDING_ENGINE, 'value', app.state.config.RAG_EMBEDDING_ENGINE)) == 'openai'
         else (
-            app.state.config.RAG_OLLAMA_API_KEY
-            if app.state.config.RAG_EMBEDDING_ENGINE == 'ollama'
-            else app.state.config.RAG_AZURE_OPENAI_API_KEY
+            str(getattr(app.state.config.RAG_OLLAMA_API_KEY, 'value', app.state.config.RAG_OLLAMA_API_KEY))
+            if str(getattr(app.state.config.RAG_EMBEDDING_ENGINE, 'value', app.state.config.RAG_EMBEDDING_ENGINE)) == 'ollama'
+            else str(getattr(app.state.config.RAG_AZURE_OPENAI_API_KEY, 'value', app.state.config.RAG_AZURE_OPENAI_API_KEY))
         )
     ),
-    embedding_batch_size=app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+    embedding_batch_size=_to_int(getattr(app.state.config.RAG_EMBEDDING_BATCH_SIZE, 'value', app.state.config.RAG_EMBEDDING_BATCH_SIZE), 1),
     azure_api_version=(
-        app.state.config.RAG_AZURE_OPENAI_API_VERSION
-        if app.state.config.RAG_EMBEDDING_ENGINE == 'azure_openai'
+        str(getattr(app.state.config.RAG_AZURE_OPENAI_API_VERSION, 'value', app.state.config.RAG_AZURE_OPENAI_API_VERSION))
+        if str(getattr(app.state.config.RAG_EMBEDDING_ENGINE, 'value', app.state.config.RAG_EMBEDDING_ENGINE)) == 'azure_openai'
         else None
     ),
-    enable_async=app.state.config.ENABLE_ASYNC_EMBEDDING,
-    concurrent_requests=app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS,
+    enable_async=bool(getattr(app.state.config.ENABLE_ASYNC_EMBEDDING, 'value', app.state.config.ENABLE_ASYNC_EMBEDDING)),
+    concurrent_requests=_to_int(getattr(app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS, 'value', app.state.config.RAG_EMBEDDING_CONCURRENT_REQUESTS), 1),
 )
 
 app.state.RERANKING_FUNCTION = get_reranking_function(
-    app.state.config.RAG_RERANKING_ENGINE,
-    app.state.config.RAG_RERANKING_MODEL,
+    str(getattr(app.state.config.RAG_RERANKING_ENGINE, 'value', app.state.config.RAG_RERANKING_ENGINE)),
+    str(getattr(app.state.config.RAG_RERANKING_MODEL, 'value', app.state.config.RAG_RERANKING_MODEL)),
     reranking_function=app.state.rf,
-    reranking_batch_size=app.state.config.RAG_RERANKING_BATCH_SIZE,
+    reranking_batch_size=_to_int(getattr(app.state.config.RAG_RERANKING_BATCH_SIZE, 'value', app.state.config.RAG_RERANKING_BATCH_SIZE), 1),
 )
 
 ########################################
@@ -1601,7 +1614,7 @@ if ENABLE_SCIM:
 try:
     audit_level = AuditLevel(AUDIT_LOG_LEVEL)
 except ValueError as e:
-    logger.error(f'Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}')
+    log.error(f'Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}')
     audit_level = AuditLevel.NONE
 
 if audit_level != AuditLevel.NONE:
@@ -1670,48 +1683,69 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
 
         models.append(model)
 
-    # Restrict dropdown presentation strictly to the 3 canonical models in priority order:
-    # 1. Wolinet Pro (Default Sovereign Conversational Flagship)
-    # 2. Wolinex Coder (Sovereign Code Intelligence)
-    # 3. Wolinet Max (Multimodal Frontier Heavy-Duty)
-    pro_model = next((m for m in models if 'pro' in str(m.get('id', '')).lower() or 'pro' in str(m.get('name', '')).lower()), None)
-    coder_model = next((m for m in models if any(k in str(m.get('id', '')).lower() or k in str(m.get('name', '')).lower() for k in ('coder', 'wolinex'))), None)
-    max_model = next((m for m in models if 'max' in str(m.get('id', '')).lower() or 'max' in str(m.get('name', '')).lower()), None)
+    # Deduplicate redundant lower-case / hyphenated aliases when Title Case display models exist
+    # (e.g. keep "Wolinet Pro", suppress "wolinet-pro"; keep "Wolinex Coder", suppress "wolinex-coder";
+    # keep "Secure Pro", suppress "secure-pro"; keep "Scorpio", suppress "scorpio")
+    existing_clean_names = {m.get('name') or m.get('id') for m in models}
+    
+    preferred_order = [
+        'Wolinet Pro',
+        'Wolinex Coder',
+        'Secure Pro',
+        'Wolinet Secure Pro',
+        'Wolinet Turbo Draft',
+        'Wolinet Max',
+        'Wolinet Max Pro',
+        'Scorpio',
+        'Scorpio Pro',
+    ]
 
-    canonical_models = []
-    if pro_model:
-        pro_model['id'] = 'Wolinet Pro'
-        pro_model['name'] = 'Wolinet Pro'
-        canonical_models.append(pro_model)
-    elif models:
-        canonical_models.append({'id': 'Wolinet Pro', 'name': 'Wolinet Pro', 'mode': 'chat'})
+    filtered_list = []
+    for m in models:
+        mid = str(m.get('id', ''))
+        
+        # Suppress raw lowercase aliases when the proper capitalized model exists
+        if mid in ('wolinet-pro', 'wolinex-coder', 'wolinet-coder') and any(k in existing_clean_names for k in ('Wolinet Pro', 'Wolinex Coder')):
+            continue
+        if mid in ('secure-pro', 'wolinet-secure-pro-alias') and 'Secure Pro' in existing_clean_names:
+            continue
+        if mid in ('wolinet-turbo-draft', 'turbo-draft') and 'Wolinet Turbo Draft' in existing_clean_names:
+            continue
+        if mid in ('wolinet-max', 'wolinet-turbo', 'wolinet-max-turbo') and 'Wolinet Max' in existing_clean_names:
+            continue
+        if mid in ('wolinet-max-pro',) and 'Wolinet Max Pro' in existing_clean_names:
+            continue
+        if mid in ('scorpio', 'scorpio-pro') and any(k in existing_clean_names for k in ('Scorpio', 'Scorpio Pro')):
+            continue
 
-    if coder_model:
-        coder_model['id'] = 'Wolinet Coder'
-        coder_model['name'] = 'Wolinex Coder'
-        canonical_models.append(coder_model)
-    elif models:
-        canonical_models.append({'id': 'Wolinet Coder', 'name': 'Wolinex Coder', 'mode': 'chat'})
+        filtered_list.append(m)
 
-    if max_model:
-        max_model['id'] = 'Wolinet Max'
-        max_model['name'] = 'Wolinet Max'
-        canonical_models.append(max_model)
-    elif models:
-        canonical_models.append({'id': 'Wolinet Max', 'name': 'Wolinet Max', 'mode': 'chat'})
+    models = filtered_list
 
-    models = canonical_models
+    # Ensure all sovereign flagships are present even if gateway cache had not completed sync
+    existing_ids = {m.get('id') for m in models}
+    flagship_placeholders = [
+        {'id': 'Wolinet Pro', 'name': 'Wolinet Pro', 'mode': 'chat', 'description': 'Sovereign Offline Reasoning & Chat Flagship'},
+        {'id': 'Wolinex Coder', 'name': 'Wolinex Coder', 'mode': 'chat', 'description': 'Sovereign High-Speed Code Intelligence'},
+        {'id': 'Secure Pro', 'name': 'Secure Pro', 'mode': 'chat', 'description': 'Sovereign AI Cyber Defense & 1Panel Infrastructure Guard'},
+        {'id': 'Wolinet Turbo Draft', 'name': 'Wolinet Turbo Draft', 'mode': 'chat', 'description': 'DFlash2 Speculative Acceleration Layer'},
+        {'id': 'Wolinet Max', 'name': 'Wolinet Max', 'mode': 'chat', 'description': 'Gemini Multimodal MoE Frontier'},
+        {'id': 'Wolinet Max Pro', 'name': 'Wolinet Max Pro', 'mode': 'chat', 'description': 'Moonshot Kimi K3.1 Pro MoE (1M Context)'},
+        {'id': 'Scorpio', 'name': 'Scorpio', 'mode': 'chat', 'description': 'DeepSeek V4.1 Flash Frontier'},
+        {'id': 'Scorpio Pro', 'name': 'Scorpio Pro', 'mode': 'chat', 'description': 'DeepSeek V4 Pro Deep Reasoner'},
+    ]
+    for fp in flagship_placeholders:
+        if fp['id'] not in existing_ids:
+            models.append(fp)
 
-    model_order_list = request.app.state.config.MODEL_ORDER_LIST or ['Wolinet Pro', 'Wolinet Coder', 'Wolinet Max']
-    if model_order_list:
-        model_order_dict = {model_id: i for i, model_id in enumerate(model_order_list)}
-        # Sort models by order list priority, with fallback for those not in the list
-        models.sort(
-            key=lambda model: (
-                model_order_dict.get(model.get('id', ''), float('inf')),
-                (model.get('name', '') or ''),
-            )
+    # Sort models by preferred priority order first, then alphabetically
+    order_dict = {name: i for i, name in enumerate(preferred_order)}
+    models.sort(
+        key=lambda m: (
+            order_dict.get(m.get('name') or m.get('id', ''), 100),
+            (m.get('name', '') or m.get('id', '')),
         )
+    )
 
     models = await get_filtered_models(models, user)
 
@@ -1870,6 +1904,11 @@ async def chat_completion(
         await get_all_models(request, user=user)
 
     model_id = form_data.get('model', None)
+    if not model_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Model ID is required',
+        )
     model_item = form_data.pop('model_item', {})
     tasks = form_data.pop('background_tasks', None)
 
@@ -2138,7 +2177,7 @@ async def chat_completion(
 
                     # Insert chat files from user message if any
                     user_message_files = user_message.get('files', [])
-                    if user_message_files:
+                    if user_message_files and user_message_id is not None:
                         try:
                             await Chats.insert_chat_files(
                                 chat_id,
@@ -2194,11 +2233,12 @@ async def chat_completion(
 
                     # Insert chat files from user message if any
                     user_message_files = user_message.get('files', [])
-                    if user_message_files:
+                    user_msg_id = user_message.get('id')
+                    if user_message_files and user_msg_id is not None:
                         try:
                             await Chats.insert_chat_files(
                                 chat_id,
-                                user_message.get('id'),
+                                user_msg_id,
                                 [
                                     file_item.get('id')
                                     for file_item in user_message_files
@@ -2271,7 +2311,12 @@ async def chat_completion(
             # chat:tasks:cancel, unblocking the frontend.
             if isinstance(response, JSONResponse) and response.status_code >= 400:
                 try:
-                    error_body = json.loads(response.body.decode('utf-8', 'replace'))
+                    body = (
+                        bytes(response.body)
+                        if isinstance(response.body, (bytes, memoryview, bytearray))
+                        else str(response.body).encode('utf-8')
+                    )
+                    error_body = json.loads(body.decode('utf-8', 'replace'))
                     detail = error_body.get('error', error_body) if isinstance(error_body, dict) else error_body
                     if isinstance(detail, dict):
                         detail = detail.get('message', detail.get('detail', str(detail)))
@@ -2865,8 +2910,9 @@ async def get_current_usage(user=Depends(get_verified_user)):
 
 
 # Initialize OAuth client manager with any MCP tool servers using OAuth 2.1
-if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
-    for tool_server_connection in app.state.config.TOOL_SERVER_CONNECTIONS:
+mcp_connections = getattr(app.state.config.TOOL_SERVER_CONNECTIONS, 'value', app.state.config.TOOL_SERVER_CONNECTIONS)
+if mcp_connections and isinstance(mcp_connections, list) and len(mcp_connections) > 0:
+    for tool_server_connection in mcp_connections:
         if tool_server_connection.get('type', 'openapi') == 'mcp':
             server_id = tool_server_connection.get('info', {}).get('id')
             auth_type = tool_server_connection.get('auth_type', 'none')
@@ -2905,7 +2951,7 @@ except Exception as e:
         SessionMiddleware,
         secret_key=WEBUI_SECRET_KEY,
         session_cookie='owui-session',
-        same_site=WEBUI_SESSION_COOKIE_SAME_SITE,
+        same_site=cast(Literal['lax', 'strict', 'none'], WEBUI_SESSION_COOKIE_SAME_SITE) if WEBUI_SESSION_COOKIE_SAME_SITE in ('lax', 'strict', 'none') else 'lax',
         https_only=WEBUI_SESSION_COOKIE_SECURE,
     )
 
@@ -3037,10 +3083,15 @@ async def oauth_client_callback(
     response: Response,
     user=Depends(get_verified_user),
 ):
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='User not authenticated',
+        )
     return await oauth_client_manager.handle_callback(
         request,
         client_id=client_id,
-        user_id=user.id if user else None,
+        user_id=str(user.id),
         response=response,
     )
 
@@ -3260,9 +3311,24 @@ LITELLM_MCP_URL = os.environ.get("LITELLM_MCP_URL", "http://127.0.0.1:4000/mcp")
 @app.api_route("/api/v1/mcp/status", methods=["GET"])
 async def get_mcp_hub_status(request: Request, user=Depends(get_admin_user)):
     """Returns connectivity and ping status for Sovereign MCP servers (Admin only)."""
-    results = {
-        "obscura": {"url": OBSCURA_MCP_URL, "online": False, "latency_ms": None, "info": None},
-        "litellm": {"url": LITELLM_MCP_URL, "online": False, "latency_ms": None, "status": "offline"},
+    obscura_status: dict[str, Any] = {
+        "url": OBSCURA_MCP_URL,
+        "online": False,
+        "latency_ms": None,
+        "info": None,
+        "status_code": None,
+        "error": None,
+    }
+    litellm_status: dict[str, Any] = {
+        "url": LITELLM_MCP_URL,
+        "online": False,
+        "latency_ms": None,
+        "status": "offline",
+        "error": None,
+    }
+    results: dict[str, Any] = {
+        "obscura": obscura_status,
+        "litellm": litellm_status,
         "tool_servers": [],
     }
 
@@ -3285,15 +3351,15 @@ async def get_mcp_hub_status(request: Request, user=Depends(get_admin_user)):
                 lat = round((time.time() - t0) * 1000, 1)
                 if resp.status == 200:
                     data = await resp.json()
-                    results["obscura"]["online"] = True
-                    results["obscura"]["latency_ms"] = lat
-                    results["obscura"]["info"] = data.get("result", {})
+                    obscura_status["online"] = True
+                    obscura_status["latency_ms"] = lat
+                    obscura_status["info"] = data.get("result", {})
                 else:
-                    results["obscura"]["online"] = False
-                    results["obscura"]["status_code"] = resp.status
+                    obscura_status["online"] = False
+                    obscura_status["status_code"] = resp.status
     except Exception as e:
-        results["obscura"]["online"] = False
-        results["obscura"]["error"] = str(e)
+        obscura_status["online"] = False
+        obscura_status["error"] = str(e)
 
     # 2. Ping LiteLLM MCP (port 4000)
     try:
@@ -3302,13 +3368,13 @@ async def get_mcp_hub_status(request: Request, user=Depends(get_admin_user)):
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(LITELLM_MCP_URL) as resp:
                 lat = round((time.time() - t0) * 1000, 1)
-                results["litellm"]["latency_ms"] = lat
+                litellm_status["latency_ms"] = lat
                 if resp.status in (200, 401):
-                    results["litellm"]["online"] = True
-                    results["litellm"]["status"] = "active"
+                    litellm_status["online"] = True
+                    litellm_status["status"] = "active"
     except Exception as e:
-        results["litellm"]["online"] = False
-        results["litellm"]["error"] = str(e)
+        litellm_status["online"] = False
+        litellm_status["error"] = str(e)
 
     # 3. Tool servers from config
     try:
