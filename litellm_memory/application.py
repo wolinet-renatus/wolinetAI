@@ -260,8 +260,15 @@ def create_app(settings=None, *, museum=None, gateway=None, start_workers=True, 
 
     def same_origin(request):
         origin = request.headers.get("origin")
-        if origin and origin.rstrip("/") != settings.public_base_url.rstrip("/"):
-            raise HTTPException(403, "Unexpected origin")
+        if origin:
+            clean_origin = origin.rstrip("/")
+            valid_origins = {
+                settings.public_base_url.rstrip("/"),
+                "http://localhost:8000",
+                "http://127.0.0.1:8000",
+            }
+            if clean_origin not in valid_origins:
+                raise HTTPException(403, "Unexpected origin")
         if request.headers.get("sec-fetch-site") == "cross-site":
             raise HTTPException(403, "Unexpected origin")
 
