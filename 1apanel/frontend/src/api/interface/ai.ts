@@ -1164,4 +1164,39 @@ export namespace AI {
         agentId: number;
         name: string;
     }
+
+    export interface AgentChatMessage {
+        role: 'system' | 'user' | 'assistant';
+        content: string;
+        timestamp?: number;
+    }
+
+    export interface AgentChatReq {
+        agentId?: number;
+        accountId?: number;
+        model?: string;
+        messages: AgentChatMessage[];
+        temperature?: number;
+        maxTokens?: number;
+    }
+
+    export interface AgentChatResp {
+        model: string;
+        content: string;
+        usageTokens: number;
+        durationMs: number;
+        agentName: string;
+    }
+
+    export interface AgentChatOptionsResp {
+        agents: AgentItem[];
+        models: AgentAccountModelItem[];
+        defaultModel: string;
+    }
+
+    export interface AgentAccountModelItem {
+        recordId?: number;
+        id: string;
+        name: string;
+    }
 }

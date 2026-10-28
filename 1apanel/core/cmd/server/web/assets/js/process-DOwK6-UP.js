@@ -1,0 +1,1 @@
+import{y as e}from"./useGlobalStore-C8m33Rto.js";var t=t=>e.post(`/process/stop`,t),n=t=>e.get(`/process/${t}`),r=()=>e.post(`/process/listening`);export{n,t as r,r as t};

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"maps"
 	"math"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -811,12 +812,24 @@ func skipCheckStatus(service types.ServiceConfig) bool {
 }
 
 func getContainerNames(install model.AppInstall) ([]string, error) {
+	if strings.TrimSpace(install.DockerCompose) == "" {
+		if install.ContainerName != "" {
+			return strings.Split(install.ContainerName, ","), nil
+		}
+		return nil, nil
+	}
 	envStr, err := coverEnvJsonToStr(install.Env)
 	if err != nil {
+		if install.ContainerName != "" {
+			return strings.Split(install.ContainerName, ","), nil
+		}
 		return nil, err
 	}
 	project, err := docker.GetComposeProject(install.Name, install.GetPath(), []byte(install.DockerCompose), []byte(envStr), true)
 	if err != nil {
+		if install.ContainerName != "" {
+			return strings.Split(install.ContainerName, ","), nil
+		}
 		return nil, err
 	}
 	containerMap := make(map[string]struct{})
@@ -1168,6 +1181,16 @@ func upApp(task *task.Task, appInstall *model.AppInstall, pullImages, useLifecyc
 }
 
 func rebuildApp(appInstall model.AppInstall) error {
+	if appInstall.DockerCompose == "" {
+		appInstall.Status = constant.StatusRebuilding
+		_ = appInstallRepo.Save(context.Background(), &appInstall)
+		go func() {
+			_ = rebuildSovereignApp(appInstall.Name, appInstall.HttpPort)
+			appInstall.Status = constant.StatusRunning
+			_ = appInstallRepo.Save(context.Background(), &appInstall)
+		}()
+		return nil
+	}
 	appInstall.Status = constant.StatusRebuilding
 	_ = appInstallRepo.Save(context.Background(), &appInstall)
 	go func() {
@@ -1414,7 +1437,23 @@ func synAppInstall(containers map[string]container.Summary, appInstall *model.Ap
 	oldStatus := appInstall.Status
 	containerNames := strings.Split(appInstall.ContainerName, ",")
 	if len(containers) == 0 {
+		if appInstall.HttpPort > 0 {
+			conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", appInstall.HttpPort), 2*time.Second)
+			if err == nil {
+				conn.Close()
+				appInstall.Status = constant.StatusRunning
+				appInstall.Message = ""
+				_ = appInstallRepo.Save(context.Background(), appInstall)
+				return
+			}
+		}
 		if appInstall.Status == constant.StatusUpErr && !force {
+			return
+		}
+		if strings.TrimSpace(appInstall.DockerCompose) == "" {
+			appInstall.Status = constant.StatusStopped
+			appInstall.Message = ""
+			_ = appInstallRepo.Save(context.Background(), appInstall)
 			return
 		}
 		appInstall.Status = constant.StatusError
@@ -1455,11 +1494,37 @@ func synAppInstall(containers map[string]container.Summary, appInstall *model.Ap
 			return
 		}
 	case restartingCount == total:
+		if appInstall.HttpPort > 0 {
+			conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", appInstall.HttpPort), 2*time.Second)
+			if err == nil {
+				conn.Close()
+				appInstall.Status = constant.StatusRunning
+				appInstall.Message = ""
+				_ = appInstallRepo.Save(context.Background(), appInstall)
+				return
+			}
+		}
 		appInstall.Status = constant.StatusRestarting
 	case pausedCount == total:
 		appInstall.Status = constant.StatusPaused
 	case len(notFoundNames) == total:
+		if appInstall.HttpPort > 0 {
+			conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", appInstall.HttpPort), 2*time.Second)
+			if err == nil {
+				conn.Close()
+				appInstall.Status = constant.StatusRunning
+				appInstall.Message = ""
+				_ = appInstallRepo.Save(context.Background(), appInstall)
+				return
+			}
+		}
 		if appInstall.Status == constant.StatusUpErr && !force {
+			return
+		}
+		if strings.TrimSpace(appInstall.DockerCompose) == "" {
+			appInstall.Status = constant.StatusStopped
+			appInstall.Message = ""
+			_ = appInstallRepo.Save(context.Background(), appInstall)
 			return
 		}
 		appInstall.Status = constant.StatusError
@@ -1612,6 +1677,9 @@ func handleInstalled(appInstallList []model.AppInstall, updated, sync, checkUpda
 			installDTO.CanUpdate = installed.App.CrossVersionUpdate
 		} else {
 			installDTO.CanUpdate = isNewerAppVersion(installed.App.Key, lastVersion, installed.Version)
+		}
+		if IsSovereignApp(installed.Name) {
+			installDTO.CanUpdate = true
 		}
 
 		if updated {

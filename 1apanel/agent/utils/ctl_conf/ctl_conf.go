@@ -8,23 +8,61 @@ import (
 
 const defaultFile = "/usr/local/bin/1pctl"
 
+func getFallback(key string) string {
+	switch key {
+	case "BASE_DIR":
+		if dir := os.Getenv("PANEL_BASE_DIR"); dir != "" {
+			return dir
+		}
+		return "./data"
+	case "ORIGINAL_PORT":
+		return "9999"
+	case "ORIGINAL_VERSION":
+		return "v2.0.0"
+	case "ORIGINAL_USERNAME":
+		return "admin"
+	case "ORIGINAL_PASSWORD":
+		return "wolinet"
+	case "ORIGINAL_ENTRANCE":
+		return ""
+	case "LANGUAGE":
+		return "en"
+	default:
+		return ""
+	}
+}
+
 func Load(key string) string {
-	info, err := LoadFromFile(defaultFile, key)
-	if err != nil {
-		panic(err)
+	if val := os.Getenv(key); val != "" {
+		return val
 	}
-	if len(info) == 0 || info == `""` {
-		panic(fmt.Sprintf("error `%s` find in %s", key, defaultFile))
+	cfgFile := defaultFile
+	if custom := os.Getenv("PANEL_CTL_FILE"); custom != "" {
+		cfgFile = custom
 	}
-	return info
+	info, err := LoadFromFile(cfgFile, key)
+	if err == nil && len(info) > 0 && info != `""` {
+		return info
+	}
+	if fallback := getFallback(key); fallback != "" {
+		return fallback
+	}
+	return ""
 }
 
 func LoadWithoutPanic(key string) string {
-	info, err := LoadFromFile(defaultFile, key)
-	if err != nil {
-		return ""
+	if val := os.Getenv(key); val != "" {
+		return val
 	}
-	return info
+	cfgFile := defaultFile
+	if custom := os.Getenv("PANEL_CTL_FILE"); custom != "" {
+		cfgFile = custom
+	}
+	info, err := LoadFromFile(cfgFile, key)
+	if err == nil && len(info) > 0 && info != `""` {
+		return info
+	}
+	return getFallback(key)
 }
 
 func LoadFromFile(filePath, key string) (string, error) {

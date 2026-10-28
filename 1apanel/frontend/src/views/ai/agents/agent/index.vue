@@ -352,9 +352,18 @@ const headerButtons = [
         label: i18n.global.t('aiTools.agents.agent'),
         path: '/ai/agents/agent',
     },
+    {
+        label: i18n.global.t('aiTools.chat.title'),
+        path: '/ai/chat',
+    },
 ];
 
 const buttons = [
+    {
+        label: i18n.global.t('aiTools.chat.title'),
+        click: (row: AI.AgentItem) => router.push({ path: '/ai/chat', query: { agentId: String(row.id) } }),
+        show: (row: AI.AgentItem) => row.status === 'Running',
+    },
     {
         label: i18n.global.t('menu.config'),
         click: (row: AI.AgentItem) => openConfig(row),

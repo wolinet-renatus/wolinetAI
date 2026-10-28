@@ -1,0 +1,1 @@
+import{pr as e,vr as t,xr as n}from"./vendor-element-plus-Dy6H9o-F.js";import{Yn as r,a as i,rr as a}from"./useGlobalStore-CmMFzCVm.js";e();var o=(e,o)=>{let{currentNode:s}=a(r()),c=i(o.scope?[s,o.scope]:[s],e),l=!1;n(()=>{l=!0}),t(()=>{if(l)return l=!1,c(),o.onRevisit()})};export{o as t};

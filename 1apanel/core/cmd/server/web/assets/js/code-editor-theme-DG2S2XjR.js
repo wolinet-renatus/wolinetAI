@@ -1,0 +1,1 @@
+var e=`code-theme`,t=e=>e?`vs-dark`:`vs`,n=(e,n)=>e===`vs`||e===`vs-dark`||e===`hc-black`?e:t(n);export{t as n,n as r,e as t};

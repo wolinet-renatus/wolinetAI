@@ -20,6 +20,7 @@ type DashboardBase struct {
 	VirtualizationSystem string `json:"virtualizationSystem"`
 	IpV4Addr             string `json:"ipV4Addr"`
 	SystemProxy          string `json:"systemProxy"`
+	HttpProxy            string `json:"httpProxy"`
 
 	CPUCores        int     `json:"cpuCores"`
 	CPULogicalCores int     `json:"cpuLogicalCores"`

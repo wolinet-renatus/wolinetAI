@@ -368,16 +368,16 @@
                                 <el-button class="btn" @click="calculateSize(req.path)" :loading="disableBtn">
                                     {{ $t('file.calculate') }}
                                 </el-button>
-                                <template v-if="hostMount.length == 1">
+                                <template v-if="hostMount && hostMount.length === 1">
                                     <el-button class="btn" @click.stop="jump(hostMount[0]?.path)">
-                                        {{ hostMount[0]?.path }} ({{ $t('file.root') }})
+                                        {{ hostMount[0]?.path || '/' }} ({{ $t('file.root') }})
                                         {{ formatFileSize(hostMount[0]?.free) }}
                                     </el-button>
                                 </template>
-                                <template v-else>
+                                <template v-else-if="hostMount && hostMount.length > 1">
                                     <el-dropdown>
                                         <el-button class="btn">
-                                            {{ hostMount[0]?.path }} ({{ $t('file.root') }})
+                                            {{ hostMount[0]?.path || '/' }} ({{ $t('file.root') }})
                                             {{ formatFileSize(hostMount[0]?.free) }}
                                         </el-button>
                                         <template #dropdown>
@@ -2289,7 +2289,7 @@ const isDecompressFile = (row: File.File) => {
 const getHostMount = async () => {
     try {
         const res = await searchHostMount();
-        hostMount.value = res.data;
+        hostMount.value = res.data || [];
     } catch (error) {
         console.error('Error fetching host mount:', error);
     }

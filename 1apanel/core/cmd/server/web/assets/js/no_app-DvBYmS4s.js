@@ -1,0 +1,1 @@
+var e=`/assets/svg/no_app-CSPDjZB-.svg`;export{e as t};

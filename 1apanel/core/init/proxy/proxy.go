@@ -16,9 +16,18 @@ import (
 	"wolinet.ai/1apanel/core/utils/publicshare"
 )
 
-const SockPath = "/etc/1panel/agent.sock"
+func GetSocketPath() string {
+	if sock := os.Getenv("AGENT_SOCK_PATH"); sock != "" {
+		return sock
+	}
+	if _, err := os.Stat("/etc/1panel/agent.sock"); err == nil {
+		return "/etc/1panel/agent.sock"
+	}
+	return "/tmp/1panel/agent.sock"
+}
 
 var (
+	SockPath        = GetSocketPath()
 	LocalAgentProxy *httputil.ReverseProxy
 )
 
@@ -27,7 +36,7 @@ func Init() {
 		Timeout: 5 * time.Second,
 	}
 	dialUnix := func(ctx context.Context, network, addr string) (net.Conn, error) {
-		return dialer.DialContext(ctx, "unix", SockPath)
+		return dialer.DialContext(ctx, "unix", GetSocketPath())
 	}
 	transport := &http.Transport{
 		DialContext:         dialUnix,

@@ -1,0 +1,1 @@
+var e={template:`<div></div>`},t={...Object.assign({}),...Object.assign({})};function n(e){for(let n in t)if(n.endsWith(e))return t[n];return null}async function r(t){let r=n(t);return r&&(await r()).default||e}export{r as t};

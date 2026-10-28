@@ -72,23 +72,28 @@ type firewallRuleBatchItem struct {
 }
 
 func LoadPanelPort() string {
-	if !global.IsMaster {
+	if global.IsMaster && global.CoreDB != nil {
+		var portSetting model.Setting
+		if err := global.CoreDB.Where("key = ?", "ServerPort").First(&portSetting).Error; err == nil && portSetting.Value != "" {
+			return portSetting.Value
+		}
+	}
+	if global.CONF.Base.Port != "" {
 		return global.CONF.Base.Port
 	}
-	var portSetting model.Setting
-	_ = global.CoreDB.Where("key = ?", "ServerPort").First(&portSetting).Error
-	return portSetting.Value
+	return "9999"
 }
 
 func SyncPanelPortWhitelist() error {
 	firewallWhitelistMu.Lock()
 	defer firewallWhitelistMu.Unlock()
-	portValue := global.CONF.Base.Port
-	if global.IsMaster {
-		var err error
-		portValue, err = settingRepo.GetCoreValueByKey("ServerPort")
-		if err != nil {
-			return err
+	portValue := "9999"
+	if global.CONF.Base.Port != "" {
+		portValue = global.CONF.Base.Port
+	}
+	if global.IsMaster && settingRepo != nil {
+		if val, err := settingRepo.GetCoreValueByKey("ServerPort"); err == nil && val != "" {
+			portValue = val
 		}
 	}
 	port, err := strconv.ParseUint(portValue, 10, 16)

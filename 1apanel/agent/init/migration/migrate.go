@@ -116,6 +116,8 @@ func agentDBMigrations() []*gormigrate.Migration {
 		migrations.AddVLLMRequestMetrics,
 		migrations.AddVLLMSampleInterval,
 		migrations.InitWolinetAgentAndProvider,
+		migrations.InitSovereignDatabases,
+		migrations.InitSovereignEcosystem,
 	}
 }
 

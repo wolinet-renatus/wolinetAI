@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"syscall"
 
 	"github.com/gin-gonic/gin"
@@ -34,13 +35,21 @@ import (
 )
 
 const (
-	masterSocketDir          = "/etc/1panel"
-	masterSocketPath         = masterSocketDir + "/agent.sock"
 	masterSocketDirPerm      = 0o700
 	masterSocketFilePerm     = 0o600
 	masterSocketDirPermMask  = 0o077
 	masterSocketFilePermMask = 0o077
 )
+
+func getMasterSocketPaths() (string, string) {
+	if sock := os.Getenv("AGENT_SOCK_PATH"); sock != "" {
+		return filepath.Dir(sock), sock
+	}
+	if os.Geteuid() == 0 {
+		return "/etc/1panel", "/etc/1panel/agent.sock"
+	}
+	return "/tmp/1panel", "/tmp/1panel/agent.sock"
+}
 
 func prepareMasterSocketDir(dir string) error {
 	if err := os.MkdirAll(dir, masterSocketDirPerm); err != nil {
@@ -137,20 +146,21 @@ func Start() {
 	}
 
 	if global.IsMaster {
-		global.LOG.Infof("agent startup: master mode, preparing unix socket %s", masterSocketPath)
-		if err := prepareMasterSocketDir(masterSocketDir); err != nil {
+		sockDir, sockPath := getMasterSocketPaths()
+		global.LOG.Infof("agent startup: master mode, preparing unix socket %s", sockPath)
+		if err := prepareMasterSocketDir(sockDir); err != nil {
 			panic(err)
 		}
-		_ = os.Remove(masterSocketPath)
-		listener, err := net.Listen("unix", masterSocketPath)
+		_ = os.Remove(sockPath)
+		listener, err := net.Listen("unix", sockPath)
 		if err != nil {
 			panic(err)
 		}
-		if err := secureMasterSocket(masterSocketPath); err != nil {
+		if err := secureMasterSocket(sockPath); err != nil {
 			_ = listener.Close()
 			panic(err)
 		}
-		global.LOG.Infof("agent startup: listening on unix socket %s", masterSocketPath)
+		global.LOG.Infof("agent startup: listening on unix socket %s", sockPath)
 		business.Init()
 		global.LOG.Info("agent startup: business initialized")
 		_ = server.Serve(listener)

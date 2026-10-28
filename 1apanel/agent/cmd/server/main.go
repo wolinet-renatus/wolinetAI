@@ -34,6 +34,11 @@ import (
 // @description - `1Panel-Timestamp` is the Unix timestamp of the current time in seconds.
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "PANIC IN MAIN: %v\n", r)
+		}
+	}()
 	if err := cmd.RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

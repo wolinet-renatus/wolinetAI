@@ -20,6 +20,16 @@ import (
 	"wolinet.ai/1apanel/core/i18n"
 )
 
+func getSocketPath() string {
+	if sock := os.Getenv("AGENT_SOCK_PATH"); sock != "" {
+		return sock
+	}
+	if _, err := os.Stat("/etc/1panel/agent.sock"); err == nil {
+		return "/etc/1panel/agent.sock"
+	}
+	return "/tmp/1panel/agent.sock"
+}
+
 func NewLocalClient(reqUrl, reqMethod string, body io.Reader, ctx *gin.Context) (interface{}, error) {
 	client := NewReusableClient()
 	defer client.CloseIdleConnections()
@@ -27,7 +37,7 @@ func NewLocalClient(reqUrl, reqMethod string, body io.Reader, ctx *gin.Context) 
 }
 
 func NewLocalClientWithContext(requestContext context.Context, reqURL, reqMethod string, body io.Reader, ctx *gin.Context, timeout time.Duration) (interface{}, error) {
-	client := newReusableClientWithTimeout("/etc/1panel/agent.sock", timeout)
+	client := newReusableClientWithTimeout(getSocketPath(), timeout)
 	defer client.CloseIdleConnections()
 	return client.RequestWithContext(requestContext, reqURL, reqMethod, body, ctx)
 }
@@ -38,7 +48,7 @@ type ReusableClient struct {
 }
 
 func NewReusableClient() *ReusableClient {
-	return newReusableClient("/etc/1panel/agent.sock")
+	return newReusableClient(getSocketPath())
 }
 
 func newReusableClient(sockPath string) *ReusableClient {

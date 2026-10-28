@@ -815,3 +815,31 @@ type AgentSkillUninstallReq struct {
 	AgentID uint   `json:"agentId" validate:"required"`
 	Name    string `json:"name" validate:"required"`
 }
+
+type AgentChatMessage struct {
+	Role    string `json:"role" validate:"required"`
+	Content string `json:"content" validate:"required"`
+}
+
+type AgentChatReq struct {
+	AgentID     uint               `json:"agentId"`
+	AccountID   uint               `json:"accountId"`
+	Model       string             `json:"model"`
+	Messages    []AgentChatMessage `json:"messages" validate:"required,min=1"`
+	Temperature *float64           `json:"temperature"`
+	MaxTokens   int                `json:"maxTokens"`
+}
+
+type AgentChatResp struct {
+	Model       string `json:"model"`
+	Content     string `json:"content"`
+	UsageTokens int    `json:"usageTokens"`
+	DurationMs  int64  `json:"durationMs"`
+	AgentName   string `json:"agentName"`
+}
+
+type AgentChatOptionsResp struct {
+	Agents       []AgentItem         `json:"agents"`
+	Models       []AgentAccountModel `json:"models"`
+	DefaultModel string              `json:"defaultModel"`
+}

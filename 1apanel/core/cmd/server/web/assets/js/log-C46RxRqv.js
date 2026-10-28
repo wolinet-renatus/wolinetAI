@@ -1,0 +1,1 @@
+import{Tr as e,cr as t,ir as n,pr as r,ur as i}from"./vendor-element-plus-Dy6H9o-F.js";import{t as a}from"./ssh-BkQLUEcX.js";import{t as o}from"./log-D5x_sVwX.js";r();var s=i({__name:`index`,setup(r){return(r,i)=>(e(),n(`div`,null,[t(a),t(o)]))}});export{s as default};

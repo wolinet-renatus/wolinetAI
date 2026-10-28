@@ -1,0 +1,1 @@
+import{x as e}from"./languageConfigurationRegistry-DMCmTLKK.js";var t=class{static insert(t,n){return{range:new e(t.lineNumber,t.column,t.lineNumber,t.column),text:n,forceMoveMarkers:!0}}static delete(e){return{range:e,text:null}}static replace(e,t){return{range:e,text:t}}static replaceMove(e,t){return{range:e,text:t,forceMoveMarkers:!0}}};export{t};

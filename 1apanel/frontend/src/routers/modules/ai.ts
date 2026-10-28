@@ -32,15 +32,20 @@ const aiRouter = {
             },
         },
         {
+            path: '/ai/chat',
+            name: 'AIChat',
+            component: () => import('@/views/ai/chat/index.vue'),
+            meta: {
+                icon: 'p-ai-menu',
+                title: 'aiTools.chat.title',
+                permission: 'ai_agent_view',
+            },
+        },
+        {
             path: '/ai/model/local',
             hidden: true,
             name: 'LocalModel',
-            component: () => import('@/views/ai/model/index.vue'),
-            meta: {
-                title: 'aiTools.model.localModel',
-                activeMenu: '/ai/model/account',
-                permission: 'ai_model_view',
-            },
+            redirect: '/ai/model/account',
         },
         {
             path: '/ai/mcp',

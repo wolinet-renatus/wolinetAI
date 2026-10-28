@@ -1,0 +1,1 @@
+var e=[];function t(t){e.push(t)}function n(){return e.slice(0)}export{t as n,n as t};
