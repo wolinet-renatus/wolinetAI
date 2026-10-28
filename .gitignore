@@ -109,6 +109,8 @@ coverage/
 xcuserdata/
 DerivedData/
 wolinet-cli
+bin/1apanel
+bin/1panel-agent
 target/
 **/target/
 orchestrator/1apanel/agent/bin/
