@@ -123,7 +123,13 @@ func upgradeInstall(req request.AppInstallUpgrade) error {
 	if install.Version == detail.Version {
 		return errors.New("two version is same")
 	}
-
+	if install.DockerCompose == "" {
+		releaseLock = false
+		go func() {
+			defer appUpgradeLocks.Delete(install.ID)
+		}()
+		return upgradeSovereignApp(&install, detail, req)
+	}
 	upgradeTask, err := task.NewTaskWithOps(install.Name, task.TaskUpgrade, task.TaskScopeApp, req.TaskID, install.ID)
 	if err != nil {
 		return err

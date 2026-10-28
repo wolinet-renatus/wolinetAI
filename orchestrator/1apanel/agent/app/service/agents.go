@@ -110,6 +110,8 @@ type IAgentService interface {
 	InstallMarketPlugin(req dto.AgentPluginMarketInstallReq) error
 	OperatePlugin(req dto.AgentPluginOperateReq) error
 	ApproveChannelPairing(req dto.AgentChannelPairingApproveReq) error
+	ChatWithAgent(req dto.AgentChatReq) (*dto.AgentChatResp, error)
+	GetChatOptions() (*dto.AgentChatOptionsResp, error)
 }
 
 type batchUpgradePlan struct {

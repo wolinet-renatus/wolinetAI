@@ -395,6 +395,21 @@ const buttons = [
         },
     },
     {
+        label: i18n.global.t('commons.button.upgrade'),
+        click: (row: any) => {
+            openOperate(row, 'upgrade');
+        },
+        permission: true,
+        disabled: (row: any) => {
+            return (
+                row.status === 'DownloadErr' ||
+                row.status === 'Upgrading' ||
+                row.status === 'Rebuilding' ||
+                row.status === 'Uninstalling'
+            );
+        },
+    },
+    {
         label: i18n.global.t('commons.button.uninstall'),
         click: (row: any) => {
             openOperate(row, 'delete');

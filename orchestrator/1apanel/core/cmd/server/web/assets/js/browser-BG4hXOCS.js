@@ -1,0 +1,1 @@
+var e=e=>{let t=/^https?:\/\/([a-f0-9:]+):(\d+)(\/?.*)?$/i;try{if(t.test(e)){let n=e.match(t);if(n){let t=n[1],r=n[2],i=n[3]||``;e=`${e.startsWith(`https`)?`https`:`http`}://[${t}]:${r}${i}`}}window.open(e,`_blank`)}catch{}},t=e=>new Promise(t=>{let n=new Image;n.onload=()=>t(e),n.onerror=()=>t(e),n.src=e});export{e as n,t};

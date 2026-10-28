@@ -94,16 +94,55 @@ EOF
 sysctl -p /etc/sysctl.d/99-wolinet.conf >/dev/null 2>&1 || true
 echo -e "   ${GREEN}✓ Kernel limits tuned: memlock=unlimited, max_map_count=262144${NC}"
 
-# 4. Generate & Install Systemd Unit File
-echo -e "\n${BOLD}[3/4] Installing /etc/systemd/system/1apanel.service...${NC}"
+# 4. Generate & Install Systemd Unit Files (Agent & Core)
+echo -e "\n${BOLD}[3/4] Installing /etc/systemd/system/1panel-agent.service and 1apanel.service...${NC}"
+
+AGENT_SERVICE_FILE="/etc/systemd/system/1panel-agent.service"
+AGENT_BINARY_PATH="${WOLINET_ROOT}/bin/1panel-agent"
+
+cat > "$AGENT_SERVICE_FILE" <<EOF
+[Unit]
+Description=Wolinet DEC 1Panel Agent Node Daemon & AI Supervisor
+Documentation=https://wolinet.ai/docs
+After=network.target network-online.target podman.socket
+Wants=network-online.target podman.socket
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=${WOLINET_ROOT}
+ExecStartPre=/usr/bin/install -d -m 0700 -o root -g root /etc/1panel
+ExecStartPre=/usr/bin/install -d -m 0755 -o root -g root /var/lib/wolinet/data/1panel/db
+ExecStart=${AGENT_BINARY_PATH}
+Restart=always
+RestartSec=5s
+
+Environment=BASE_DIR=/var/lib/wolinet/data/1panel
+Environment=ORIGINAL_PORT=8888
+Environment=ORIGINAL_VERSION=v2.0.0
+Environment=ORIGINAL_USERNAME=admin
+Environment=ORIGINAL_PASSWORD=wolinet
+Environment=LANGUAGE=en
+Environment=DOCKER_HOST=unix://${PODMAN_SOCK}
+Environment=CONTAINER_HOST=unix://${PODMAN_SOCK}
+
+LimitNOFILE=65535
+LimitNPROC=65535
+TasksMax=infinity
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 SERVICE_FILE="/etc/systemd/system/1apanel.service"
 
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=Wolinet DEC 1Panel Control Plane & Hardware Supervisor
 Documentation=https://wolinet.ai/docs
-After=network.target network-online.target podman.socket
-Wants=network-online.target podman.socket
+After=network.target network-online.target podman.socket 1panel-agent.service
+Wants=network-online.target podman.socket 1panel-agent.service
 
 [Service]
 Type=simple
@@ -138,20 +177,22 @@ EOF
 
 echo -e "   -> Reloading systemd daemon..."
 systemctl daemon-reload
-echo -e "   -> Enabling 1apanel.service on boot..."
-systemctl enable 1apanel.service
-echo -e "   -> Starting 1apanel.service..."
+echo -e "   -> Enabling 1panel-agent.service and 1apanel.service on boot..."
+systemctl enable 1panel-agent.service 1apanel.service
+echo -e "   -> Starting 1panel-agent.service and 1apanel.service..."
+systemctl restart 1panel-agent.service
+sleep 1
 systemctl restart 1apanel.service
 
 # 5. Service Status Verification
 echo -e "\n${BOLD}[4/4] Verifying Service Health & Sockets...${NC}"
 sleep 2
 
-if systemctl is-active --quiet 1apanel.service; then
-    echo -e "   ${GREEN}✓ 1apanel.service is ACTIVE and running as host root daemon.${NC}"
+if systemctl is-active --quiet 1apanel.service && systemctl is-active --quiet 1panel-agent.service; then
+    echo -e "   ${GREEN}✓ 1panel-agent.service & 1apanel.service are ACTIVE and running as host daemons.${NC}"
 else
-    echo -e "   ${RED}[!] 1apanel.service failed to enter active state.${NC}"
-    systemctl status 1apanel.service --no-pager
+    echo -e "   ${RED}[!] 1apanel services failed to enter active state.${NC}"
+    systemctl status 1panel-agent.service 1apanel.service --no-pager
     exit 1
 fi
 

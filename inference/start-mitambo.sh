@@ -177,61 +177,37 @@ try:
     running_models = client.list_models()
     print(f'==> [mitambo-init] Currently active models: {list(running_models.keys())}')
 
-    # 4. Auto-launch Wolinet Pro (Qwen 2.5 1.5B) if not running
-    if "wolinet-pro" not in running_models and "qwen2.5-instruct" not in running_models:
-        qwen_src = "/root/.xinference/cache/v2/qwen2.5-instruct-ggufv2-1_5b-q4_k_m/qwen2.5-1.5b-instruct-q4_k_m.gguf"
-        if os.path.exists(qwen_src):
-            try:
-                qwen_alt_dir = "/root/.xinference/cache/v2/qwen2_5-instruct-ggufv2-1_5b-q4_k_m"
-                os.makedirs(qwen_alt_dir, exist_ok=True)
-                qwen_alt = os.path.join(qwen_alt_dir, "qwen2.5-1.5b-instruct-q4_k_m.gguf")
-                if not os.path.exists(qwen_alt) or os.path.getsize(qwen_alt) != os.path.getsize(qwen_src):
-                    import shutil
-                    shutil.copyfile(qwen_src, qwen_alt)
+    # 4. Auto-launch Sovereign Wolinex Coder & Wolinet Pro (DeepSeek-R1 Distill Qwen 1.5B Uncensored)
+    candidate_paths = [
+        "/models/llm/wolinet-brain-r1-1.5b.gguf",
+        "/Users/apple/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf",
+        os.path.expanduser("~/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf"),
+    ]
+    r1_src = next((p for p in candidate_paths if os.path.exists(p)), None)
 
-                print("==> [mitambo-init] Auto-launching Wolinet Pro (Qwen 2.5 1.5B)...")
+    for uid in ("wolinex-coder", "wolinet-pro"):
+        if uid not in running_models and r1_src:
+            try:
+                print(f"==> [mitambo-init] Auto-launching {uid} from {r1_src}...")
                 client.launch_model(
-                    model_name="qwen2.5-instruct",
-                    model_uid="wolinet-pro",
+                    model_name="deepseek-r1-distill-qwen",
+                    model_uid=uid,
                     model_engine="llama.cpp",
                     model_format="ggufv2",
                     model_size_in_billions="1_5",
-                    quantization="q4_k_m",
-                    model_path=qwen_src,
+                    quantization="Q4_K_M",
+                    model_path=r1_src,
                     n_gpu_layers=0,
-                    n_ctx=4096,
+                    n_ctx=32768,
                     n_parallel=1,
                     n_threads=int(os.environ.get("XINFERENCE_THREADS", "8")),
                     n_batch=2048,
                     n_ubatch=512,
                     cache_ram_mib=8192,
                 )
-                print("==> [mitambo-init] Wolinet Pro auto-launched successfully.")
+                print(f"==> [mitambo-init] {uid} (DeepSeek-R1 Distill Qwen 1.5B Uncensored) auto-launched successfully.")
             except Exception as pe:
-                print(f"==> [mitambo-init] Notice launching Wolinet Pro: {pe}")
-
-    # 5. Auto-launch Wolinet Coder (DeepSeek Coder 1.3B) if not running
-    if "deepseek-coder-instruct" not in running_models:
-        try:
-            print("==> [mitambo-init] Auto-launching Wolinet Coder (DeepSeek Coder 1.3B)...")
-            client.launch_model(
-                model_name="deepseek-coder-instruct",
-                model_uid="deepseek-coder-instruct",
-                model_engine="llama.cpp",
-                model_format="ggufv2",
-                model_size_in_billions="1_3",
-                quantization="Q4_K_M",
-                n_gpu_layers=0,
-                n_ctx=4096,
-                n_parallel=1,
-                n_threads=int(os.environ.get("XINFERENCE_THREADS", "8")),
-                n_batch=2048,
-                n_ubatch=512,
-                cache_ram_mib=4096,
-            )
-            print("==> [mitambo-init] Wolinet Coder auto-launched successfully.")
-        except Exception as ce:
-            print(f"==> [mitambo-init] Notice launching Wolinet Coder: {ce}")
+                print(f"==> [mitambo-init] Notice launching {uid}: {pe}")
 
     running_models = client.list_models()
     print(f'==> [mitambo-init] Active Xinference models now: {list(running_models.keys())}')

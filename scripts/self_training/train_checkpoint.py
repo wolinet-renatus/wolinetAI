@@ -125,8 +125,8 @@ class CheckpointTrainer:
         checkpoint_meta = {
             "model_name": "Wolinet Coder v2",
             "model_id": "wolinet-coder-v2",
-            "model_family": "qwen2.5-coder-instruct",
-            "base_checkpoint": "Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf",
+            "model_family": "deepseek-r1-distill-qwen",
+            "base_checkpoint": "wolinet-brain-r1-1.5b.gguf",
             "target_device": self.device,
             "training_samples": len(dataset),
             "initial_loss": loss_history[0] if loss_history else 2.45,

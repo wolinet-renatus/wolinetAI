@@ -1,4 +1,4 @@
-<script lang="ts">
+ <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { WEBUI_NAME, showSidebar, user, mobile } from '$lib/stores';
@@ -310,7 +310,7 @@ print(res.json())`;
 			</div>
 
 			<div class="p-4 rounded-xl border border-gray-200/80 dark:border-gray-800 bg-white/70 dark:bg-gray-850/60 shadow-xs">
-				<div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">LiteLLM Gateway MCP</div>
+				<div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Wolinet AI Gateway MCP</div>
 				<div class="mt-2 flex items-center justify-between">
 					<div class="text-xl font-bold {hubStatus?.litellm?.online ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500'}">
 						{hubStatus?.litellm?.online ? 'Online' : 'Offline'}
@@ -424,7 +424,7 @@ print(res.json())`;
 							</div>
 							<div>
 								<div class="flex items-center gap-2">
-									<h3 class="font-bold text-base text-gray-900 dark:text-white">LiteLLM Gateway Server</h3>
+									<h3 class="font-bold text-base text-gray-900 dark:text-white">Wolinet AI Gateway Server</h3>
 									<span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400">
 										Orchestrator
 									</span>

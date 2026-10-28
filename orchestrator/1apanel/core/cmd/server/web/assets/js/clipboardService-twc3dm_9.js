@@ -1,0 +1,1 @@
+import{Ot as e}from"./configuration-D3IDXCcy.js";var t=e(`clipboardService`);export{t};

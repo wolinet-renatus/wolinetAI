@@ -256,7 +256,7 @@ func (b *BaseApi) GetLoginSetting(c *gin.Context) {
 		return
 	}
 	ip := common.GetRealClientIP(c)
-	needCaptcha := global.IPTracker.NeedCaptcha(ip)
+	needCaptcha := global.IPTracker.NeedCaptcha(ip) && ip != "127.0.0.1" && ip != "::1"
 	res := &dto.LoginSetting{
 		IsDemo:        global.CONF.Base.IsDemo,
 		IsIntl:        global.CONF.Base.Edition == "intl",

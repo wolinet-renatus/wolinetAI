@@ -402,3 +402,11 @@ export const uninstallAgentSkill = (req: AI.AgentSkillUninstallReq) => {
 export const approveAgentChannelPairing = (req: AI.AgentChannelPairingApproveReq) => {
     return http.post(`/ai/agents/channel/pairing/approve`, req, TimeoutEnum.T_5M);
 };
+
+export const getAgentChatOptions = () => {
+    return http.post<AI.AgentChatOptionsResp>(`/ai/agents/chat/options`);
+};
+
+export const chatWithAgent = (req: AI.AgentChatReq) => {
+    return http.post<AI.AgentChatResp>(`/ai/agents/chat`, req, TimeoutEnum.T_5M);
+};

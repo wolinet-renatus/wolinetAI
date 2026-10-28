@@ -30,14 +30,27 @@ type LocalCommand struct {
 }
 
 func NewCommand(name string, arg ...string) (*LocalCommand, error) {
+	return NewCommandWithDir("", name, arg...)
+}
+
+func NewCommandWithDir(dir string, name string, arg ...string) (*LocalCommand, error) {
 	cmd := exec.Command(name, arg...)
 	if term := os.Getenv("TERM"); term != "" {
 		cmd.Env = append(os.Environ(), "TERM="+term)
 	} else {
-		cmd.Env = append(os.Environ(), "TERM=xterm")
+		cmd.Env = append(os.Environ(), "TERM=xterm-256color")
 	}
-	homeDir, _ := os.UserHomeDir()
-	cmd.Dir = homeDir
+	if dir != "" {
+		if fi, err := os.Stat(dir); err == nil && fi.IsDir() {
+			cmd.Dir = dir
+		} else {
+			homeDir, _ := os.UserHomeDir()
+			cmd.Dir = homeDir
+		}
+	} else {
+		homeDir, _ := os.UserHomeDir()
+		cmd.Dir = homeDir
+	}
 
 	pty, err := pty.Start(cmd)
 	if err != nil {
@@ -54,6 +67,7 @@ func NewCommand(name string, arg ...string) (*LocalCommand, error) {
 
 	return lcmd, nil
 }
+
 
 func (lcmd *LocalCommand) Read(p []byte) (n int, err error) {
 	return lcmd.pty.Read(p)

@@ -123,5 +123,7 @@ func (a *AIToolsRouter) InitRouter(Router *gin.RouterGroup) {
 		aiToolsRouter.POST("/agents/skills/install", baseApi.InstallAgentSkill)
 		aiToolsRouter.POST("/agents/skills/uninstall", baseApi.UninstallAgentSkill)
 		aiToolsRouter.POST("/agents/channel/pairing/approve", baseApi.ApproveAgentChannelPairing)
+		aiToolsRouter.POST("/agents/chat", baseApi.ChatWithAgent)
+		aiToolsRouter.POST("/agents/chat/options", baseApi.GetChatOptions)
 	}
 }

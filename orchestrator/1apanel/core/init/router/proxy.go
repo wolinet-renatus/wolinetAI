@@ -76,7 +76,7 @@ func Proxy() gin.HandlerFunc {
 		}
 
 		if (reqPath == "/api/v2/hosts/terminal/local" || reqPath == "/api/v2/hosts/terminal/ssh" || reqPath == "/api/v2/hosts/terminal/container") && (currentNode == "local" || len(currentNode) == 0) {
-			if _, err := os.Stat(proxy.SockPath); err == nil {
+			if _, err := os.Stat(proxy.GetSocketPath()); err == nil {
 				proxyLocalAgent(c)
 				return
 			}

@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -288,8 +290,74 @@ func newHostSSHClient(host *model.Host, err error) (*ssh.SSHClient, error) {
 	return ssh.NewClient(connInfo)
 }
 
+var sovereignAppDirs = map[string]string{
+	"mitambo":           "/Users/apple/Documents/wolinetai/inference",
+	"lango":             "/Users/apple/Documents/wolinetai/gateway",
+	"wolinetai-lango-1": "/Users/apple/Documents/wolinetai/gateway",
+	"web-client":        "/Users/apple/Documents/wolinetai/apps/web-client",
+	"memory":            "/Users/apple/Documents/wolinetai/services/litellm-memory",
+	"obscura":           "/Users/apple/Documents/wolinetai/apps/browser",
+	"wolinet-browser":   "/Users/apple/Documents/wolinetai/apps/browser",
+	"dev-portal":        "/Users/apple/Documents/wolinetai/apps/dev-portal",
+	"homepage":          "/Users/apple/Documents/wolinetai/apps/homepage",
+}
+
+var sovereignContainerAliases = map[string]string{
+	"lango":      "wolinetai-lango-1",
+	"obscura":    "wolinet-browser",
+	"mitambo":    "wolinet-mitambo",
+	"postgresql": "wolinetai-postgres-1",
+	"redis":      "wolinetai-redis-1",
+	"mysql":      "wolinetai-mysql-1",
+}
+
 func loadContainerTerminalCommand(c *gin.Context) (*terminal.LocalCommand, error) {
 	source := c.Query("source")
+	if source == "container" {
+		containerID := strings.TrimSpace(c.Query("containerid"))
+		if containerID != "" {
+			// 1. Check if containerID or alias is running in docker
+			targetContainer := containerID
+			if alias, ok := sovereignContainerAliases[containerID]; ok {
+				targetContainer = alias
+			}
+			if out, err := exec.Command("docker", "inspect", "-f", "{{.State.Running}}", targetContainer).Output(); err == nil && strings.TrimSpace(string(out)) == "true" {
+				cmdStr := c.Query("command")
+				if cmdStr == "" {
+					cmdStr = "/bin/sh"
+				}
+				user := c.Query("user")
+				var args []string
+				if user != "" {
+					args = []string{"exec", "-it", "-u", user, targetContainer, cmdStr}
+				} else {
+					args = []string{"exec", "-it", targetContainer, cmdStr}
+				}
+				return terminal.NewCommand("docker", args...)
+			}
+
+			// 2. If not a running container, check if it is a sovereign app workspace directory
+			if appDir, exists := sovereignAppDirs[containerID]; exists {
+				if fi, err := os.Stat(appDir); err == nil && fi.IsDir() {
+					shell := os.Getenv("SHELL")
+					if shell == "" {
+						shell = "/bin/zsh"
+						if _, err := os.Stat(shell); err != nil {
+							shell = "/bin/bash"
+						}
+					}
+					cmdReq := c.Query("command")
+					if cmdReq == "/bin/zsh" || cmdReq == "/bin/bash" || cmdReq == "/bin/sh" {
+						if _, err := os.Stat(cmdReq); err == nil {
+							shell = cmdReq
+						}
+					}
+					return terminal.NewCommandWithDir(appDir, shell)
+				}
+			}
+		}
+	}
+
 	var (
 		initCmd []string
 		err     error
@@ -311,6 +379,7 @@ func loadContainerTerminalCommand(c *gin.Context) (*terminal.LocalCommand, error
 	}
 	return terminal.NewCommand("docker", initCmd...)
 }
+
 
 func loadRedisInitCmd(c *gin.Context, redisType string) ([]string, error) {
 	name := c.Query("name")

@@ -1892,7 +1892,15 @@ var AddVLLMSampleInterval = &gormigrate.Migration{
 var InitWolinetAgentAndProvider = &gormigrate.Migration{
 	ID: "20261027-init-wolinet-agent-and-provider",
 	Migrate: func(tx *gorm.DB) error {
-		if err := tx.AutoMigrate(&model.AgentAccount{}, &model.AgentAccountModel{}, &model.Agent{}, &model.McpServer{}); err != nil {
+		if err := tx.AutoMigrate(
+			&model.AgentAccount{},
+			&model.AgentAccountModel{},
+			&model.Agent{},
+			&model.McpServer{},
+			&model.OllamaModel{},
+			&model.App{},
+			&model.AppInstall{},
+		); err != nil {
 			return err
 		}
 
@@ -1973,9 +1981,11 @@ var InitWolinetAgentAndProvider = &gormigrate.Migration{
 			URL     string
 			SsePath string
 			Type    string
+			Compose string
 		}{
-			{"Wolinet Obscura Browser", "http://127.0.0.1:8080", "/mcp", "sse"},
-			{"ai-memory Persistence", "http://127.0.0.1:49374", "/sse", "sse"},
+			{"Wolinet Obscura Browser", "http://127.0.0.1:8080", "/mcp", "sse", "services:\n  obscura:\n    image: supercorp/supergateway:latest\n    container_name: obscura\n    ports:\n      - \"127.0.0.1:8080:8080\"\n"},
+			{"ai-memory Persistence", "http://127.0.0.1:49374", "/sse", "sse", "services:\n  ai-memory:\n    image: supercorp/supergateway:latest\n    container_name: ai-memory\n    ports:\n      - \"127.0.0.1:49374:49374\"\n"},
+			{"Wolinet Filesystem Tools", "http://127.0.0.1:9999", "/api/v2/mcp", "sse", "services:\n  filesystem:\n    image: supercorp/supergateway:latest\n    container_name: filesystem\n    ports:\n      - \"127.0.0.1:9999:9999\"\n"},
 		}
 		for _, tool := range mcpTools {
 			var count int64
@@ -1986,13 +1996,469 @@ var InitWolinetAgentAndProvider = &gormigrate.Migration{
 					BaseURL:         tool.URL,
 					SsePath:         tool.SsePath,
 					Type:            tool.Type,
-					Status:          "running",
+					Status:          constant.StatusRunning,
+					DockerCompose:   tool.Compose,
 					ProtocolVersion: "2024-11-05",
 				}
 				_ = tx.Create(srv).Error
 			}
 		}
 
+		localModels := []struct {
+			Name   string
+			Size   string
+			From   string
+			Status string
+		}{
+			{"mitambo-deepseek-r1-8b", "4.9 GB", "local", "Success"},
+			{"mitambo-qwen-2.5-coder-7b", "4.7 GB", "local", "Success"},
+			{"mitambo-llama-3.2-3b", "2.0 GB", "local", "Success"},
+			{"wolinet-devops-fast", "1.8 GB", "local", "Success"},
+		}
+		for _, lm := range localModels {
+			var count int64
+			tx.Model(&model.OllamaModel{}).Where("name = ?", lm.Name).Count(&count)
+			if count == 0 {
+				rec := &model.OllamaModel{
+					Name:   lm.Name,
+					Size:   lm.Size,
+					From:   lm.From,
+					Status: lm.Status,
+				}
+				_ = tx.Create(rec).Error
+			}
+		}
+
+		var ollamaApp model.App
+		err = tx.Where("key = ?", "ollama").First(&ollamaApp).Error
+		if err != nil {
+			ollamaApp = model.App{
+				Name:        "Ollama",
+				Key:         "ollama",
+				Type:        "ai",
+				Status:      "Normal",
+				Resource:    "remote",
+				Description: "Mitambo Sovereign Inference Engine & Local Model Runner",
+				Website:     "http://localhost:9997",
+				Document:    "http://localhost:9997/docs",
+			}
+			_ = tx.Create(&ollamaApp).Error
+		}
+
+		var ollamaInstall model.AppInstall
+		err = tx.Where("app_id = ? AND name = ?", ollamaApp.ID, "ollama").First(&ollamaInstall).Error
+		if err != nil {
+			ollamaInstall = model.AppInstall{
+				Name:          "ollama",
+				AppId:         ollamaApp.ID,
+				Version:       "v0.5.7",
+				Status:        constant.StatusRunning,
+				ContainerName: "mitambo",
+				ServiceName:   "mitambo",
+				HttpPort:      9997,
+				DockerCompose: "services:\n  ollama:\n    image: ollama/ollama:latest\n    container_name: mitambo\n    ports:\n      - \"127.0.0.1:9997:11434\"\n",
+				Description:   "Mitambo Sovereign Hardware Accelerator Engine",
+			}
+			_ = tx.Create(&ollamaInstall).Error
+		}
+
 		return nil
 	},
 }
+
+var InitSovereignDatabases = &gormigrate.Migration{
+	ID: "20261027-init-sovereign-databases-v3",
+	Migrate: func(tx *gorm.DB) error {
+		_ = tx.AutoMigrate(
+			&model.Database{},
+			&model.DatabasePostgresql{},
+			&model.DatabaseMysql{},
+			&model.App{},
+			&model.AppInstall{},
+		)
+
+		encKey := "S5JzLVEmG71zyP9F"
+		pgPass, _ := encrypt.StringEncryptWithKey("CHANGE_ME_STRONG_PG_PASSWORD", encKey)
+		redisPass, _ := encrypt.StringEncryptWithKey("CHANGE_ME_STRONG_REDIS_PASSWORD", encKey)
+		mysqlPass, _ := encrypt.StringEncryptWithKey("CHANGE_ME_STRONG_MYSQL_PASSWORD", encKey)
+
+		// 1. PostgreSQL Service Registration
+		var pgDB model.Database
+		if err := tx.Where("name = ?", "postgresql").First(&pgDB).Error; err != nil {
+			pgDB = model.Database{
+				Name:        "postgresql",
+				Type:        "postgresql",
+				Version:     "16-alpine",
+				From:        "local",
+				Address:     "127.0.0.1",
+				Port:        5433,
+				InitialDB:   "postgres",
+				Username:    "postgres",
+				Password:    pgPass,
+				Timeout:     30,
+				SkipVerify:  true,
+				Description: "Sovereign PostgreSQL Database Engine",
+			}
+			_ = tx.Create(&pgDB).Error
+		}
+
+		var pgApp model.App
+		if err := tx.Where("key = ?", "postgresql").First(&pgApp).Error; err != nil {
+			pgApp = model.App{
+				Name:        "PostgreSQL",
+				Key:         "postgresql",
+				Type:        "database",
+				Status:      "Normal",
+				Resource:    "local",
+				Description: "Sovereign Relational Database Management System",
+			}
+			_ = tx.Create(&pgApp).Error
+		}
+
+		var pgInstall model.AppInstall
+		if err := tx.Where("name = ?", "postgresql").First(&pgInstall).Error; err != nil {
+			detailId := uint(414)
+			var appDetail model.AppDetail
+			if err := tx.Where("app_id = ?", pgApp.ID).First(&appDetail).Error; err == nil {
+				detailId = appDetail.ID
+			}
+			pgInstall = model.AppInstall{
+				Name:          "postgresql",
+				AppId:         pgApp.ID,
+				AppDetailId:   detailId,
+				Version:       "16-alpine",
+				Status:        constant.StatusRunning,
+				ContainerName: "wolinetai-postgres-1",
+				ServiceName:   "postgres",
+				HttpPort:      5433,
+				Description:   "Sovereign PostgreSQL Database Cluster",
+			}
+			_ = tx.Create(&pgInstall).Error
+		}
+
+		// 2. Individual PostgreSQL Databases Auto-Discovery
+		pgDatabases := []struct {
+			Name string
+			Desc string
+		}{
+			{"litellm", "Lango Gateway Models, Virtual Keys, Routing & Budgeting"},
+			{"webui", "Open WebUI Conversations, Prompts, Users & RAG State"},
+			{"litellm_memory", "LiteLLM Semantic Episodic Memory & Recall Store"},
+			{"wolinex", "Model Execution, Fine-Tuning & Evaluation Datasets"},
+			{"postgres", "System Master Maintenance Database"},
+		}
+
+		for _, item := range pgDatabases {
+			var pgItem model.DatabasePostgresql
+			if err := tx.Where("name = ? AND postgresql_name = ?", item.Name, "postgresql").First(&pgItem).Error; err != nil {
+				pgItem = model.DatabasePostgresql{
+					Name:           item.Name,
+					From:           "local",
+					PostgresqlName: "postgresql",
+					Format:         "UTF8",
+					Username:       "postgres",
+					Password:       pgPass,
+					SuperUser:      true,
+					IsDelete:       false,
+					Description:    item.Desc,
+				}
+				_ = tx.Create(&pgItem).Error
+			}
+		}
+
+		// 3. Redis Service Registration
+		var redisDB model.Database
+		if err := tx.Where("name = ?", "redis").First(&redisDB).Error; err != nil {
+			redisDB = model.Database{
+				Name:        "redis",
+				Type:        "redis",
+				Version:     "7-alpine",
+				From:        "local",
+				Address:     "127.0.0.1",
+				Port:        6379,
+				Password:    redisPass,
+				Timeout:     30,
+				SkipVerify:  true,
+				Description: "Sovereign In-Memory Cache & Message Broker",
+			}
+			_ = tx.Create(&redisDB).Error
+		}
+
+		var redisApp model.App
+		if err := tx.Where("key = ?", "redis").First(&redisApp).Error; err != nil {
+			redisApp = model.App{
+				Name:        "Redis",
+				Key:         "redis",
+				Type:        "database",
+				Status:      "Normal",
+				Resource:    "local",
+				Description: "High Performance In-Memory Data Store",
+			}
+			_ = tx.Create(&redisApp).Error
+		}
+
+		var redisInstall model.AppInstall
+		if err := tx.Where("name = ?", "redis").First(&redisInstall).Error; err != nil {
+			detailId := uint(690)
+			var appDetail model.AppDetail
+			if err := tx.Where("app_id = ?", redisApp.ID).First(&appDetail).Error; err == nil {
+				detailId = appDetail.ID
+			}
+			redisInstall = model.AppInstall{
+				Name:          "redis",
+				AppId:         redisApp.ID,
+				AppDetailId:   detailId,
+				Version:       "7-alpine",
+				Status:        constant.StatusRunning,
+				ContainerName: "wolinetai-redis-1",
+				ServiceName:   "redis",
+				HttpPort:      6379,
+				Description:   "Sovereign Redis Cache Instance",
+			}
+			_ = tx.Create(&redisInstall).Error
+		}
+
+		// 4. MySQL Service Registration
+		var mysqlDB model.Database
+		if err := tx.Where("name = ?", "mysql").First(&mysqlDB).Error; err != nil {
+			mysqlDB = model.Database{
+				Name:        "mysql",
+				Type:        "mysql",
+				Version:     "8.0",
+				From:        "local",
+				Address:     "127.0.0.1",
+				Port:        3306,
+				Username:    "root",
+				Password:    mysqlPass,
+				Timeout:     30,
+				SkipVerify:  true,
+				Description: "Sovereign MySQL / MariaDB Relational Database",
+			}
+			_ = tx.Create(&mysqlDB).Error
+		}
+
+		var mysqlApp model.App
+		if err := tx.Where("key = ?", "mysql").First(&mysqlApp).Error; err != nil {
+			mysqlApp = model.App{
+				Name:        "MySQL",
+				Key:         "mysql",
+				Type:        "database",
+				Status:      "Normal",
+				Resource:    "local",
+				Description: "Relational Database Management System",
+			}
+			_ = tx.Create(&mysqlApp).Error
+		}
+
+		var mysqlInstall model.AppInstall
+		if err := tx.Where("name = ?", "mysql").First(&mysqlInstall).Error; err != nil {
+			detailId := uint(451)
+			var appDetail model.AppDetail
+			if err := tx.Where("app_id = ?", mysqlApp.ID).First(&appDetail).Error; err == nil {
+				detailId = appDetail.ID
+			}
+			mysqlInstall = model.AppInstall{
+				Name:          "mysql",
+				AppId:         mysqlApp.ID,
+				AppDetailId:   detailId,
+				Version:       "8.0",
+				Status:        constant.StatusRunning,
+				ContainerName: "wolinetai-mysql-1",
+				ServiceName:   "mysql",
+				HttpPort:      3306,
+				Description:   "Sovereign MySQL Database Service",
+			}
+			_ = tx.Create(&mysqlInstall).Error
+		}
+
+		var mysqlItem model.DatabaseMysql
+		if err := tx.Where("name = ? AND mysql_name = ?", "wolinet", "mysql").First(&mysqlItem).Error; err != nil {
+			mysqlItem = model.DatabaseMysql{
+				Name:        "wolinet",
+				From:        "local",
+				MysqlName:   "mysql",
+				Format:      "utf8mb4",
+				Collation:   "utf8mb4_general_ci",
+				Username:    "root",
+				Password:    mysqlPass,
+				Permission:  "%",
+				IsDelete:    false,
+				Description: "Sovereign Application Database Instance",
+			}
+			_ = tx.Create(&mysqlItem).Error
+		}
+
+		return nil
+	},
+}
+
+var InitSovereignEcosystem = &gormigrate.Migration{
+	ID: "20261027-init-sovereign-ecosystem-v4",
+	Migrate: func(tx *gorm.DB) error {
+		_ = tx.Where("name = ?", "ollama").Delete(&model.AppInstall{}).Error
+
+		type appDef struct {
+			Key         string
+			Name        string
+			Type        string
+			Version     string
+			Container   string
+			Service     string
+			Port        int
+			Description string
+		}
+
+		products := []appDef{
+			{
+				Key:         "mitambo",
+				Name:        "Mitambo Inference",
+				Type:        "ai",
+				Version:     "0.16.1",
+				Container:   "mitambo",
+				Service:     "mitambo",
+				Port:        9997,
+				Description: "Sovereign local model inference engine with Apple Silicon MPS & NVIDIA CUDA acceleration",
+			},
+			{
+				Key:         "lango",
+				Name:        "Lango Gateway",
+				Type:        "ai",
+				Version:     "1.7.0",
+				Container:   "wolinetai-lango-1",
+				Service:     "lango",
+				Port:        4000,
+				Description: "Sovereign API Gateway, proxy router, MCP host, rate limiting, and auth",
+			},
+			{
+				Key:         "web-client",
+				Name:        "Wolinex Studio (WebUI)",
+				Type:        "ai",
+				Version:     "0.6.46",
+				Container:   "web-client",
+				Service:     "web-client",
+				Port:        8081,
+				Description: "Sovereign conversational interface, collaborative workspace, and MCP Hub UI",
+			},
+			{
+				Key:         "memory",
+				Name:        "ai-memory Persistence",
+				Type:        "ai",
+				Version:     "0.9.3",
+				Container:   "memory",
+				Service:     "memory",
+				Port:        49374,
+				Description: "ai-memory persistent vector & cross-session continuity daemon",
+			},
+			{
+				Key:         "obscura",
+				Name:        "Obscura Browser Sandbox",
+				Type:        "tool",
+				Version:     "1.0.0",
+				Container:   "wolinet-browser",
+				Service:     "obscura",
+				Port:        8080,
+				Description: "Sandboxed browser automation MCP container for agent tool execution",
+			},
+			{
+				Key:         "dev-portal",
+				Name:        "Developer Portal",
+				Type:        "web_app",
+				Version:     "1.0.0",
+				Container:   "dev-portal",
+				Service:     "dev-portal",
+				Port:        8082,
+				Description: "Interactive developer documentation, API key onboarding, and playground",
+			},
+			{
+				Key:         "homepage",
+				Name:        "Wolinet Homepage",
+				Type:        "web_app",
+				Version:     "1.0.0",
+				Container:   "homepage",
+				Service:     "homepage",
+				Port:        3000,
+				Description: "Enterprise sovereign showcase, landing page, and product documentation",
+			},
+			{
+				Key:         "postgresql",
+				Name:        "PostgreSQL",
+				Type:        "database",
+				Version:     "16-alpine",
+				Container:   "wolinetai-postgres-1",
+				Service:     "postgres",
+				Port:        5433,
+				Description: "Sovereign PostgreSQL Database Cluster",
+			},
+			{
+				Key:         "redis",
+				Name:        "Redis",
+				Type:        "database",
+				Version:     "7-alpine",
+				Container:   "wolinetai-redis-1",
+				Service:     "redis",
+				Port:        6379,
+				Description: "Sovereign Redis Cache & Rate Limiting Cluster",
+			},
+			{
+				Key:         "mysql",
+				Name:        "MySQL",
+				Type:        "database",
+				Version:     "8.0",
+				Container:   "wolinetai-mysql-1",
+				Service:     "mysql",
+				Port:        3306,
+				Description: "Sovereign MySQL Database Service",
+			},
+		}
+
+		for _, p := range products {
+			var app model.App
+			if err := tx.Where("key = ?", p.Key).First(&app).Error; err != nil {
+				app = model.App{
+					Name:        p.Name,
+					Key:         p.Key,
+					Type:        p.Type,
+					Status:      "Normal",
+					Resource:    "local",
+					Description: p.Description,
+				}
+				_ = tx.Create(&app).Error
+			}
+
+			var detail model.AppDetail
+			if err := tx.Where("app_id = ?", app.ID).First(&detail).Error; err != nil {
+				detail = model.AppDetail{
+					AppId:   app.ID,
+					Version: p.Version,
+					Status:  "Normal",
+				}
+				_ = tx.Create(&detail).Error
+			}
+
+			var install model.AppInstall
+			if err := tx.Where("name = ?", p.Key).First(&install).Error; err != nil {
+				install = model.AppInstall{
+					Name:          p.Key,
+					AppId:         app.ID,
+					AppDetailId:   detail.ID,
+					Version:       p.Version,
+					Status:        constant.StatusRunning,
+					ContainerName: p.Container,
+					ServiceName:   p.Service,
+					HttpPort:      p.Port,
+					Description:   p.Description,
+				}
+				_ = tx.Create(&install).Error
+			} else {
+				install.Status = constant.StatusRunning
+				install.ContainerName = p.Container
+				install.ServiceName = p.Service
+				install.HttpPort = p.Port
+				_ = tx.Save(&install).Error
+			}
+		}
+
+		return nil
+	},
+}
+

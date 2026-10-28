@@ -50,10 +50,10 @@ class CheckpointRegistrar:
             "model_specs": [
                 {
                     "model_format": "ggufv2",
-                    "model_size_in_billions": 3,
+                    "model_size_in_billions": "1_5",
                     "quantizations": ["Q4_K_M"],
                     "model_id": "wolinet-coder-v2",
-                    "model_file_name_template": "Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf"
+                    "model_file_name_template": "wolinet-brain-r1-1.5b.gguf"
                 }
             ],
             "prompt_style": {

@@ -1499,3 +1499,40 @@ func (b *BaseApi) ApproveAgentChannelPairing(c *gin.Context) {
 	}
 	helper.Success(c)
 }
+
+// @Tags AI
+// @Summary Chat with Agent or Model for Operations
+// @Accept json
+// @Param request body dto.AgentChatReq true "request"
+// @Success 200 {object} dto.AgentChatResp
+// @Security ApiKeyAuth
+// @Security Timestamp
+// @Router /ai/agents/chat [post]
+func (b *BaseApi) ChatWithAgent(c *gin.Context) {
+	var req dto.AgentChatReq
+	if err := helper.CheckBindAndValidate(&req, c); err != nil {
+		return
+	}
+	res, err := agentService.ChatWithAgent(req)
+	if err != nil {
+		helper.BadRequest(c, err)
+		return
+	}
+	helper.SuccessWithData(c, res)
+}
+
+// @Tags AI
+// @Summary Get Chat Options (Agents & Models)
+// @Accept json
+// @Success 200 {object} dto.AgentChatOptionsResp
+// @Security ApiKeyAuth
+// @Security Timestamp
+// @Router /ai/agents/chat/options [post]
+func (b *BaseApi) GetChatOptions(c *gin.Context) {
+	res, err := agentService.GetChatOptions()
+	if err != nil {
+		helper.BadRequest(c, err)
+		return
+	}
+	helper.SuccessWithData(c, res)
+}

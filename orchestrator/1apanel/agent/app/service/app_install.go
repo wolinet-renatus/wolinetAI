@@ -251,6 +251,28 @@ func (a *AppInstallService) Operate(req request.AppInstalledOperate) error {
 	if err != nil {
 		return err
 	}
+	if IsSovereignApp(install.Name) {
+		if req.Operate == constant.Delete {
+			return appInstallRepo.Delete(context.Background(), install)
+		}
+		return operateSovereignApp(&install, req)
+	}
+	isSovereign := strings.TrimSpace(install.DockerCompose) == "" || !files.NewFileOp().Stat(install.GetComposePath())
+	if isSovereign {
+		switch req.Operate {
+		case constant.Start, constant.Restart:
+			return syncAppInstallStatus(&install, true)
+		case constant.Stop:
+			install.Status = constant.StatusStopped
+			install.Message = ""
+			_ = appInstallRepo.Save(context.Background(), &install)
+			return nil
+		case constant.Sync:
+			return syncAppInstallStatus(&install, true)
+		case constant.Delete:
+			return appInstallRepo.Delete(context.Background(), install)
+		}
+	}
 	if !req.ForceDelete && !files.NewFileOp().Stat(install.GetPath()) {
 		return buserr.New("ErrInstallDirNotFound")
 	}
@@ -841,9 +863,14 @@ func (a *AppInstallService) GetParams(id uint) (*response.AppConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	detail, err := appDetailRepo.GetFirst(repo.WithByID(install.AppDetailId))
-	if err != nil {
-		return nil, err
+	detail, _ := appDetailRepo.GetFirst(repo.WithByID(install.AppDetailId))
+	if detail.ID == 0 || install.DockerCompose == "" {
+		cfg := &response.AppConfig{
+			Params: []response.AppParam{},
+		}
+		cfg.ContainerName = install.ContainerName
+		cfg.WebUI = install.WebUI
+		return cfg, nil
 	}
 	if err = json.Unmarshal([]byte(detail.Params), &appForm); err != nil {
 		return nil, err
@@ -972,24 +999,20 @@ func syncAppInstallStatus(appInstall *model.AppInstall, force bool) error {
 			return nil
 		}
 	}
+	var containersMap map[string]container.Summary
 	cli, err := docker.NewClient()
-	if err != nil {
-		return err
-	}
-	defer cli.Close()
-
-	var (
-		containers     []container.Summary
-		containersMap  map[string]container.Summary
-		containerNames = strings.Split(appInstall.ContainerName, ",")
-	)
-	containers, err = cli.ListContainersByName(containerNames)
-	if err != nil {
-		return err
-	}
-	containersMap = make(map[string]container.Summary)
-	for _, con := range containers {
-		containersMap[con.Names[0]] = con
+	if err == nil {
+		defer cli.Close()
+		var (
+			containerNames = strings.Split(appInstall.ContainerName, ",")
+		)
+		containers, err := cli.ListContainersByName(containerNames)
+		if err == nil {
+			containersMap = make(map[string]container.Summary)
+			for _, con := range containers {
+				containersMap[con.Names[0]] = con
+			}
+		}
 	}
 	synAppInstall(containersMap, appInstall, force)
 	return nil

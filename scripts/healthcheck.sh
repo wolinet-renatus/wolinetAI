@@ -8,6 +8,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+if [ -f "${ROOT_DIR}/.env" ]; then
+    set -o allexport
+    # shellcheck disable=SC1091
+    source "${ROOT_DIR}/.env"
+    set +o allexport
+fi
+
 echo "=== Wolinet AI Platform Health Check ==="
 
 # Check Xinference
@@ -70,4 +77,30 @@ else
     fi
 fi
 
+# Check OrcaCyber AI Defense & Secure Pro (:8088)
+echo -n "5. Checking OrcaCyber AI Defense & Secure Pro (:8088)... "
+if curl -sf "http://127.0.0.1:8088/health" >/dev/null 2>&1; then
+    echo "✅ UP (Secure Pro & Turbo Draft active)"
+else
+    echo "⚠️  DOWN (Run: python services/defense/orcacyber_defense.py)"
+fi
+
+# Check Registered AI Agents (:4000/ui/agents/)
+echo -n "6. Registered Sovereign AI Agents: "
+AGENTS_COUNT=$(python3 - <<'PY'
+import json, os, urllib.request
+key = os.getenv("LITELLM_MASTER_KEY") or os.getenv("WOLINET_GATEWAY_MASTER_KEY") or "not-needed"
+req = urllib.request.Request("http://127.0.0.1:4000/v1/agents", headers={"Authorization": f"Bearer {key}"})
+try:
+    with urllib.request.urlopen(req, timeout=5) as r:
+        agents = json.load(r)
+        names = [a.get("agent_name", "") for a in agents]
+        print(f"✅ {len(agents)} Active ({', '.join(names[:3])}...)")
+except Exception:
+    print("⚠️ Unable to query agents")
+PY
+)
+echo "${AGENTS_COUNT}"
+
 echo "=== Health Check Complete ==="
+

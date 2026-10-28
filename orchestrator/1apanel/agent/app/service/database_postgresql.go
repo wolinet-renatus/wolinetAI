@@ -184,13 +184,35 @@ func LoadPostgresqlClientByFrom(database string) (postgresql.PostgresqlClient, e
 	} else {
 		app, err := appInstallRepo.LoadBaseInfo(databaseItem.Type, database)
 		if err != nil {
-			return nil, err
+			if len(databaseItem.Address) != 0 && databaseItem.Port != 0 {
+				dbInfo.Address = databaseItem.Address
+				dbInfo.Port = databaseItem.Port
+				dbInfo.Username = databaseItem.Username
+				dbInfo.Password = databaseItem.Password
+				dbInfo.InitialDB = databaseItem.InitialDB
+			} else {
+				return nil, err
+			}
+		} else {
+			dbInfo.From = "local"
+			dbInfo.Address = app.ContainerName
+			if len(databaseItem.Address) != 0 && (databaseItem.Address == "127.0.0.1" || databaseItem.Address == "localhost") {
+				dbInfo.Address = databaseItem.Address
+			}
+			dbInfo.Username = app.UserName
+			if len(databaseItem.Username) != 0 {
+				dbInfo.Username = databaseItem.Username
+			}
+			dbInfo.Password = app.Password
+			if len(databaseItem.Password) != 0 {
+				dbInfo.Password = databaseItem.Password
+			}
+			dbInfo.Port = uint(app.Port)
+			if databaseItem.Port != 0 {
+				dbInfo.Port = databaseItem.Port
+			}
+			dbInfo.InitialDB = databaseItem.InitialDB
 		}
-		dbInfo.From = "local"
-		dbInfo.Address = app.ContainerName
-		dbInfo.Username = app.UserName
-		dbInfo.Password = app.Password
-		dbInfo.Port = uint(app.Port)
 	}
 
 	cli, err := postgresql.NewPostgresqlClient(dbInfo)

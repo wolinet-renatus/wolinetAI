@@ -1,0 +1,1 @@
+import{Cr as e,Ir as t,pr as n}from"./vendor-element-plus-Dy6H9o-F.js";import{b as r,x as i}from"./useGlobalStore-C8m33Rto.js";n();var a=n=>{let a=``,o=t(n,e=>{a=e||``,i(a)},{immediate:!0});e(()=>{o(),r(a)})};export{a as t};

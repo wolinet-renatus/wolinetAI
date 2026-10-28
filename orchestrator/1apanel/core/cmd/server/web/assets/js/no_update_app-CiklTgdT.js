@@ -1,0 +1,1 @@
+var e=`/assets/svg/no_update_app-CU8zTK-k.svg`;export{e as t};

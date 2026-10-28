@@ -47,7 +47,7 @@
                     <template #body>
                         <div class="h-overview">
                             <el-row>
-                                <el-col :span="6" v-for="item in baseInfo.quickJump" :key="item.name">
+                                <el-col :span="6" v-for="item in (baseInfo?.quickJump || [])" :key="item.name">
                                     <span>{{ $t(item.title, 2) }}</span>
                                     <div class="count">
                                         <el-tooltip
@@ -302,7 +302,7 @@
                                             {{ showSensitiveInfo ? baseInfo.ipV4Addr : '****' }}
                                         </el-descriptions-item>
                                         <el-descriptions-item
-                                            v-if="baseInfo.httpProxy && baseInfo.httpProxy !== 'noProxy'"
+                                            v-if="baseInfo?.httpProxy && baseInfo.httpProxy !== 'noProxy'"
                                             class-name="system-content"
                                             label-class-name="system-label"
                                         >
@@ -794,8 +794,16 @@ const onLoadBaseInfo = async (isInit: boolean, range: string) => {
         loadData();
     }
     const res = await loadBaseInfo(searchInfo.ioOption, searchInfo.netOption);
+    if (!res?.data) {
+        return;
+    }
     baseInfo.value = res.data;
-    updateCurrentInfo(baseInfo.value.currentInfo);
+    if (baseInfo.value && !baseInfo.value.quickJump) {
+        baseInfo.value.quickJump = [];
+    }
+    if (baseInfo.value?.currentInfo) {
+        updateCurrentInfo(baseInfo.value.currentInfo);
+    }
     skipNextCurrentInfoDelta.value = !isInit;
     if (!isInit) {
         onLoadCurrentInfo();

@@ -1,0 +1,1 @@
+var e=new class{list;constructor(){this.list={}}on(e,t){this.list[e]=this.list[e]||[],this.list[e].push(t)}emit(e,t){this.list[e]&&this.list[e].forEach(e=>{e(t)})}off(e){this.list[e]&&delete this.list[e]}};export{e as t};

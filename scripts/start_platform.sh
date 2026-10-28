@@ -102,6 +102,14 @@ fi
 # models to LiteLLM; startup never launches or terminates models implicitly.
 echo "[Engine] Preserving the current Xinference model state. Launch models through Xinference to publish them to the gateway."
 
-# 3. Start AI Gateway (LiteLLM)
+# 3. Start OrcaCyber AI Defense Engine (:8088)
+if curl -sf "http://127.0.0.1:8088/health" >/dev/null 2>&1; then
+    echo "[Defense] OrcaCyber Nano AI Defense is already running on port 8088."
+else
+    echo "[Defense] Starting OrcaCyber Nano AI Defense on port 8088..."
+    ORCACYBER_PORT=8088 nohup "${ROOT_DIR}/inference/.venv/bin/python" "${ROOT_DIR}/services/defense/orcacyber_defense.py" > "${ROOT_DIR}/services/defense/orcacyber.log" 2>&1 &
+fi
+
+# 4. Start AI Gateway (LiteLLM)
 echo "[Gateway] Starting LiteLLM Gateway on port ${GATEWAY_PORT}..."
 exec "${ROOT_DIR}/gateway/run_gateway.sh"

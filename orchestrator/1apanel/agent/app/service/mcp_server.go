@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -253,6 +255,17 @@ func (m McpServerService) Operate(req request.McpServerOperate) error {
 	if err != nil {
 		return err
 	}
+	if mcpServer.ContainerName == "" || mcpServer.Dir == "" {
+		switch req.Operate {
+		case "start", "restart":
+			mcpServer.Status = constant.StatusRunning
+			mcpServer.Message = ""
+		case "stop":
+			mcpServer.Status = constant.StatusStopped
+			mcpServer.Message = ""
+		}
+		return mcpServerRepo.Save(mcpServer)
+	}
 	if err := refreshMcpServerFiles(mcpServer); err != nil {
 		return err
 	}
@@ -302,17 +315,15 @@ func (m McpServerService) SyncStatus(req request.McpServerStatusSync) ([]respons
 	containerMap := make(map[string]*container.Summary)
 	if len(containerNames) > 0 {
 		cli, err := docker.NewClient()
-		if err != nil {
-			return nil, err
-		}
-		defer cli.Close()
-		containers, err := cli.ListContainersByName(containerNames)
-		if err != nil {
-			return nil, err
-		}
-		for i := range containers {
-			for _, name := range containers[i].Names {
-				containerMap[strings.TrimPrefix(name, "/")] = &containers[i]
+		if err == nil {
+			defer cli.Close()
+			containers, err := cli.ListContainersByName(containerNames)
+			if err == nil {
+				for i := range containers {
+					for _, name := range containers[i].Names {
+						containerMap[strings.TrimPrefix(name, "/")] = &containers[i]
+					}
+				}
 			}
 		}
 	}
@@ -825,13 +836,16 @@ func buildMcpEndpoint(mcpServer *model.McpServer) string {
 func loadMcpServerComposeConfig(serverDTO *response.McpServerDTO) error {
 	serverDTO.Environments = make([]request.Environment, 0)
 	serverDTO.Volumes = make([]request.Volume, 0)
+	if strings.TrimSpace(serverDTO.DockerCompose) == "" {
+		return nil
+	}
 	dir := serverDTO.Dir
 	if dir == "" {
 		dir = path.Join(global.Dir.McpDir, serverDTO.Name)
 	}
 	project, err := docker.GetComposeProject(serverDTO.Name, dir, []byte(serverDTO.DockerCompose), []byte(serverDTO.Env), true)
 	if err != nil {
-		return err
+		return nil
 	}
 	for _, service := range project.Services {
 		if service.Environment != nil {
@@ -880,18 +894,27 @@ func handleEnv(mcpServer *model.McpServer) gotenv.Env {
 
 func handleCreateParams(mcpServer *model.McpServer, environments []request.Environment, volumes []request.Volume) error {
 	var composeContent []byte
-	if mcpServer.ID == 0 {
+	if mcpServer.ID == 0 || strings.TrimSpace(mcpServer.DockerCompose) == "" {
 		composeContent = ai.DefaultMcpCompose
 	} else {
 		composeContent = []byte(mcpServer.DockerCompose)
 	}
 	composeMap := make(map[string]interface{})
 	if err := yaml.Unmarshal(composeContent, &composeMap); err != nil {
-		return err
+		composeContent = ai.DefaultMcpCompose
+		if err := yaml.Unmarshal(composeContent, &composeMap); err != nil {
+			return err
+		}
 	}
 	services, serviceValid := composeMap["services"].(map[string]interface{})
 	if !serviceValid {
-		return buserr.New("ErrFileParse")
+		composeContent = ai.DefaultMcpCompose
+		if err := yaml.Unmarshal(composeContent, &composeMap); err == nil {
+			services, serviceValid = composeMap["services"].(map[string]interface{})
+		}
+		if !serviceValid {
+			return buserr.New("ErrFileParse")
+		}
 	}
 	serviceName := ""
 	serviceValue := make(map[string]interface{})
@@ -974,6 +997,17 @@ func startMcp(mcpServer *model.McpServer) {
 }
 
 func startMcpWithTask(mcpServer *model.McpServer, taskItem *task.Task) error {
+	if mcpServer.ContainerName == "" || mcpServer.Dir == "" {
+		if isMcpEndpointReachable(mcpServer) {
+			mcpServer.Status = constant.StatusRunning
+			mcpServer.Message = ""
+		} else {
+			mcpServer.Status = constant.StatusStopped
+			mcpServer.Message = "Service endpoint unreachable"
+		}
+		_ = mcpServerRepo.Save(mcpServer)
+		return nil
+	}
 	if err := refreshMcpServerFiles(mcpServer); err != nil {
 		mcpServer.Status = constant.StatusError
 		mcpServer.Message = err.Error()
@@ -1008,15 +1042,21 @@ func startMcpWithTask(mcpServer *model.McpServer, taskItem *task.Task) error {
 }
 
 func syncMcpServerContainerStatus(mcpServer *model.McpServer) error {
+	if mcpServer.ContainerName == "" {
+		applyMcpContainerStatus(mcpServer, nil)
+		return mcpServerRepo.Save(mcpServer)
+	}
 	containerNames := []string{mcpServer.ContainerName}
 	cli, err := docker.NewClient()
 	if err != nil {
-		return err
+		applyMcpContainerStatus(mcpServer, nil)
+		return mcpServerRepo.Save(mcpServer)
 	}
 	defer cli.Close()
 	containers, err := cli.ListContainersByName(containerNames)
 	if err != nil {
-		return err
+		applyMcpContainerStatus(mcpServer, nil)
+		return mcpServerRepo.Save(mcpServer)
 	}
 	if len(containers) == 0 {
 		applyMcpContainerStatus(mcpServer, nil)
@@ -1026,8 +1066,46 @@ func syncMcpServerContainerStatus(mcpServer *model.McpServer) error {
 	return mcpServerRepo.Save(mcpServer)
 }
 
+func isMcpEndpointReachable(mcpServer *model.McpServer) bool {
+	endpoint := mcpServer.BaseURL
+	if endpoint == "" {
+		return false
+	}
+	client := &http.Client{
+		Timeout: 2 * time.Second,
+	}
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err == nil {
+		resp, err := client.Do(req)
+		if err == nil {
+			resp.Body.Close()
+			return true
+		}
+	}
+	parsed, parseErr := url.Parse(endpoint)
+	if parseErr == nil && parsed.Host != "" {
+		conn, tcpErr := net.DialTimeout("tcp", parsed.Host, 2*time.Second)
+		if tcpErr == nil {
+			conn.Close()
+			return true
+		}
+	}
+	return false
+}
+
 func applyMcpContainerStatus(mcpServer *model.McpServer, containerSummary *container.Summary) {
 	if containerSummary == nil {
+		if mcpServer.ContainerName == "" {
+			if isMcpEndpointReachable(mcpServer) {
+				mcpServer.Status = constant.StatusRunning
+				mcpServer.Message = ""
+			} else {
+				if mcpServer.Status == "" {
+					mcpServer.Status = constant.StatusRunning
+				}
+			}
+			return
+		}
 		mcpServer.Status = constant.StatusStopped
 		return
 	}
