@@ -11,6 +11,7 @@ An enterprise-ready, high-performance self-hosted AI cloud featuring intelligent
 ---
 
 ## 📖 Complete Documentation
+* **Comprehensive Architecture & Port Matrix:** [ARCHITECTURE.md](ARCHITECTURE.md)
 * **Architecture & Manifesto:** [WOLINETAI.md](WOLINETAI.md)
 * **Backend Specification (V1.1):** [wolinet-backend-setup-v1.md](wolinet-backend-setup-v1.md)
 * **Production Deployment & Subdomain Topologies:** [DEPLOYMENT.md](DEPLOYMENT.md)

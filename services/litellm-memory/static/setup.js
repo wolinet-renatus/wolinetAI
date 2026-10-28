@@ -55,7 +55,7 @@ export async function initializeSetup({ api, show, el, busy, populateSelect }) {
     $("gateway-summary-url").textContent = status.base_url || "";
     $("gateway-key").placeholder = status.gateway_connected
       ? "Saved securely. Leave empty to keep it."
-      : "Your LiteLLM key";
+      : "Your Wolinet Gateway key";
     $("gateway-badge").textContent = status.gateway_connected
       ? "Connected"
       : "Not connected";
@@ -74,7 +74,7 @@ export async function initializeSetup({ api, show, el, busy, populateSelect }) {
     $("install-slack").textContent = slackNeedsUpdate ? "Update Slack access" : "Install in Slack";
     show("install-slack", status.slack_configured && !slackAccessReady);
     $("slack-access-help").textContent = slackNeedsUpdate
-      ? "Approve the required permissions so LiteLLM Memory can verify company members."
+      ? "Approve the required permissions so Wolinet Memory can verify company members."
       : "";
     show("slack-access-help", slackNeedsUpdate);
     show(
@@ -108,7 +108,7 @@ export async function initializeSetup({ api, show, el, busy, populateSelect }) {
       "classifier_model",
     ])
       selected[role] = $("setup-" + role).value;
-    $("setup-model-status").textContent = "Checking models through LiteLLM…";
+    $("setup-model-status").textContent = "Checking models through Wolinet Gateway…";
     try {
       modelState = await api(
         "/api/v1/setup/models",

@@ -374,7 +374,7 @@ function setView(view, { navigate = true } = {}) {
   clearTimeout(state.dailyTimer);
   if (view !== "daily") state.dailyVersion++;
   document.body.dataset.view = view;
-  document.title = `${viewNames[view]} · LiteLLM Memory`;
+  document.title = `${viewNames[view]} · Wolinet Memory`;
   for (const name of Object.keys(viewNames))
     show(name + "-view", name === view);
   document.querySelectorAll(".nav-link").forEach((button) => {
@@ -1145,7 +1145,7 @@ async function loadModels() {
   );
   if (!result.data.length)
     throw new Error(
-      "No chat models are available to this LiteLLM key. Ask your administrator to enable one.",
+      "No chat models are available to this Wolinet Gateway key. Ask your administrator to enable one.",
     );
   chatBusy(Boolean(state.job));
 }
@@ -1229,7 +1229,7 @@ function addMessage(role, text) {
   const message = el("article", "", "chat-message");
   message.dataset.role = role;
   message.append(
-    el("div", role === "user" ? "You" : "LiteLLM Memory", "message-author"),
+    el("div", role === "user" ? "You" : "Wolinet Memory", "message-author"),
   );
   const body = el("div", "", "message-body");
   if (role === "user") body.textContent = text;
@@ -1258,7 +1258,7 @@ async function ask(question) {
   if (!question || state.job || state.preferencesSaving) return;
   const model = $("model").value;
   if (!model) {
-    toast("Choose an available LiteLLM model first.");
+    toast("Choose an available Wolinet model first.");
     return;
   }
   setView("ask");
@@ -1348,7 +1348,7 @@ function recordingMessage(status) {
     };
   if (!status.connected_clients)
     return {
-      title: "Bring your work into LiteLLM Memory",
+      title: "Bring your work into Wolinet Memory",
       copy: "Connect Codex or Claude Code once. Your agent saves useful work memories privately as you work.",
       action: "Connect a tool",
       destination: "connections",
@@ -1652,7 +1652,7 @@ async function loadModelSettings(refresh = false) {
     $("setting-classifier_model").value = config.models.classifier_model;
     $("model-settings-status").textContent =
       config.checks.jev?.status === "ready"
-        ? "Jev connected through LiteLLM."
+        ? "Jev connected through Wolinet Gateway."
         : "";
   } catch (error) {
     $("model-settings-status").textContent = explain(error);
@@ -2449,7 +2449,7 @@ $("model-settings-form").onsubmit = async (e) => {
     ])
       models[role] = $("setting-" + role).value;
     $("model-settings-status").textContent =
-      "Checking models and Jev through LiteLLM…";
+      "Checking models and Jev through Wolinet Gateway…";
     try {
       state.modelSettings = await api(
         "/api/v1/admin/models",

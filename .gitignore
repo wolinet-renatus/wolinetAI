@@ -109,14 +109,25 @@ coverage/
 xcuserdata/
 DerivedData/
 wolinet-cli
+target/
+**/target/
+orchestrator/1apanel/agent/bin/
 
 # Large Model Weights (Keep configuration JSONs, ignore raw weights)
+models/**/*.gguf
+models/**/*.bin
+models/**/*.safetensors
+models/**/*.pt
+models/**/*.onnx
 models/*.gguf
 models/*.bin
 models/*.safetensors
 models/*.pt
 models/*.onnx
 !models/registrations/
+!models/configs/
+!models/checkpoints/**/README.md
+!models/checkpoints/**/*.json
 
 # Logs & Runtime Storage
 *.log
