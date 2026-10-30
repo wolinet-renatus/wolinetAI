@@ -9,7 +9,14 @@ Official TypeScript & JavaScript client for the **Wolinet AI Sovereign Gateway &
 ## Installation
 
 ```bash
+# Using pnpm (recommended: fast, disk-space efficient with hardlinked store)
+pnpm add @wolinet/sdk
+
+# Using npm
 npm install @wolinet/sdk
+
+# Using bun
+bun add @wolinet/sdk
 ```
 
 ## Quickstart

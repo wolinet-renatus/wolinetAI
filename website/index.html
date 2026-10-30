@@ -798,12 +798,12 @@ open /Applications/WolinetIDE.app</code></pre>
         </div>
       </section>
 
-      <!-- Client SDKs & PMP Tooling Section -->
+      <!-- Client SDKs Section -->
       <section id="sdks" class="section">
         <div class="shell">
           <div class="section-header">
-            <span class="section-tag">Client SDKs &amp; Tooling</span>
-            <h2 class="section-title">Official Client Libraries &amp; PMP Automation</h2>
+            <span class="section-tag">Client SDKs</span>
+            <h2 class="section-title">Official Client Libraries &amp; Developer Tooling</h2>
             <p class="section-description">
               Integrate Wolinet AI directly into your stack. Strongly typed, high-performance client libraries for TypeScript, Python, and Go with real-time SSE streaming, model discovery, and platform telemetry.
             </p>
@@ -823,7 +823,8 @@ open /Applications/WolinetIDE.app</code></pre>
                 Zero-dependency client library compatible with Node.js, Bun, Deno, and modern browsers. Full TypeScript types and async iterators for streaming.
               </p>
               <div class="terminal-install-command" style="margin-bottom: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <code>npm install @wolinet/sdk</code>
+                <code>pnpm add @wolinet/sdk</code>
+                <span style="color: var(--text-muted); font-size: 11px;">(or npm / bun)</span>
               </div>
               <pre style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; font-size: 11px; color: #e2e8f0; overflow-x: auto; margin: 0; flex-grow: 1;"><code>import { WolinetAI } from '@wolinet/sdk';
 
@@ -888,21 +889,21 @@ for chunk := range stream {
             </div>
           </div>
 
-          <!-- PMP Tool Automation Banner -->
+          <!-- Fast Package Management Banner -->
           <div class="studio-panel" style="padding: 24px; background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%); border: 1px solid rgba(56, 189, 248, 0.3);">
             <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;">
               <div>
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                  <span style="background: var(--brand-cyan); color: #0f172a; font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 4px;">CLI TOOL</span>
-                  <h3 style="font-size: 18px; margin: 0;">PMP: Platform Package Manager</h3>
+                  <span style="background: var(--brand-cyan); color: #0f172a; font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 4px;">FAST PACKAGE MANAGEMENT</span>
+                  <h3 style="font-size: 18px; margin: 0;">Optimized for pnpm, pip &amp; Go Modules</h3>
                 </div>
                 <p style="font-size: 13px; color: var(--text-secondary); margin: 0; max-width: 650px;">
-                  Unified developer CLI for testing, building, linking, and maintaining Wolinet client SDKs across your machines.
+                  Save disk space with <strong>pnpm</strong>'s content-addressable global store and symlinks. Zero duplicate dependencies across workspaces and CI/CD pipelines.
                 </p>
               </div>
               <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <code style="background: #020617; border: 1px solid var(--border-subtle); padding: 8px 14px; border-radius: 6px; font-size: 12px; color: var(--brand-cyan);">curl -fsSL https://ai.wolinet.com/install-pmp.sh | bash</code>
-                <a class="btn btn-primary btn-sm" href="https://docs.wolinet.com#pmp" data-portal="docs" target="_blank" rel="noopener">PMP Docs ↗</a>
+                <code style="background: #020617; border: 1px solid var(--border-subtle); padding: 8px 14px; border-radius: 6px; font-size: 12px; color: var(--brand-cyan);">pnpm add @wolinet/sdk</code>
+                <a class="btn btn-primary btn-sm" href="https://docs.wolinet.com" data-portal="docs" target="_blank" rel="noopener">Explore SDK Docs ↗</a>
               </div>
             </div>
           </div>
@@ -1102,7 +1103,7 @@ print(response.choices[0].message.content)</code></pre>
             <ul class="footer-links">
               <li><a href="http://localhost:8081" data-portal="wolinex">WolinEx AI Studio</a></li>
               <li><a href="#downloads">WolinetIDE Desktop Workspace</a></li>
-              <li><a href="#sdks">Client SDKs &amp; PMP Tooling</a></li>
+              <li><a href="#sdks">Client SDKs &amp; Tooling</a></li>
               <li><a href="#agent-swarm">Autonomous Agent Swarm</a></li>
               <li><a href="https://dev.wolinet.com" data-portal="dev" target="_blank" rel="noopener">Developer Studio &amp; Keys</a></li>
               <li><a href="https://docs.wolinet.com" data-portal="docs" target="_blank" rel="noopener">Scalar API Reference &amp; Copilot</a></li>

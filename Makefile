@@ -10,7 +10,7 @@ SHELL := /usr/bin/env bash
 PYTHON := .venv/bin/python3
 XINFERENCE := .venv/bin/xinference
 
-.PHONY: help start stop restart gateway mock register test health web docker-up docker-down dev-env prod-deploy backup-models backup-db backup-all pod-status pmp pmp-install pmp-test pmp-build
+.PHONY: help start stop restart gateway mock register test health web docker-up docker-down dev-env prod-deploy backup-models backup-db backup-all pod-status sdk sdk-build sdk-test
 
 dev-env:
 	@echo "🔧 Running platform locally on Mac development paths..."
@@ -88,17 +88,23 @@ mock:
 sdk:
 	@$(PYTHON) scripts/generate_sdk.py
 
-pmp:
-	@./scripts/pmp status
+sdk-build:
+	@echo "📦 Building client SDKs..."
+	@cd packages/wolinet-sdk && pnpm run build
+	@echo "✅ Client SDKs built successfully."
 
-pmp-install:
-	@./scripts/pmp install all
-
-pmp-test:
-	@./scripts/pmp test all
-
-pmp-build:
-	@./scripts/pmp build all
+sdk-test:
+	@echo "🧪 Running client SDK test suites..."
+	@cd packages/wolinet-sdk && pnpm test
+	@cd packages/wolinet-go && go test -v ./...
+	@if [ -x inference/.venv/bin/python3 ]; then \
+		PYTHONPATH=packages/wolinet-python inference/.venv/bin/python3 -m unittest discover -s packages/wolinet-python/tests -v; \
+	elif [ -x .venv/bin/python3 ]; then \
+		PYTHONPATH=packages/wolinet-python .venv/bin/python3 -m unittest discover -s packages/wolinet-python/tests -v; \
+	else \
+		PYTHONPATH=packages/wolinet-python python3 -m unittest discover -s packages/wolinet-python/tests -v; \
+	fi
+	@echo "✅ All SDK test suites passed."
 
 register:
 	@./scripts/register_models.sh
