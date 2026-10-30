@@ -12,8 +12,8 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PYTHON_EXEC="python3"
 if [ -x "${ROOT_DIR}/.venv/bin/python" ]; then
     PYTHON_EXEC="${ROOT_DIR}/.venv/bin/python"
-elif [ -x "${ROOT_DIR}/services/litellm-memory/.venv/bin/python" ]; then
-    PYTHON_EXEC="${ROOT_DIR}/services/litellm-memory/.venv/bin/python"
+elif [ -x "${ROOT_DIR}/gateway/litellm-memory/.venv/bin/python" ]; then
+    PYTHON_EXEC="${ROOT_DIR}/gateway/litellm-memory/.venv/bin/python"
 fi
 
 export PYTHONPATH="${ROOT_DIR}:${PYTHONPATH:-}"

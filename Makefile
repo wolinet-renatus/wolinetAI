@@ -10,7 +10,7 @@ SHELL := /usr/bin/env bash
 PYTHON := .venv/bin/python3
 XINFERENCE := .venv/bin/xinference
 
-.PHONY: help start stop restart gateway mock register test health web docker-up docker-down dev-env prod-deploy backup-models backup-db backup-all pod-status sdk sdk-build sdk-test
+.PHONY: help start stop restart gateway memory mock register test health web docker-up docker-down dev-env prod-deploy backup-models backup-db backup-all pod-status sdk sdk-build sdk-test
 
 dev-env:
 	@echo "🔧 Running platform locally on Mac development paths..."
@@ -68,6 +68,7 @@ help:
 	@echo "  make backup-all   - Full backup of models and persistent databases"
 	@echo "  make start        - Start both Inference Engine and Gateway"
 	@echo "  make gateway      - Start only the LiteLLM Gateway"
+	@echo "  make memory       - Start LiteLLM Sovereign Memory Service (:8000)"
 	@echo "  make mock         - Run zero-GPU Mock Gateway (:4010) for UI & CI testing"
 	@echo "  make web          - Start Wolinet AI Web Portal (Open WebUI on :3080)"
 	@echo "  make register     - Register all GGUF models into Xinference"
@@ -81,6 +82,9 @@ start:
 
 gateway:
 	@./gateway/run_gateway.sh
+
+memory:
+	@./gateway/litellm-memory/start-memory.sh
 
 mock:
 	@$(PYTHON) scripts/mock_server.py
