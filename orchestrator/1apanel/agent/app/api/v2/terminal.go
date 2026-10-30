@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -290,18 +291,31 @@ func newHostSSHClient(host *model.Host, err error) (*ssh.SSHClient, error) {
 	return ssh.NewClient(connInfo)
 }
 
-var sovereignAppDirs = map[string]string{
-	"mitambo":           "/Users/apple/Documents/wolinetai/inference",
-	"lango":             "/Users/apple/Documents/wolinetai/gateway",
-	"wolinetai-lango-1": "/Users/apple/Documents/wolinetai/gateway",
-	"web-client":        "/Users/apple/Documents/wolinetai/apps/wolinex",
-	"wolinex":           "/Users/apple/Documents/wolinetai/apps/wolinex",
-	"memory":            "/Users/apple/Documents/wolinetai/services/litellm-memory",
-	"obscura":           "/Users/apple/Documents/wolinetai/apps/browser",
-	"wolinet-browser":   "/Users/apple/Documents/wolinetai/apps/browser",
-	"dev-portal":        "/Users/apple/Documents/wolinetai/apps/dev-portal",
-	"homepage":          "/Users/apple/Documents/wolinetai/website",
-	"website":           "/Users/apple/Documents/wolinetai/website",
+var sovereignAppRelDirs = map[string]string{
+	"mitambo":           "inference",
+	"lango":             "gateway",
+	"wolinetai-lango-1": "gateway",
+	"web-client":        "apps/wolinex",
+	"wolinex":           "apps/wolinex",
+	"memory":            "services/litellm-memory",
+	"obscura":           "apps/browser",
+	"wolinet-browser":   "apps/browser",
+	"dev-portal":        "apps/dev-portal",
+	"docs":              "apps/docs",
+	"website":           "website",
+}
+
+func getSovereignAppDir(name string) (string, bool) {
+	relPath, exists := sovereignAppRelDirs[name]
+	if !exists {
+		return "", false
+	}
+	wsRoot := service.GetWorkspaceRoot()
+	fullPath := filepath.Join(wsRoot, relPath)
+	if fi, err := os.Stat(fullPath); err == nil && fi.IsDir() {
+		return fullPath, true
+	}
+	return "", false
 }
 
 var sovereignContainerAliases = map[string]string{
@@ -339,23 +353,21 @@ func loadContainerTerminalCommand(c *gin.Context) (*terminal.LocalCommand, error
 			}
 
 			// 2. If not a running container, check if it is a sovereign app workspace directory
-			if appDir, exists := sovereignAppDirs[containerID]; exists {
-				if fi, err := os.Stat(appDir); err == nil && fi.IsDir() {
-					shell := os.Getenv("SHELL")
-					if shell == "" {
-						shell = "/bin/zsh"
-						if _, err := os.Stat(shell); err != nil {
-							shell = "/bin/bash"
-						}
+			if appDir, exists := getSovereignAppDir(containerID); exists {
+				shell := os.Getenv("SHELL")
+				if shell == "" {
+					shell = "/bin/zsh"
+					if _, err := os.Stat(shell); err != nil {
+						shell = "/bin/bash"
 					}
-					cmdReq := c.Query("command")
-					if cmdReq == "/bin/zsh" || cmdReq == "/bin/bash" || cmdReq == "/bin/sh" {
-						if _, err := os.Stat(cmdReq); err == nil {
-							shell = cmdReq
-						}
-					}
-					return terminal.NewCommandWithDir(appDir, shell)
 				}
+				cmdReq := c.Query("command")
+				if cmdReq == "/bin/zsh" || cmdReq == "/bin/bash" || cmdReq == "/bin/sh" {
+					if _, err := os.Stat(cmdReq); err == nil {
+						shell = cmdReq
+					}
+				}
+				return terminal.NewCommandWithDir(appDir, shell)
 			}
 		}
 	}

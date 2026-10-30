@@ -22,7 +22,7 @@ import (
 
 func IsSovereignApp(name string) bool {
 	switch strings.ToLower(name) {
-	case "mitambo", "lango", "web-client", "wolinex", "memory", "obscura", "dev-portal", "homepage", "postgresql", "redis", "mysql":
+	case "mitambo", "lango", "web-client", "wolinex", "memory", "obscura", "dev-portal", "docs", "website", "postgresql", "redis", "mysql":
 		return true
 	default:
 		return false
@@ -49,18 +49,30 @@ func stopHostProcessByPort(port int) error {
 	return nil
 }
 
-func getWorkspaceRoot() string {
+func GetWorkspaceRoot() string {
 	if root := os.Getenv("WORKSPACE_ROOT"); root != "" {
 		return root
 	}
-	if pwd, err := os.Getwd(); err == nil {
-		return pwd
+	if dir, err := os.Getwd(); err == nil {
+		for {
+			if _, err := os.Stat(filepath.Join(dir, "products.json")); err == nil {
+				return dir
+			}
+			if _, err := os.Stat(filepath.Join(dir, "docker-compose.prod.yml")); err == nil {
+				return dir
+			}
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
 	}
 	return "."
 }
 
 func startSovereignApp(appName string, port int) error {
-	wsRoot := getWorkspaceRoot()
+	wsRoot := GetWorkspaceRoot()
 	switch appName {
 	case "mitambo":
 		cmd := exec.Command(filepath.Join(wsRoot, "inference/.venv/bin/python"),
@@ -82,7 +94,7 @@ func startSovereignApp(appName string, port int) error {
 			"--config", cfgPath,
 			"serve", "--transport", "http", "--enable-web")
 		return cmd.Start()
-	case "dev-portal", "homepage":
+	case "dev-portal", "docs", "website", "homepage":
 		cmd := exec.Command("python3", "scripts/deploy/start-web-services.py")
 		cmd.Dir = wsRoot
 		return cmd.Start()
@@ -128,11 +140,13 @@ func buildOrSyncSovereignApp(appName string) error {
 	buildTarget := appName
 	switch appName {
 	case "website", "homepage":
-		buildTarget = "homepage"
+		buildTarget = "website"
 	case "dev-portal", "devportal":
 		buildTarget = "dev-portal"
+	case "docs":
+		buildTarget = "docs"
 	case "web-client", "webui", "wolinex":
-		buildTarget = "web-client"
+		buildTarget = "wolinex"
 	case "memory":
 		buildTarget = "memory"
 	case "mitambo":
@@ -142,7 +156,7 @@ func buildOrSyncSovereignApp(appName string) error {
 	case "obscura":
 		buildTarget = "server"
 	}
-	wsRoot := getWorkspaceRoot()
+	wsRoot := GetWorkspaceRoot()
 	cmd := exec.Command("python3", filepath.Join(wsRoot, "bin/wolinet-product"), "build", buildTarget)
 	cmd.Dir = wsRoot
 	out, err := cmd.CombinedOutput()
