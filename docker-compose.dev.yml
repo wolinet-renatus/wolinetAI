@@ -118,7 +118,7 @@ services:
     volumes:
       - webui_dev_data:/app/backend/data
       - ./gateway/assets/wolinet_logo.png:/app/backend/open_webui/static/logo.png:ro
-      - ./apps/web-client/backend/open_webui/routers/openai.py:/app/backend/open_webui/routers/openai.py:ro
+      - ./apps/wolinex/backend/open_webui/routers/openai.py:/app/backend/open_webui/routers/openai.py:ro
     depends_on:
       lango:
         condition: service_healthy

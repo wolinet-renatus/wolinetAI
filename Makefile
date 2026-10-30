@@ -98,7 +98,7 @@ health:
 	@./scripts/healthcheck.sh
 
 web:
-	@./apps/web-client/run_webui.sh
+	@./apps/wolinex/run_webui.sh
 
 docker-up:
 	@docker compose up -d

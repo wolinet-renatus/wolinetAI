@@ -254,7 +254,7 @@ def cmd_build(args: argparse.Namespace) -> None:
             print(f"   ✓ Output artifact: {build_cfg.get('output')} (Pre-compiled 67MB binary verified)")
         elif b_type == "node_python":
             print(f"   • Type: Web Client Bundle & Server")
-            print(f"   ✓ Build assets verified at apps/web-client/build")
+            print(f"   ✓ Build assets verified at apps/wolinex/build")
         else:
             print(f"   • Type: {b_type} (Validated)")
 
@@ -284,7 +284,7 @@ def main() -> None:
 
     # sync
     p_sync = subparsers.add_parser("sync", help="Synchronize between main and product sub-branch")
-    p_sync.add_argument("product", help="Product ID to sync (e.g. lango, mitambo, web-client)")
+    p_sync.add_argument("product", help="Product ID to sync (e.g. lango, mitambo, wolinex)")
     p_sync.add_argument("direction", choices=["push", "pull"], help="push: main->branch, pull: branch->main")
 
     # build

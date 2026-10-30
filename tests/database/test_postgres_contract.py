@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-WEBUI = ROOT / 'apps/web-client/backend/open_webui'
+WEBUI = ROOT / 'apps/wolinex/backend/open_webui'
 
 
 class PostgreSQLContractTests(unittest.TestCase):

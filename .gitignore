@@ -98,8 +98,8 @@ coverage/
 !inference/xinference/ui/web/dist/**
 !inference/frontend/out/
 !inference/frontend/out/**
-!apps/web-client/dist/
-!apps/web-client/dist/**
+!apps/wolinex/dist/
+!apps/wolinex/dist/**
 !packages/wolinet-sdk/dist/
 !packages/wolinet-sdk/dist/**
 
@@ -146,7 +146,7 @@ scratch/
 *.sqlite3
 *.db
 .litellm_cache/
-apps/web-client/data/
+apps/wolinex/data/
 data/
 *.pkg
 orchestrator/1apanel/data/

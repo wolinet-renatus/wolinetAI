@@ -21,7 +21,7 @@ The ecosystem exposes public subdomains terminating TLS on an isolated edge reve
        Podman Pod Namespace: wolinetai-core-pod (Loopback 127.0.0.1)
         ├── panel.wolinet.com   ──► 1apanel:8888/:8089 (Stage 1 Control Plane, Native SQLite)
         ├── ai.wolinet.com      ──► website:80/:3000   (Enterprise Homepage & Download Links)
-        ├── wolinex.wolinet.com ──► web-client:8081    (Open WebUI Sovereign Workspace)
+        ├── wolinex.wolinet.com ──► wolinex:8080       (Wolinex AI Studio Sovereign Workspace)
         ├── lango.wolinet.com   ──► lango:4000         (LiteLLM AI Gateway, /v1 & /ui)
         ├── mitambo.wolinet.com ──► mitambo:9997       (Xinference Engine, GGUF Models)
         └── dev.wolinet.com     ──► devportal:8082     (Docs, Key Studio & Scalar Specs)
@@ -36,7 +36,7 @@ The ecosystem exposes public subdomains terminating TLS on an isolated edge reve
 | :--- | :--- | :--- |
 | **`panel.wolinet.com`** | `1apanel:8888` / `:8089` | **Stage 1 DEC 1Panel Control Plane:** Hardware supervision (CPU/RAM/GPU), storage mounts, Podman socket management, and isolated native SQLite DB. |
 | **`ai.wolinet.com`** | `website:80` / `:3000` | **Marketing Homepage & Showcase:** Custom, fast-loading branded interface with product matrix, documentation links, and client download destinations. |
-| **`wolinex.wolinet.com`** | `web-client:8081` | **Wolinet AI Studio (Open WebUI):** Sovereign chat interface, model switching, workspace tools, and session management. |
+| **`wolinex.wolinet.com`** | `wolinex:8080` | **Wolinex AI Studio:** Sovereign chat interface, model switching, workspace tools, and session management. |
 | **`lango.wolinet.com`** | `lango:4000` | **LiteLLM AI Gateway:** Sovereign routing engine, OpenAI-compatible `/v1` endpoints, budget controls, Postgres spend logging, and CORS preflight handling. |
 | **`mitambo.wolinet.com`** | `mitambo:9997` | **Xinference Inference Engine:** High-performance local inference backend (Apple Silicon MPS / NVIDIA CUDA). Protected by HTTP Basic Auth. |
 | **`dev.wolinet.com`** / **`docs.wolinet.com`** | `devportal:8082` | **Developer Documentation & Key Studio:** Dynamic API key rotation, interactive Scalar API specifications, and live developer assistants. |

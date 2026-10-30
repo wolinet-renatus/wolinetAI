@@ -113,9 +113,9 @@ wolinetai/
 │       └── qwen-image-2.1.json  # Local diffusion transformer
 │
 ├── apps/                        # 🌐 Stage 4: Sovereign Workspaces & Applications
-│   ├── web-client/              # 💬 Sovereign Web Client (Open WebUI Studio on Port 8081)
+│   ├── wolinex/                 # 💬 Sovereign AI Studio Workspace (wolinex.wolinet.com, Port 8080)
 │   ├── dev-portal/              # 📚 Interactive Developer API Documentation (Port 8082)
-│   └── homepage/                # 🏠 Official Homepage & Landing Page (Port 80 / :3000)
+│   └── docs/                    # 📖 Scalar API Reference & Copilot (Port 8083)
 │
 ├── Wolinet-Dkt-Ide/             # 💻 Autonomous Client Workstation Desktop IDE (Tauri App)
 │                                # (Pure API client — NEVER deployed into server container pod)
@@ -309,8 +309,8 @@ The gateway codebase located in `gateway/` is 100% open source and fully customi
 * **Serving Endpoints**:
   * `GET /get_image` $\rightarrow$ Serves branded logo
   * `GET /get_favicon` $\rightarrow$ Serves branded favicon
-* **Wolinet AI Studio Web Client**:
-  * Located at `apps/web-client/` (served on port `3080` via `make web`).
+* **Wolinet AI Studio (Wolinex)**:
+  * Located at `apps/wolinex/` (served on port `8080` via `make web`).
   * Features: chat interface, real-time model switching, integrated developer portal at `/docs`
     with API key management and AI assistant.
 

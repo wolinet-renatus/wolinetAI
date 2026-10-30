@@ -130,7 +130,7 @@ docker exec -i "$PG_CONTAINER" psql -U postgres -d wolinex -c "UPDATE alembic_ve
 `AppConfig` inherits from a custom persistent config class that expects attributes to be predefined `ConfigVar` instances in `_entries`. When `main.py` directly assigns a primitive boolean to an uninitialized key, looking up `entries[name]` throws a `KeyError`.
 
 ### Solution
-In [`apps/web-client/backend/open_webui/internal/config.py`](file:///Users/apple/Documents/wolinetai/apps/web-client/backend/open_webui/internal/config.py):
+In [`apps/wolinex/backend/open_webui/internal/config.py`](file:///Users/apple/Documents/wolinetai/apps/wolinex/backend/open_webui/internal/config.py):
 1. In `__setattr__`: If `name not in entries`, cleanly delegate to `super().__setattr__(name, value)`.
 2. In `__getattr__`: If `name not in entries`, fallback to `super().__getattribute__(name)`.
 
@@ -144,7 +144,7 @@ This makes `AppConfig` behave like a standard Python object for any dynamic or e
 - Visiting `https://wolinex.wolinet.com/docs` and clicking "Sign In" or "Register" does nothing or fails due to inline JavaScript modal handler errors.
 
 ### Solution
-Header authentication buttons in [`apps/web-client/backend/open_webui/routers/wolinet_docs.py`](file:///Users/apple/Documents/wolinetai/apps/web-client/backend/open_webui/routers/wolinet_docs.py) use direct HTML navigation links:
+Header authentication buttons in [`apps/wolinex/backend/open_webui/routers/wolinet_docs.py`](file:///Users/apple/Documents/wolinetai/apps/wolinex/backend/open_webui/routers/wolinet_docs.py) use direct HTML navigation links:
 ```html
 <a href="/auth" class="btn-signin">Sign In</a>
 <a href="/auth" class="btn-register">Register</a>

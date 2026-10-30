@@ -1,4 +1,4 @@
-# Wolinet AI Studio (Web Client)
+# Wolinex AI Studio
 
 A sovereign, high-performance browser console for **Wolinet AI** connected directly to the LiteLLM Gateway layer (`http://127.0.0.1:4000/v1`).
 

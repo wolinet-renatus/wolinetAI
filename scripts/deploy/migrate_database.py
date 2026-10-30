@@ -66,7 +66,7 @@ def migrate_mitambo_tables():
 
 def migrate_wolinex_data():
     log("Migrating WolinEx Studio data...")
-    source_webui = BASE_DIR / "apps" / "web-client" / "data"
+    source_webui = BASE_DIR / "apps" / "wolinex" / "data"
     target_wolinex = DATA_DIR / "wolinex"
     
     if source_webui.exists():

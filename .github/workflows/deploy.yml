@@ -87,8 +87,8 @@ jobs:
             context: gateway
             dockerfile: gateway/Dockerfile
           - image: wolinet-wolinex
-            context: apps/web-client
-            dockerfile: apps/web-client/Dockerfile
+            context: apps/wolinex
+            dockerfile: apps/wolinex/Dockerfile
           - image: wolinet-mitambo
             context: inference
             dockerfile: inference/xinference/deploy/docker/Dockerfile

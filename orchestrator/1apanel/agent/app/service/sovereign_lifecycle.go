@@ -22,7 +22,7 @@ import (
 
 func IsSovereignApp(name string) bool {
 	switch strings.ToLower(name) {
-	case "mitambo", "lango", "web-client", "memory", "obscura", "dev-portal", "homepage", "postgresql", "redis", "mysql":
+	case "mitambo", "lango", "web-client", "wolinex", "memory", "obscura", "dev-portal", "homepage", "postgresql", "redis", "mysql":
 		return true
 	default:
 		return false
@@ -68,9 +68,9 @@ func startSovereignApp(appName string, port int) error {
 			"-H", "0.0.0.0", "-p", "9997")
 		cmd.Dir = filepath.Join(wsRoot, "inference")
 		return cmd.Start()
-	case "web-client":
-		cmd := exec.Command("bash", filepath.Join(wsRoot, "apps/web-client/run_webui.sh"))
-		cmd.Dir = filepath.Join(wsRoot, "apps/web-client")
+	case "web-client", "wolinex":
+		cmd := exec.Command("bash", filepath.Join(wsRoot, "apps/wolinex/run_webui.sh"))
+		cmd.Dir = filepath.Join(wsRoot, "apps/wolinex")
 		return cmd.Start()
 	case "memory":
 		homeDir, _ := os.UserHomeDir()

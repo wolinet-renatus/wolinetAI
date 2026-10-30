@@ -74,7 +74,7 @@ class PublicSurfaceTests(unittest.TestCase):
         edge_config = (ROOT / "nginx/conf.d/wolinet.conf").read_text()
         main_config = (ROOT / "nginx/nginx.conf").read_text()
         compose_config = (ROOT / "docker-compose.prod.yml").read_text()
-        docs_router = (ROOT / "apps/web-client/backend/open_webui/routers/wolinet_docs.py").read_text()
+        docs_router = (ROOT / "apps/wolinex/backend/open_webui/routers/wolinet_docs.py").read_text()
         proxy_server = (ROOT / "gateway/litellm/proxy/proxy_server.py").read_text()
 
         # 1. Cloudflare edge buffering suppression

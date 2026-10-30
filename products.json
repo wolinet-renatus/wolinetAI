@@ -37,17 +37,17 @@
     },
     {
       "id": "web-client",
-      "name": "Wolinet Web Client & Chat",
+      "name": "Wolinet Web Client & Chat (Wolinex Studio)",
       "category": "web_app",
       "deployable_to_server": true,
-      "path": "apps/web-client",
+      "path": "apps/wolinex",
       "sub_branch": "stack/web-client",
       "description": "Sovereign conversational interface, collaborative workspace, and MCP Hub UI",
       "ports": [8081],
       "healthcheck": "http://localhost:8081/health",
       "build": {
         "type": "node_python",
-        "script": "apps/web-client/run_webui.sh",
+        "script": "apps/wolinex/run_webui.sh",
         "image": "wolinet-web-client:latest"
       }
     },

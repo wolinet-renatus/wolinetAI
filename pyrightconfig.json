@@ -1,19 +1,19 @@
 {
   "include": [
-    "apps/web-client/backend",
+    "apps/wolinex/backend",
     "gateway",
     "tests"
   ],
   "extraPaths": [
-    "apps/web-client/backend",
+    "apps/wolinex/backend",
     "gateway",
     "."
   ],
   "executionEnvironments": [
     {
-      "root": "apps/web-client/backend",
+      "root": "apps/wolinex/backend",
       "extraPaths": [
-        "apps/web-client/backend"
+        "apps/wolinex/backend"
       ]
     },
     {
