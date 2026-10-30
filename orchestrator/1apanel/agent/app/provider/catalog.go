@@ -52,6 +52,26 @@ var catalog = map[string]Meta{
 			{ID: "wolinet-turbo", Name: "Wolinet Turbo (Sub-Second Ultra Fast Ops)"},
 		},
 	},
+	"lango": {
+		Key: "lango", DisplayName: "Lango AI Gateway", Sort: 2, DefaultAPIType: "openai-completions", EnvKey: "WOLINET_API_KEY",
+		APIConfigs: []APIConfig{
+			{APIType: "openai-completions", BaseURL: "http://127.0.0.1:4000/v1", EditableBaseURL: true, DiscoverModels: true, DefaultAuthMode: AuthModeBearer, AuthModes: []string{AuthModeBearer}},
+			{APIType: "openai-responses", BaseURL: "http://127.0.0.1:4000/v1", EditableBaseURL: true, DiscoverModels: true, DefaultAuthMode: AuthModeBearer, AuthModes: []string{AuthModeBearer}},
+			{APIType: "openai-embeddings", BaseURL: "http://127.0.0.1:4000/v1", EditableBaseURL: true, DiscoverModels: true, DefaultAuthMode: AuthModeBearer, AuthModes: []string{AuthModeBearer}},
+		},
+		Models: []Model{
+			{ID: "wolinet-max", Name: "Wolinet Max (Reasoning & Architecture)"},
+			{ID: "wolinet-pro", Name: "Wolinet Pro (Sovereign Local Hardware Engine)"},
+			{ID: "wolinet-coder", Name: "Wolinet Coder (Sovereign Systems & DevOps)"},
+			{ID: "wolinet-turbo", Name: "Wolinet Turbo (Sub-Second Ultra Fast Ops)"},
+		},
+	},
+	"mitambo": {
+		Key: "mitambo", DisplayName: "Mitambo Local Inference Engine", Sort: 3, DefaultAPIType: "openai-completions", EnvKey: "MITAMBO_API_KEY",
+		APIConfigs: []APIConfig{
+			{APIType: "openai-completions", BaseURL: "http://127.0.0.1:4000/v1", EditableBaseURL: true, DiscoverModels: true, DefaultAuthMode: AuthModeBearer, AuthModes: []string{AuthModeBearer}},
+		},
+	},
 	"custom": {
 		Key: "custom", DisplayName: "Custom", Sort: 10, DefaultAPIType: "openai-completions", EnvKey: "CUSTOM_API_KEY",
 		APIConfigs: editableAPIConfigs(true, "openai-completions", "openai-responses", "anthropic-messages", "openai-images", "dashscope-images", "openai-embeddings"),
@@ -473,6 +493,9 @@ func NormalizeModelID(provider, modelID string) string {
 }
 
 var legacyModelPrefixes = map[string][]string{
+	"wolinet":             {"wolinet"},
+	"lango":               {"lango"},
+	"mitambo":             {"mitambo"},
 	"custom":              {"custom"},
 	"vllm":                {"custom"},
 	"ollama":              {"ollama"},
