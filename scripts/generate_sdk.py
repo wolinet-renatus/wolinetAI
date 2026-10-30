@@ -661,6 +661,10 @@ class _ChatCompletionsSync:
     def __init__(self, client: "WolinetAI"):
         self._c = client
 
+    @property
+    def completions(self) -> "_ChatCompletionsSync":
+        return self
+
     def create(
         self,
         model: str,
@@ -710,6 +714,10 @@ class _ChatCompletionsSync:
 class _ChatCompletionsAsync:
     def __init__(self, client: "AsyncWolinetAI"):
         self._c = client
+
+    @property
+    def completions(self) -> "_ChatCompletionsAsync":
+        return self
 
     async def create(
         self,

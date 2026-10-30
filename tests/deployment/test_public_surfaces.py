@@ -49,6 +49,25 @@ class PublicSurfaceTests(unittest.TestCase):
         for leak in (":4000", ":9997", "litellm", "xinference"):
             self.assertNotIn(leak, raw_html.lower())
 
+    def test_homepage_exposes_sdks_and_pmp_automation(self) -> None:
+        raw_html = (ROOT / "website/index.html").read_text()
+        parser = SiteParser()
+        parser.feed(raw_html)
+
+        # 1. Assert navigation menu has SDK link and section exists
+        self.assertIn("#sdks", parser.links)
+        self.assertIn("sdks", parser.ids)
+
+        # 2. Assert official SDKs are displayed
+        self.assertIn("@wolinet/sdk", raw_html)
+        self.assertIn("pip install wolinet", raw_html)
+        self.assertIn("github.com/wolinet/wolinet-go", raw_html)
+
+        # 3. Assert PMP automation tools are present
+        self.assertTrue((ROOT / "scripts/pmp").is_file())
+        self.assertTrue((ROOT / "scripts/install-pmp.sh").is_file())
+        self.assertIn("install-pmp.sh", raw_html)
+
     def test_developer_portal_has_session_key_and_assistant_contracts(self) -> None:
         page = (ROOT / "apps/dev-portal/index.html").read_text()
         client = (ROOT / "apps/dev-portal/app.js").read_text()

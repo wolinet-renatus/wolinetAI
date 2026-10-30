@@ -45,6 +45,7 @@
             <span style="font-size: 10px; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: var(--brand-cyan); border: 1px solid rgba(56, 189, 248, 0.3); padding: 1px 6px; border-radius: 999px; margin-left: 4px;">v0.3.75</span>
           </a>
           <a class="nav-item" href="#models">Models</a>
+          <a class="nav-item" href="#sdks">SDKs</a>
           <a class="nav-item" href="#developer-studio">Developer Studio</a>
           <a class="nav-item" href="https://docs.wolinet.com" data-portal="docs" target="_blank" rel="noopener">API Reference</a>
           <a class="nav-item" href="#security">Sovereignty</a>
@@ -797,6 +798,117 @@ open /Applications/WolinetIDE.app</code></pre>
         </div>
       </section>
 
+      <!-- Client SDKs & PMP Tooling Section -->
+      <section id="sdks" class="section">
+        <div class="shell">
+          <div class="section-header">
+            <span class="section-tag">Client SDKs &amp; Tooling</span>
+            <h2 class="section-title">Official Client Libraries &amp; PMP Automation</h2>
+            <p class="section-description">
+              Integrate Wolinet AI directly into your stack. Strongly typed, high-performance client libraries for TypeScript, Python, and Go with real-time SSE streaming, model discovery, and platform telemetry.
+            </p>
+          </div>
+
+          <div class="sdk-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 32px;">
+            <!-- TypeScript SDK Card -->
+            <div class="studio-panel" style="padding: 24px; display: flex; flex-direction: column;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="background: rgba(56, 189, 248, 0.15); color: var(--brand-cyan); padding: 6px 10px; border-radius: 8px; font-weight: 700; font-size: 13px;">TS / JS</span>
+                  <h3 style="font-size: 18px; margin: 0;">@wolinet/sdk</h3>
+                </div>
+                <span class="pill-badge" style="margin: 0;">v1.1.0</span>
+              </div>
+              <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
+                Zero-dependency client library compatible with Node.js, Bun, Deno, and modern browsers. Full TypeScript types and async iterators for streaming.
+              </p>
+              <div class="terminal-install-command" style="margin-bottom: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <code>npm install @wolinet/sdk</code>
+              </div>
+              <pre style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; font-size: 11px; color: #e2e8f0; overflow-x: auto; margin: 0; flex-grow: 1;"><code>import { WolinetAI } from '@wolinet/sdk';
+
+const client = new WolinetAI({ apiKey: 'YOUR_KEY' });
+for await (const chunk of client.chat.completions.stream({
+  model: 'wolinex-coder',
+  messages: [{ role: 'user', content: 'Say hello' }]
+})) {
+  process.stdout.write(chunk.choices[0]?.delta?.content || '');
+}</code></pre>
+            </div>
+
+            <!-- Python SDK Card -->
+            <div class="studio-panel" style="padding: 24px; display: flex; flex-direction: column;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 6px 10px; border-radius: 8px; font-weight: 700; font-size: 13px;">Python</span>
+                  <h3 style="font-size: 18px; margin: 0;">wolinet</h3>
+                </div>
+                <span class="pill-badge" style="margin: 0;">v1.1.0</span>
+              </div>
+              <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
+                Dual synchronous (&lt;code&gt;WolinetAI&lt;/code&gt;) and asynchronous (&lt;code&gt;AsyncWolinetAI&lt;/code&gt;) client with Pydantic type models and HTTPX keep-alive pooling.
+              </p>
+              <div class="terminal-install-command" style="margin-bottom: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <code>pip install wolinet</code>
+              </div>
+              <pre style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; font-size: 11px; color: #e2e8f0; overflow-x: auto; margin: 0; flex-grow: 1;"><code>from wolinet import WolinetAI
+
+client = WolinetAI(api_key="YOUR_KEY")
+for chunk in client.chat.completions.create(
+    model="wolinex-coder",
+    messages=[{"role": "user", "content": "Say hello"}],
+    stream=True
+):
+    print(chunk.choices[0].delta.content or "", end="", flush=True)</code></pre>
+            </div>
+
+            <!-- Go SDK Card -->
+            <div class="studio-panel" style="padding: 24px; display: flex; flex-direction: column;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="background: rgba(168, 85, 247, 0.15); color: #a855f7; padding: 6px 10px; border-radius: 8px; font-weight: 700; font-size: 13px;">Go</span>
+                  <h3 style="font-size: 18px; margin: 0;">wolinet-go</h3>
+                </div>
+                <span class="pill-badge" style="margin: 0;">v1.1.0</span>
+              </div>
+              <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
+                Idiomatic Go client with context cancellation, real-time SSE event channels, and native status telemetry inspection.
+              </p>
+              <div class="terminal-install-command" style="margin-bottom: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <code>go get github.com/wolinet/wolinet-go</code>
+              </div>
+              <pre style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; font-size: 11px; color: #e2e8f0; overflow-x: auto; margin: 0; flex-grow: 1;"><code>client := wolinet.NewClient("YOUR_KEY")
+stream, _ := client.CreateChatCompletionStream(ctx, wolinet.ChatCompletionRequest{
+    Model: "wolinex-coder",
+    Messages: []wolinet.ChatMessage{{Role: "user", Content: "Say hello"}},
+})
+for chunk := range stream {
+    fmt.Print(chunk.Choices[0].Delta.Content)
+}</code></pre>
+            </div>
+          </div>
+
+          <!-- PMP Tool Automation Banner -->
+          <div class="studio-panel" style="padding: 24px; background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%); border: 1px solid rgba(56, 189, 248, 0.3);">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <span style="background: var(--brand-cyan); color: #0f172a; font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 4px;">CLI TOOL</span>
+                  <h3 style="font-size: 18px; margin: 0;">PMP: Platform Package Manager</h3>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin: 0; max-width: 650px;">
+                  Unified developer CLI for testing, building, linking, and maintaining Wolinet client SDKs across your machines.
+                </p>
+              </div>
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <code style="background: #020617; border: 1px solid var(--border-subtle); padding: 8px 14px; border-radius: 6px; font-size: 12px; color: var(--brand-cyan);">curl -fsSL https://ai.wolinet.com/install-pmp.sh | bash</code>
+                <a class="btn btn-primary btn-sm" href="https://docs.wolinet.com#pmp" data-portal="docs" target="_blank" rel="noopener">PMP Docs ↗</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Developer Studio Section -->
       <section id="developer-studio" class="section developer-studio">
         <div class="shell">
@@ -990,6 +1102,7 @@ print(response.choices[0].message.content)</code></pre>
             <ul class="footer-links">
               <li><a href="http://localhost:8081" data-portal="wolinex">WolinEx AI Studio</a></li>
               <li><a href="#downloads">WolinetIDE Desktop Workspace</a></li>
+              <li><a href="#sdks">Client SDKs &amp; PMP Tooling</a></li>
               <li><a href="#agent-swarm">Autonomous Agent Swarm</a></li>
               <li><a href="https://dev.wolinet.com" data-portal="dev" target="_blank" rel="noopener">Developer Studio &amp; Keys</a></li>
               <li><a href="https://docs.wolinet.com" data-portal="docs" target="_blank" rel="noopener">Scalar API Reference &amp; Copilot</a></li>

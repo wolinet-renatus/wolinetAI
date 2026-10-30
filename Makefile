@@ -10,7 +10,7 @@ SHELL := /usr/bin/env bash
 PYTHON := .venv/bin/python3
 XINFERENCE := .venv/bin/xinference
 
-.PHONY: help start stop restart gateway mock register test health web docker-up docker-down dev-env prod-deploy backup-models backup-db backup-all pod-status
+.PHONY: help start stop restart gateway mock register test health web docker-up docker-down dev-env prod-deploy backup-models backup-db backup-all pod-status pmp pmp-install pmp-test pmp-build
 
 dev-env:
 	@echo "🔧 Running platform locally on Mac development paths..."
@@ -87,6 +87,18 @@ mock:
 
 sdk:
 	@$(PYTHON) scripts/generate_sdk.py
+
+pmp:
+	@./scripts/pmp status
+
+pmp-install:
+	@./scripts/pmp install all
+
+pmp-test:
+	@./scripts/pmp test all
+
+pmp-build:
+	@./scripts/pmp build all
 
 register:
 	@./scripts/register_models.sh
