@@ -1,4 +1,0 @@
-[submodule "Wolinet-Dkt-Ide"]
-	path = Wolinet-Dkt-Ide
-	url = https://github.com/wolinet-renatus/WolinetIDE.git
-	branch = main

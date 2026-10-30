@@ -134,20 +134,10 @@
       "name": "Wolinet Desktop IDE",
       "category": "client_desktop",
       "deployable_to_server": false,
-      "path": "Wolinet-Dkt-Ide",
-      "sub_branch": "stack/desktop-ide",
-      "remote_url": "https://github.com/wolinet-renatus/WolinetIDE.git",
-      "description": "Sovereign desktop IDE for AI-assisted engineering and autonomous agent swarms",
-      "api_dependency": "Connects via REST/SSE to Lango Gateway (:4000/v1 or https://lango.wolinet.com)",
-      "build": {
-        "type": "tauri_desktop",
-        "command": "cd Wolinet-Dkt-Ide && npm run build",
-        "artifacts": [
-          "Wolinet-Dkt-Ide/src-tauri/target/release/bundle/dmg/*.dmg",
-          "Wolinet-Dkt-Ide/src-tauri/target/release/bundle/appimage/*.AppImage",
-          "Wolinet-Dkt-Ide/src-tauri/target/release/bundle/deb/*.deb"
-        ]
-      }
+      "repository": "https://github.com/wolinet-renatus/WolinetIDE.git",
+      "distribution_path": "website/downloads",
+      "description": "Sovereign desktop IDE for AI-assisted engineering and autonomous agent swarms (binaries served via website/downloads)",
+      "api_dependency": "Connects via REST/SSE to Lango Gateway (:4000/v1 or https://lango.wolinet.com)"
     },
     {
       "id": "wolinex",
