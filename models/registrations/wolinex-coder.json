@@ -23,7 +23,7 @@
       "quantization": "Q4_K_M",
       "model_id": "thirdeyeai/DeepSeek-R1-Distill-Qwen-1.5B-uncensored",
       "model_hub": "huggingface",
-      "model_uri": "/Users/apple/Documents/wolinetai/models/llm",
+      "model_uri": "models/llm",
       "model_file_name_template": "wolinet-brain-r1-1.5b.gguf"
     }
   ],

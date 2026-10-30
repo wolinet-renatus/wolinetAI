@@ -63,11 +63,10 @@ time.sleep(1)
 running = client.list_models()
 
 # 3. Ensure Single Unified High-Speed Sovereign Model is running (No duplicate weights in RAM)
+workspace_root = os.getenv("WORKSPACE_ROOT", os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 candidate_paths = [
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "../../models/llm/wolinet-brain-r1-1.5b.gguf")),
+    os.path.join(workspace_root, "models/llm/wolinet-brain-r1-1.5b.gguf"),
     "/models/llm/wolinet-brain-r1-1.5b.gguf",
-    "/Users/apple/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf",
-    os.path.expanduser("~/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf"),
 ]
 model_path = next((p for p in candidate_paths if os.path.exists(p)), None)
 

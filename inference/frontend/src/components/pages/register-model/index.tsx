@@ -143,7 +143,7 @@ const RegisterModel: FC<RegisterModelProps> = ({ modelType, modelName }) => {
               fileName &&
               !rawUri.endsWith(fileName)
                 ? `${rawUri.replace(/\/$/, '')}/${fileName}`
-                : rawUri || (fileName ? `/Users/apple/Documents/wolinetai/models/llm/${fileName}` : '');
+                : rawUri || (fileName ? `models/llm/${fileName}` : '');
             return {
               ...item,
               model_uri: fullUri,

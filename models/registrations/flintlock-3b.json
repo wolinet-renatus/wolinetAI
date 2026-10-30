@@ -19,7 +19,7 @@
       "quantization": "IQ4_XS",
       "model_id": "mradermacher/flintlock_3B_v0.1-GGUF",
       "model_hub": "huggingface",
-      "model_uri": "/Users/apple/Documents/wolinetai/models/llm",
+      "model_uri": "models/llm",
       "model_file_name_template": "flintlock_3B_v0.1.IQ4_XS.gguf"
     }
   ],

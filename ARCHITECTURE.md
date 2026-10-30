@@ -71,7 +71,7 @@
 
 ### Stage 1: Lango AI Gateway (`gateway/`)
 - **Engine:** LiteLLM Proxy packaged inside `ghcr.io/wolinet-renatus/wolinet-lango:latest`.
-- **Config:** [`gateway/config.yaml`](file:///Users/apple/Documents/wolinetai/gateway/config.yaml) directly bind-mounted into the container.
+- **Config:** [`gateway/config.yaml`](gateway/config.yaml) directly bind-mounted into the container.
 - **Failover Logic:** Automatically routes from primary models to fallbacks if timeouts or provider rate limits occur.
 - **Timeouts:** Configured to `90` seconds across all tier models with `allowed_fails: 1` and `cooldown_time: 30s`.
 
@@ -96,10 +96,10 @@
 - **Models Loaded:** `wolinex-coder` (DeepSeek-R1 Distill Qwen 1.5B, Q4_K_M GGUF, 131k context length).
 
 ### Stage 4: DEC 1Panel Control Plane & DevOps Copilot (`orchestrator/1apanel/`)
-- **Core Binary:** [`bin/1apanel`](file:///Users/apple/Documents/wolinetai/bin/1apanel) listening on port `9999`.
-- **Daemon Binary:** [`bin/1panel-agent`](file:///Users/apple/Documents/wolinetai/bin/1panel-agent) communicating via `/tmp/1panel/agent.sock`.
-- **Embedded AI Chat Copilot:** Located at `http://localhost:9999/ai/chat` ([`index.vue`](file:///Users/apple/Documents/wolinetai/orchestrator/1apanel/frontend/src/views/ai/chat/index.vue)).
-- **Database:** Native SQLite at [`data/1panel/db/agent.db`](file:///Users/apple/Documents/wolinetai/data/1panel/db/agent.db), storing model metadata in `agent_account_models`.
+- **Core Binary:** [`bin/1apanel`](bin/1apanel) listening on port `9999`.
+- **Daemon Binary:** [`bin/1panel-agent`](bin/1panel-agent) communicating via `/tmp/1panel/agent.sock`.
+- **Embedded AI Chat Copilot:** Located at `http://localhost:9999/ai/chat` ([`index.vue`](orchestrator/1apanel/frontend/src/views/ai/chat/index.vue)).
+- **Database:** Native SQLite at [`data/1panel/db/agent.db`](data/1panel/db/agent.db), storing model metadata in `agent_account_models`.
 
 ---
 
@@ -124,7 +124,7 @@ The 1Panel AI Chat drop list and Lango Gateway support the following 10 unified 
 
 ## 5. Fallback Routing Architecture
 
-LiteLLM Router in [`gateway/config.yaml`](file:///Users/apple/Documents/wolinetai/gateway/config.yaml#L516-L565) guarantees high availability through automated fallback chains:
+LiteLLM Router in [`gateway/config.yaml`](gateway/config.yaml#L516-L565) guarantees high availability through automated fallback chains:
 
 ```yaml
 fallbacks:

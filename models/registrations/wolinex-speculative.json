@@ -23,7 +23,7 @@
       "quantization": "Q8_0",
       "model_id": "z-lab/DFlash2-v2",
       "model_hub": "huggingface",
-      "model_uri": "/Users/apple/Documents/wolinetai/models/dflash",
+      "model_uri": "models/dflash",
       "model_file_name_template": "dflash2-v2-q8_0.gguf",
       "draft_model_id": "z-lab/DFlash2-v2",
       "draft_model_file_name_template": "dflash2-v2-q8_0.gguf",

@@ -599,7 +599,7 @@ const MonitorCenter = () => {
                     <div>
                       <div className="font-semibold">Local Sovereign Disk &amp; Cache Store</div>
                       <div className="text-xs text-muted-foreground">
-                        Free Disk: {formatFileSize(Number(osInfo.diskSize || 537274368000))} • Active Cache: /Users/apple/.xinference/cache/v2
+                        Free Disk: {formatFileSize(Number(osInfo.diskSize || 537274368000))} • Active Cache: ~/.xinference/cache/v2
                       </div>
                     </div>
                     <HardDrive className="size-4 text-muted-foreground" />

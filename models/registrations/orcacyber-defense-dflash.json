@@ -23,7 +23,7 @@
       "quantization": "Q8_0",
       "model_id": "wolinet/orcacyber-defense-dflash2",
       "model_hub": "huggingface",
-      "model_uri": "/Users/apple/Documents/wolinetai/models/dflash",
+      "model_uri": "models/dflash",
       "model_file_name_template": "orcacyber-defense-dflash2-q8_0.gguf"
     }
   ],

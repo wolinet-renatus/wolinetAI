@@ -170,8 +170,8 @@ make health
 
 ## 5. Working with Models
 
-### Model Manifests ([models/registrations/](file:///Users/apple/Documents/wolinetai/models/registrations))
-Custom models are defined declaratively without touching engine source code. For example, [models/registrations/wolinex-coder.json](file:///Users/apple/Documents/wolinetai/models/registrations/wolinex-coder.json):
+### Model Manifests ([models/registrations/](models/registrations))
+Custom models are defined declaratively without touching engine source code. For example, [models/registrations/wolinex-coder.json](models/registrations/wolinex-coder.json):
 
 ```json
 {
@@ -318,8 +318,8 @@ The gateway codebase located in `gateway/` is 100% open source and fully customi
 
 ## 10. Contributor Guidelines
 
-1. **Never Hardcode Model Identifiers in Engine Code**: All model identities, templates, and quantization profiles belong in [models/registrations/](file:///Users/apple/Documents/wolinetai/models/registrations/).
-2. **Gateway-First Routing**: New models (local or cloud) must be added to [gateway/config.yaml](file:///Users/apple/Documents/wolinetai/gateway/config.yaml) with defined fallback chains.
+1. **Never Hardcode Model Identifiers in Engine Code**: All model identities, templates, and quantization profiles belong in [models/registrations/](models/registrations/).
+2. **Gateway-First Routing**: New models (local or cloud) must be added to [gateway/config.yaml](gateway/config.yaml) with defined fallback chains.
 3. **OpenAI Standard Compliance**: All endpoints must conform to the standard OpenAI REST schemas to ensure zero friction with Cursor, Open WebUI, and standard SDKs.
 4. **Editable Gateway Development**: Modify code inside `gateway/litellm` and test with `make gateway` or `./gateway/run_gateway.sh`.
 

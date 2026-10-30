@@ -351,7 +351,7 @@ export const SOVEREIGN_LOCAL_LLM_PRESETS = [
     stop: ['<|endoftext|>', '<|im_end|>'],
     model_specs: [
       {
-        model_uri: '/Users/apple/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf',
+        model_uri: 'models/llm/wolinet-brain-r1-1.5b.gguf',
         model_size_in_billions: 1.5,
         model_format: ModelFormat.GGUFV2,
         quantization: 'Q4_K_M',
@@ -374,7 +374,7 @@ export const SOVEREIGN_LOCAL_LLM_PRESETS = [
     stop: ['<|endoftext|>', '<|im_end|>'],
     model_specs: [
       {
-        model_uri: '/Users/apple/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf',
+        model_uri: 'models/llm/wolinet-brain-r1-1.5b.gguf',
         model_size_in_billions: 1.5,
         model_format: ModelFormat.GGUFV2,
         quantization: 'Q4_K_M',
@@ -397,7 +397,7 @@ export const SOVEREIGN_LOCAL_LLM_PRESETS = [
     stop: ['<|endoftext|>', '<|im_end|>'],
     model_specs: [
       {
-        model_uri: '/Users/apple/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf',
+        model_uri: 'models/llm/wolinet-brain-r1-1.5b.gguf',
         model_size_in_billions: 1.5,
         model_format: ModelFormat.GGUFV2,
         quantization: 'Q4_K_M',
@@ -418,7 +418,7 @@ export const SOVEREIGN_LOCAL_LLM_PRESETS = [
     stop: ['<|eot_id|>', '<|end_of_text|>'],
     model_specs: [
       {
-        model_uri: '/Users/apple/Documents/wolinetai/models/llm/flintlock_3B_v0.1.IQ4_XS.gguf',
+        model_uri: 'models/llm/flintlock_3B_v0.1.IQ4_XS.gguf',
         model_size_in_billions: 3,
         model_format: ModelFormat.GGUFV2,
         quantization: 'IQ4_XS',
@@ -442,7 +442,7 @@ export const SOVEREIGN_LOCAL_LLM_PRESETS = [
     model_specs: [
       {
         model_uri:
-          '/Users/apple/Documents/wolinetai/models/dflash/qwen3.8-27b-dflash2-r3-q4_k_m.gguf',
+          'models/dflash/qwen3.8-27b-dflash2-r3-q4_k_m.gguf',
         model_size_in_billions: 27,
         model_format: ModelFormat.GGUFV2,
         quantization: 'Q4_K_M',
@@ -465,7 +465,7 @@ export const SOVEREIGN_LOCAL_LLM_PRESETS = [
     stop: ['<|endoftext|>', '<|im_end|>'],
     model_specs: [
       {
-        model_uri: '/Users/apple/Documents/wolinetai/models/dflash/dflash2-v2-q8_0.gguf',
+        model_uri: 'models/dflash/dflash2-v2-q8_0.gguf',
         model_size_in_billions: 1.5,
         model_format: ModelFormat.GGUFV2,
         quantization: 'Q8_0',
@@ -489,7 +489,7 @@ export const SOVEREIGN_LOCAL_LLM_PRESETS = [
     model_specs: [
       {
         model_uri:
-          '/Users/apple/Documents/wolinetai/models/dflash/orcacyber-defense-dflash2-q8_0.gguf',
+          'models/dflash/orcacyber-defense-dflash2-q8_0.gguf',
         model_size_in_billions: 3,
         model_format: ModelFormat.GGUFV2,
         quantization: 'Q8_0',
@@ -509,7 +509,7 @@ export const REGISTER_MODEL_INIT_DATA = {
     model_ability: [ModelAbility.Chat, ModelAbility.Tools, ModelAbility.Reasoning],
     model_specs: [
       {
-        model_uri: '/Users/apple/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf',
+        model_uri: 'models/llm/wolinet-brain-r1-1.5b.gguf',
         model_size_in_billions: 1.5,
         model_format: ModelFormat.GGUFV2,
         quantization: 'Q4_K_M',

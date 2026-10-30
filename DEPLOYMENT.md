@@ -176,7 +176,7 @@ if ($request_method = 'OPTIONS') {
 
 ## 7. Automated CI/CD Rolling Deployment Pipeline
 
-The workflow defined in [`.github/workflows/deploy.yml`](file:///Users/apple/Documents/wolinetai/.github/workflows/deploy.yml) provides an automated delivery pipeline:
+The workflow defined in [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) provides an automated delivery pipeline:
 1. **Validate Stage:** Tests deployment contracts, JavaScript syntax, and Compose syntax.
 2. **Build Stage:** Builds multi-stage images for `wolinet-lango`, `wolinet-wolinex`, `wolinet-homepage`, and `wolinet-devportal`.
 3. **Deploy Stage:** Syncs configuration, triggers rolling restarts, reloads reverse proxy configurations, and verifies the Golden Loop synthetic transaction.

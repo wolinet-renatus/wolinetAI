@@ -1201,11 +1201,16 @@ def is_valid_model_uri(model_uri: Optional[str]) -> bool:
     if not model_uri:
         return False
 
+    model_uri = os.path.expanduser(os.path.expandvars(model_uri))
     src_scheme, src_root = parse_uri(model_uri)
 
     if src_scheme == "file":
         if not os.path.isabs(src_root):
-            raise ValueError(f"Model URI cannot be a relative path: {model_uri}")
+            workspace = os.getenv("WORKSPACE_ROOT")
+            if workspace:
+                src_root = os.path.join(workspace, src_root)
+            else:
+                src_root = os.path.abspath(src_root)
         return os.path.exists(src_root)
     else:
         # TODO: handle other schemes.
@@ -1224,6 +1229,7 @@ def resolve_model_uri(model_uri: str, model_name: Optional[str] = None) -> str:
     A ``file://`` root is used as is; an ``oci://`` reference is pulled through
     llmman into its content-addressed store.
     """
+    model_uri = os.path.expanduser(os.path.expandvars(model_uri))
     src_scheme, src_root = parse_uri(model_uri)
     if src_root.endswith("/"):
         # remove trailing path separator.
@@ -1231,7 +1237,11 @@ def resolve_model_uri(model_uri: str, model_name: Optional[str] = None) -> str:
 
     if src_scheme == "file":
         if not os.path.isabs(src_root):
-            raise ValueError(f"Model URI cannot be a relative path: {model_uri}")
+            workspace = os.getenv("WORKSPACE_ROOT")
+            if workspace:
+                src_root = os.path.join(workspace, src_root)
+            else:
+                src_root = os.path.abspath(src_root)
         if not os.path.exists(src_root):
             of_model = f" of model {model_name!r}" if model_name else ""
             raise ValueError(

@@ -178,10 +178,11 @@ try:
     print(f'==> [mitambo-init] Currently active models: {list(running_models.keys())}')
 
     # 4. Auto-launch Sovereign Wolinex Coder & Wolinet Pro (DeepSeek-R1 Distill Qwen 1.5B Uncensored)
+    ws_root = os.environ.get("WORKSPACE_ROOT", os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     candidate_paths = [
+        os.path.join(ws_root, "models/llm/wolinet-brain-r1-1.5b.gguf"),
         "/models/llm/wolinet-brain-r1-1.5b.gguf",
-        "/Users/apple/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf",
-        os.path.expanduser("~/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf"),
+        os.path.expanduser("~/models/llm/wolinet-brain-r1-1.5b.gguf"),
     ]
     r1_src = next((p for p in candidate_paths if os.path.exists(p)), None)
 

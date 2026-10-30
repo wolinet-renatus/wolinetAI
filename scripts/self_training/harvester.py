@@ -26,16 +26,17 @@ class TrajectoryHarvester:
         pg_user: str = "postgres",
         pg_password: str = "CHANGE_ME_STRONG_PG_PASSWORD",
         pg_db: str = "litellm",
-        hook_spool_dir: str = "/Users/apple/Library/Application Support/ai-memory/hook-spool",
-        brain_dir: str = "/Users/apple/.gemini/antigravity-ide/brain",
+        hook_spool_dir: Optional[str] = None,
+        brain_dir: Optional[str] = None,
     ):
         self.pg_host = pg_host
         self.pg_port = pg_port
         self.pg_user = pg_user
         self.pg_password = pg_password
         self.pg_db = pg_db
-        self.hook_spool_dir = Path(hook_spool_dir)
-        self.brain_dir = Path(brain_dir)
+        home = Path.home()
+        self.hook_spool_dir = Path(hook_spool_dir or os.getenv("HOOK_SPOOL_DIR", str(home / "Library/Application Support/ai-memory/hook-spool")))
+        self.brain_dir = Path(brain_dir or os.getenv("BRAIN_DIR", str(home / ".gemini/antigravity-ide/brain")))
 
     def harvest_postgres_logs(self, limit: int = 200) -> List[Dict[str, Any]]:
         """Harvest execution logs and latency metrics from PostgreSQL LiteLLM_SpendLogs."""

@@ -344,7 +344,7 @@ export default function SystemSettings() {
                     Local Sovereign Weights Root
                   </div>
                   <div className="font-mono text-xs font-semibold break-all">
-                    /Users/apple/Documents/wolinetai/models
+                    models
                   </div>
                   <div className="text-[11px] text-muted-foreground">
                     7 local GGUF models registered &amp; symlinked in v2 cache
@@ -356,7 +356,7 @@ export default function SystemSettings() {
                     Active Cache &amp; Virtualenv Store
                   </div>
                   <div className="font-mono text-xs font-semibold break-all">
-                    /Users/apple/.xinference/cache/v2
+                    ~/.xinference/cache/v2
                   </div>
                   <div className="text-[11px] text-muted-foreground">
                     Zero-copy GGUF symlinks • 522 GiB Free Disk Space

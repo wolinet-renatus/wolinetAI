@@ -4,7 +4,8 @@ import asyncio
 import httpx
 from pathlib import Path
 
-SKILLS_DIR = Path("/Users/apple/Documents/wolinetai/.agents/skills")
+WORKSPACE_ROOT = Path(os.getenv("WORKSPACE_ROOT", Path(__file__).resolve().parent.parent))
+SKILLS_DIR = WORKSPACE_ROOT / ".agents/skills"
 API_URL = "http://127.0.0.1:4000/claude-code/plugins"
 AUTH_HEADER = {"Authorization": "Bearer sk-XvKFiwDoOtOe8i4lwbzb8Q", "Content-Type": "application/json"}
 
@@ -138,7 +139,7 @@ def parse_skill(skill_dir: Path):
     domain = "Engineering"
     
     # Check if scientific skill
-    sci_src = Path("/Users/apple/Documents/wolinetai/tools/scientific-agent-skills/skills") / name
+    sci_src = WORKSPACE_ROOT / "tools/scientific-agent-skills/skills" / name
     if sci_src.exists():
         author_name = "K-Dense-AI"
         repo = "K-Dense-AI/scientific-agent-skills"

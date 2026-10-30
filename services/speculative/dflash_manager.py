@@ -24,9 +24,13 @@ import gguf
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("dflash-manager")
 
+ROOT_DIR = os.environ.get(
+    "WORKSPACE_ROOT",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+)
 DFLASH_DIR = os.environ.get(
     "DFLASH_MODELS_DIR",
-    "/Users/apple/Documents/wolinetai/models/dflash"
+    os.path.join(ROOT_DIR, "models/dflash")
 )
 
 
