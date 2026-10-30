@@ -9,6 +9,7 @@
 #   wolinex    → Open WebUI (web client)     (wolinex.wolinet.com)
 #   website    → Marketing / home page       (ai.wolinet.com)
 #   devportal  → Developer docs and key studio (dev.wolinet.com)
+#   docs       → Scalar API reference & copilot (docs.wolinet.com)
 #   nginx      → Reverse proxy + TLS terminator
 # ==============================================================================
 
@@ -390,13 +391,13 @@ services:
           - wolinet-website
           - homepage
           - wolinet-homepage
-    expose: ["80", "8080"]
+    expose: ["80", "8080", "3000"]
     volumes:
       - ./website:/usr/share/nginx/html:ro
       - ./website/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     healthcheck:
       test:
-        ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1"]
+        ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1 || wget -qO- http://127.0.0.1:3000/healthz >/dev/null 2>&1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -408,7 +409,73 @@ services:
           memory: 256M
 
   # ==========================================================================
-  # 7. Nginx — reverse proxy + TLS termination for all 5 subdomains
+  # 7. DevPortal — Developer documentation and API key studio (dev.wolinet.com)
+  # ==========================================================================
+  devportal:
+    image: ${DEVPORTAL_IMAGE:-nginx:1.27-alpine}
+    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - devportal
+          - wolinet-devportal
+          - dev
+      wolinet_internal:
+        aliases:
+          - devportal
+          - wolinet-devportal
+          - dev
+    expose: ["80", "8082"]
+    volumes:
+      - ./apps/dev-portal:/usr/share/nginx/html:ro
+      - ./apps/dev-portal/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8082/healthz >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # ==========================================================================
+  # 8. Docs — Standalone Scalar API reference and copilot (docs.wolinet.com)
+  # ==========================================================================
+  docs:
+    image: ${DOCS_IMAGE:-nginx:1.27-alpine}
+    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - docs
+          - wolinet-docs
+      wolinet_internal:
+        aliases:
+          - docs
+          - wolinet-docs
+    expose: ["80", "8083"]
+    volumes:
+      - ./apps/docs:/usr/share/nginx/html:ro
+      - ./apps/docs/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8083/healthz >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # ==========================================================================
+  # 9. Nginx — reverse proxy + TLS termination for all 6 subdomains
   # ==========================================================================
   nginx:
     image: nginx:1.27-alpine
@@ -430,6 +497,8 @@ services:
       - wolinex
       - lango
       - mitambo
+      - devportal
+      - docs
     healthcheck:
       test:
         [

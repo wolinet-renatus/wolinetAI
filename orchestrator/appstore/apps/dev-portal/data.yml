@@ -1,0 +1,30 @@
+name: "Wolinet Developer Studio"
+tags:
+  - AI
+  - Developer
+  - API
+title: "Sovereign API Key Studio, SDK Quickstarts, and Developer AI Assistant"
+description: "Interactive Developer Studio with enterprise API credential rotation, multi-language SDK code generation, token budgeting, and integrated Developer AI Assistant"
+additionalProperties:
+  key: dev-portal
+  name: "Wolinet Developer Studio"
+  tags:
+    - AI
+    - Developer
+    - API
+  shortDescZh: "企业级 API 密钥管理中心、多语言 SDK 快速接入与智能开发者助手"
+  shortDescEn: "Sovereign API Key Studio, SDK Quickstarts, and Developer AI Assistant"
+  description:
+    en: "Interactive Developer Studio with enterprise API credential rotation, multi-language SDK code generation, token budgeting, and integrated Developer AI Assistant"
+    zh: "企业级 API 密钥管理中心、多语言 SDK 快速接入与智能开发者助手"
+  type: website
+  crossVersionUpdate: true
+  recommend: 1
+  limit: 1
+  gpuSupport: false
+  architectures:
+    - amd64
+    - arm64
+  website: https://dev.wolinet.com
+  github: https://github.com/wolinetai
+

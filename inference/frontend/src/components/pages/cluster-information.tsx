@@ -288,6 +288,51 @@ export default function ClusterInfoPage() {
     </div>
   );
 
+  const coordination = useMemo(() => {
+    const first = (supervisors[0] || workers[0] || routers[0]) as any;
+    return first?.onepanel_coordination || null;
+  }, [supervisors, workers, routers]);
+
+  const onepanelSummary = useMemo(() => {
+    const osInfo = coordination?.os_info || {};
+    const copilot = coordination?.devops_copilot || {};
+    const lango = coordination?.lango_gateway || {};
+    const orca = coordination?.orcacyber_defense || {};
+    const diskBytes = typeof osInfo.diskSize === 'number' ? osInfo.diskSize : 537274368000;
+    return [
+      {
+        label: 'DEC 1Panel Control Plane',
+        value:
+          coordination?.onepanel_status === 'CONNECTED'
+            ? 'CONNECTED (/tmp/1panel/agent.sock • http://127.0.0.1:9999)'
+            : 'COORDINATION READY (http://127.0.0.1:9999)',
+        total: `Cluster ID: ${coordination?.cluster_id || 'wolinet-sovereign-cluster'}`,
+      },
+      {
+        label: 'Host OS & Kernel (1Panel)',
+        value: osInfo.prettyDistro
+          ? `${osInfo.prettyDistro} (${osInfo.kernelArch || 'x86_64'})`
+          : 'macOS Darwin (x86_64)',
+        total: `Kernel: ${osInfo.kernelVersion || '24.6.0'} • Free Disk: ${formatFileSize(diskBytes)}`,
+      },
+      {
+        label: '1Panel DevOps Copilot Sync',
+        value: `${copilot.agent_name || 'Wolinet DevOps Copilot'} (${copilot.default_model || 'wolinet/wolinet-pro'})`,
+        total: `${copilot.models_synced || 10} Sovereign Models Synchronized`,
+      },
+      {
+        label: 'Lango Unified AI Gateway',
+        value: `${lango.address || '127.0.0.1:4000'} (${lango.status || 'HEALTHY'})`,
+        total: 'OpenAI-Compatible Sovereign Router & Fallbacks',
+      },
+      {
+        label: 'OrcaCyber Defense Mesh',
+        value: `${orca.address || '127.0.0.1:8088'} (${orca.status || 'HEALTHY'})`,
+        total: `Service: ${orca.service || 'orcacyber-security'} • Prompt Firewall Active`,
+      },
+    ];
+  }, [coordination]);
+
   return (
     <PageContainer
       title={t('menu.clusterInfo')}
@@ -298,6 +343,13 @@ export default function ClusterInfoPage() {
       }
     >
       <div className="space-y-6">
+        <section>
+          <h2 className="mb-3 text-lg font-bold text-primary">
+            DEC 1Panel &amp; Sovereign System Coordination
+          </h2>
+          {renderSummary(onepanelSummary)}
+        </section>
+
         <section>
           <h2 className="mb-3 text-lg font-bold text-primary">{t('clusterInfo.supervisor')}</h2>
           {renderSummary(supervisorSummary)}

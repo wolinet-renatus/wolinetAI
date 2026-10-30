@@ -7,10 +7,10 @@ This directory contains the sovereign model weights, speculative decoding draft 
 ```
 models/
 ├── llm/                                  # Primary Sovereign Large Language Models (GGUF)
-│   └── wolinet-brain-r1-1.5b.gguf        # DeepSeek-R1 Distill Qwen 1.5B Uncensored (IQ4_XS imatrix, 131k ctx)
+│   ├── wolinet-brain-r1-1.5b.gguf        # DeepSeek-R1 Distill Qwen 1.5B Uncensored (IQ4_XS imatrix, 131k ctx)
+│   └── flintlock_3B_v0.1.IQ4_XS.gguf     # Flintlock 3B Sovereign Intelligence Engine (IQ4_XS imatrix)
 ├── dflash/                               # Speculative Decoding & AI Defense Layers (DFlash2 GGUF)
 │   ├── orcacyber-defense-dflash2-q8_0.gguf # OrcaCyber Nano 1.0 AI Defense Layer (Q8_0, 262k ctx)
-│   ├── qwen3.8-27b-dflash2-r3-q4_k_m.gguf  # Qwen 3.8 / 27B DFlash2 Speculative Draft Model (Q4_K_M, 262k ctx)
 │   └── dflash2-v2-q8_0.gguf              # DFlash2 v2 High-Speed Acceleration Draft (Q8_0, 262k ctx)
 ├── configs/                              # Tokenizer, Generation & Vocabulary Metadata
 │   ├── config.json                       # Transformer architecture hyperparameters
@@ -21,14 +21,13 @@ models/
 │   └── wolinet-brain-card.md             # Model card & benchmark provenance
 ├── checkpoints/                          # Self-training adapters & LoRA checkpoints
 │   └── wolinet-coder-v2/                 # Self-training checkpoint metadata & weights
-└── registrations/                        # Declarative model manifests for Xinference
-    ├── wolinet-brain-r1.json             # Manifest for Wolinet Brain R1 1.5B
-    ├── wolinex-coder.json                # Sovereign coding intelligence manifest
+└── registrations/                        # Declarative model manifests for Xinference (1 per weight file)
+    ├── wolinex-coder.json                # Sovereign coding & reasoning intelligence manifest (wolinet-brain-r1-1.5b.gguf)
+    ├── flintlock-3b.json                 # Flintlock 3B manifest (flintlock_3B_v0.1.IQ4_XS.gguf)
+    ├── orcacyber-defense-dflash.json     # OrcaCyber AI Defense manifest (orcacyber-defense-dflash2-q8_0.gguf)
+    ├── wolinex-speculative.json          # DFlash2 speculative acceleration manifest (dflash2-v2-q8_0.gguf)
     ├── bge-small-en-v1.5.json            # Sentence embeddings manifest
-    ├── bge-reranker-v2-m3.json           # Neural reranker manifest
-    ├── whisper-small.json                # Fast speech-to-text manifest
-    ├── whisper-large-v3-turbo.json       # High-accuracy speech-to-text manifest
-    └── magpie-tts.json                   # Sovereign speech synthesis manifest
+    └── bge-reranker-v2-m3.json           # Neural reranker manifest
 ```
 
 ---

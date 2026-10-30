@@ -21,6 +21,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 WEBSITE_DIR = BASE_DIR / "website"
 DEVPORTAL_DIR = BASE_DIR / "apps" / "dev-portal"
+DOCS_DIR = BASE_DIR / "apps" / "docs"
 
 LANGO_UPSTREAM = os.getenv("LANGO_UPSTREAM", "http://127.0.0.1:4000")
 WOLINEX_UPSTREAM = os.getenv("WOLINEX_UPSTREAM", "http://127.0.0.1:8080")
@@ -55,6 +56,14 @@ class BaseProxyHandler(SimpleHTTPRequestHandler):
             self.wfile.write(e.read())
         except Exception as e:
             self.send_error(502, f"Proxy error: {e}")
+
+    def do_HEAD(self):
+        if self.path in ("/healthz", "/health"):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            return
+        return super().do_HEAD()
 
     def log_message(self, format, *args):
         if os.getenv("DEBUG"):
@@ -137,8 +146,54 @@ class DevPortalHandler(BaseProxyHandler):
         self.send_error(404, "Not Found")
 
 
+class DocsHandler(BaseProxyHandler):
+    """Handler for Wolinet Scalar API Documentation & Copilot (Port 8083)"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(DOCS_DIR), **kwargs)
+
+    def do_GET(self):
+        if self.path in ("/healthz", "/health"):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"ok\n")
+            return
+
+        if self.path.startswith("/openapi.json"):
+            return self._proxy(LANGO_UPSTREAM + "/openapi.json")
+
+        if self.path.startswith("/v1/"):
+            return self._proxy(LANGO_UPSTREAM + self.path)
+
+        if self.path.startswith("/api/wolinet/"):
+            sub_path = self.path.replace("/api/wolinet", "/api/v1")
+            return self._proxy(WOLINEX_UPSTREAM + sub_path)
+
+        # Fallback to index.html for virtual routes
+        requested = DOCS_DIR / self.path.lstrip("/").split("?")[0]
+        if not requested.exists() and "." not in self.path:
+            self.path = "/index.html"
+
+        return super().do_GET()
+
+    def do_POST(self):
+        if self.path.startswith("/v1/"):
+            return self._proxy(LANGO_UPSTREAM + self.path, method="POST")
+
+        if self.path.startswith("/api/wolinet/"):
+            sub_path = self.path.replace("/api/wolinet", "/api/v1")
+            return self._proxy(WOLINEX_UPSTREAM + sub_path, method="POST")
+
+        self.send_error(404, "Not Found")
+
+
+class ReusableHTTPServer(HTTPServer):
+    allow_reuse_address = True
+
+
 def run_server(port, handler_class, name):
-    server = HTTPServer(("0.0.0.0", port), handler_class)
+    server = ReusableHTTPServer(("0.0.0.0", port), handler_class)
     print(f"[Wolinet Web Services] {name} listening on http://0.0.0.0:{port}")
     try:
         server.serve_forever()
@@ -153,17 +208,21 @@ def main():
     print(f" - Home / Marketing Website: http://localhost:3000")
     print(f" - WolinEx AI Studio:        http://localhost:8080")
     print(f" - Developer Portal Studio:  http://localhost:8082")
-    print(f" - API Docs & Gateway Specs: http://localhost:4000/docs")
+    print(f" - Scalar API Documentation: http://localhost:8083")
+    print(f" - API Gateway Raw Specs:    http://localhost:4000/docs")
     print("============================================================")
 
     t1 = threading.Thread(target=run_server, args=(3000, WebsiteHandler, "Home Website"), daemon=True)
     t2 = threading.Thread(target=run_server, args=(8082, DevPortalHandler, "Developer Portal"), daemon=True)
+    t3 = threading.Thread(target=run_server, args=(8083, DocsHandler, "Docs Studio"), daemon=True)
 
     t1.start()
     t2.start()
+    t3.start()
 
     t1.join()
     t2.join()
+    t3.join()
 
 
 if __name__ == "__main__":

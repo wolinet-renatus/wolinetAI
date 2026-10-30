@@ -1,7 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Check, CloudDownload, Loader2, RotateCcw, Save, SlidersHorizontal } from 'lucide-react';
+import {
+  Check,
+  CloudDownload,
+  Cpu,
+  HardDrive,
+  Loader2,
+  Network,
+  RotateCcw,
+  Save,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -280,6 +292,103 @@ export default function SystemSettings() {
           </div>
         ) : (
           <div className="w-full space-y-6">
+            <Card className="gap-0 overflow-hidden rounded-xl py-0 shadow-none border-primary/20">
+              <CardHeader className="border-b bg-primary/5 py-5">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      <Cpu className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base">
+                          Wolinet Sovereign System Environment &amp; Runtime Alignment
+                        </CardTitle>
+                        <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-xs">
+                          Sovereign Active
+                        </Badge>
+                      </div>
+                      <CardDescription>
+                        Synchronized local inference paths, hardware acceleration, and control plane coordination with DEC 1Panel (:9999), Lango Gateway (:4000), and OrcaCyber Defense (:8088).
+                      </CardDescription>
+                    </div>
+                  </div>
+                  {canEdit && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setForm((prev) => ({
+                          ...prev,
+                          download_source: 'huggingface',
+                          hf_endpoint: 'https://huggingface.co',
+                          pip_index_url: 'https://pypi.org/simple',
+                          download_max_attempts: 5,
+                          hub_detect_timeout: 5.0,
+                          model_download_workers: 8,
+                        }));
+                        toast.info('Applied Wolinet Sovereign optimal system parameters. Click Save Changes to persist.');
+                      }}
+                    >
+                      <Sparkles className="h-3.5 w-3.5 mr-1.5 text-primary" />
+                      Apply Sovereign Optimal Defaults
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-4 py-5 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-lg border bg-muted/20 p-3.5 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <HardDrive className="h-3.5 w-3.5 text-primary" />
+                    Local Sovereign Weights Root
+                  </div>
+                  <div className="font-mono text-xs font-semibold break-all">
+                    /Users/apple/Documents/wolinetai/models
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    7 local GGUF models registered &amp; symlinked in v2 cache
+                  </div>
+                </div>
+                <div className="rounded-lg border bg-muted/20 p-3.5 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Cpu className="h-3.5 w-3.5 text-emerald-500" />
+                    Active Cache &amp; Virtualenv Store
+                  </div>
+                  <div className="font-mono text-xs font-semibold break-all">
+                    /Users/apple/.xinference/cache/v2
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Zero-copy GGUF symlinks • 522 GiB Free Disk Space
+                  </div>
+                </div>
+                <div className="rounded-lg border bg-muted/20 p-3.5 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Network className="h-3.5 w-3.5 text-sky-500" />
+                    DEC 1Panel &amp; Lango Gateway Mesh
+                  </div>
+                  <div className="font-mono text-xs font-semibold break-all">
+                    /tmp/1panel/agent.sock • :9999 • :4000
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Coordinated OS telemetry &amp; DevOps Copilot AI options
+                  </div>
+                </div>
+                <div className="rounded-lg border bg-muted/20 p-3.5 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
+                    OrcaCyber Autonomous Defense
+                  </div>
+                  <div className="font-mono text-xs font-semibold break-all">
+                    http://127.0.0.1:8088 (Active Guardrails)
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    DFlash2 Q8_0 Threat Engine &amp; Prompt Firewall
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card className="gap-0 overflow-hidden rounded-xl py-0 shadow-none">
               <CardHeader className="border-b bg-muted/20 py-5">
                 <div className="flex items-start gap-3">

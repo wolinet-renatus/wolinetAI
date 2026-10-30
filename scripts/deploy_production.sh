@@ -22,6 +22,8 @@ set_release_images() {
     export LANGO_IMAGE="ghcr.io/wolinet-renatus/wolinet-lango:${tag}"
     export WOLINEX_IMAGE="ghcr.io/wolinet-renatus/wolinet-wolinex:${tag}"
     export WEBSITE_IMAGE="ghcr.io/wolinet-renatus/wolinet-homepage:${tag}"
+    export DEVPORTAL_IMAGE="ghcr.io/wolinet-renatus/wolinet-devportal:${tag}"
+    export DOCS_IMAGE="ghcr.io/wolinet-renatus/wolinet-docs:${tag}"
 }
 
 "${ROOT_DIR}/scripts/setup_mitambo_auth.sh"
@@ -45,13 +47,13 @@ docker builder prune -a -f 2>/dev/null || true
 docker container prune -f 2>/dev/null || true
 docker image prune -f 2>/dev/null || true
 
-"${COMPOSE[@]}" pull mitambo lango wolinex website nginx
+"${COMPOSE[@]}" pull mitambo lango wolinex website devportal docs nginx
 
 if ! "${COMPOSE[@]}" up -d --no-build --wait --remove-orphans; then
     if [ -n "${PREVIOUS_TAG}" ]; then
         echo "Deployment failed; restoring ${PREVIOUS_TAG}" >&2
         set_release_images "${PREVIOUS_TAG}"
-        "${COMPOSE[@]}" pull mitambo lango wolinex website nginx
+        "${COMPOSE[@]}" pull mitambo lango wolinex website devportal docs nginx
         "${COMPOSE[@]}" up -d --no-build --wait
     fi
     exit 1

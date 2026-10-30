@@ -1,0 +1,30 @@
+name: "Wolinet API Documentation"
+tags:
+  - AI
+  - Documentation
+  - API
+title: "Interactive Scalar OpenAPI Documentation and Intelligent API Copilot"
+description: "Interactive modern OpenAPI documentation reference powered by Scalar with real-time request testing, SDK examples, and an integrated domain-aware Docs AI Copilot"
+additionalProperties:
+  key: docs
+  name: "Wolinet API Documentation"
+  tags:
+    - AI
+    - Documentation
+    - API
+  shortDescZh: "企业级 Scalar 现代化交互式 API 文档中心与智能文档副驾驶"
+  shortDescEn: "Interactive Scalar OpenAPI Documentation and Intelligent API Copilot"
+  description:
+    en: "Interactive modern OpenAPI documentation reference powered by Scalar with real-time request testing, SDK examples, and an integrated domain-aware Docs AI Copilot"
+    zh: "企业级 Scalar 现代化交互式 API 文档中心与智能文档副驾驶"
+  type: website
+  crossVersionUpdate: true
+  recommend: 1
+  limit: 1
+  gpuSupport: false
+  architectures:
+    - amd64
+    - arm64
+  website: https://docs.wolinet.com
+  github: https://github.com/wolinetai
+

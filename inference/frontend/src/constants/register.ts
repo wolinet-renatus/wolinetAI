@@ -334,23 +334,193 @@ export enum ControlnetModelFamily {
 export const CONTROLNET_MODEL_FAMILY_OPTIONS = [
   { label: ControlnetModelFamily.Controlnet, value: ControlnetModelFamily.Controlnet },
 ];
+export const SOVEREIGN_LOCAL_LLM_PRESETS = [
+  {
+    label: 'Wolinex Coder 1.5B (Flagship GGUF)',
+    model_name: 'wolinex-coder',
+    model_description:
+      'Wolinex Coder / Wolinet Pro — Sovereign AI Model distilled from DeepSeek-R1 (Qwen2 architecture, 1.5B, Uncensored, IQ4_XS).',
+    context_length: 131072,
+    model_lang: ['en', 'zh'],
+    model_ability: [ModelAbility.Chat, ModelAbility.Tools, ModelAbility.Reasoning],
+    model_family: 'deepseek-r1-distill-qwen',
+    tool_parser: 'qwen',
+    reasoning_start_tag: '<think>',
+    reasoning_end_tag: '</think>',
+    stop_token_ids: [151643, 151644, 151645],
+    stop: ['<|endoftext|>', '<|im_end|>'],
+    model_specs: [
+      {
+        model_uri: '/Users/apple/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf',
+        model_size_in_billions: 1.5,
+        model_format: ModelFormat.GGUFV2,
+        quantization: 'Q4_K_M',
+      },
+    ],
+  },
+  {
+    label: 'Wolinet Brain R1 1.5B (Reasoning)',
+    model_name: 'wolinet-brain-r1',
+    model_description:
+      'Wolinet Brain R1 1.5B Uncensored — Flagship Sovereign Reasoning Intelligence distilled from DeepSeek-R1 (131k context).',
+    context_length: 131072,
+    model_lang: ['en', 'zh'],
+    model_ability: [ModelAbility.Chat, ModelAbility.Tools, ModelAbility.Reasoning],
+    model_family: 'deepseek-r1-distill-qwen',
+    tool_parser: 'qwen',
+    reasoning_start_tag: '<think>',
+    reasoning_end_tag: '</think>',
+    stop_token_ids: [151643, 151644, 151645],
+    stop: ['<|endoftext|>', '<|im_end|>'],
+    model_specs: [
+      {
+        model_uri: '/Users/apple/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf',
+        model_size_in_billions: 1.5,
+        model_format: ModelFormat.GGUFV2,
+        quantization: 'Q4_K_M',
+      },
+    ],
+  },
+  {
+    label: 'Wolinet Coder v2 (Self-Trained LoRA)',
+    model_name: 'wolinet-coder-v2',
+    model_description:
+      'Wolinet Coder v2 — Self-Trained Sovereign AI Engineering Model fine-tuned on verified agent trajectories with LoRA distillation.',
+    context_length: 131072,
+    model_lang: ['en', 'zh'],
+    model_ability: [ModelAbility.Chat, ModelAbility.Tools, ModelAbility.Reasoning],
+    model_family: 'deepseek-r1-distill-qwen',
+    tool_parser: 'qwen',
+    reasoning_start_tag: '<think>',
+    reasoning_end_tag: '</think>',
+    stop_token_ids: [151643, 151644, 151645],
+    stop: ['<|endoftext|>', '<|im_end|>'],
+    model_specs: [
+      {
+        model_uri: '/Users/apple/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf',
+        model_size_in_billions: 1.5,
+        model_format: ModelFormat.GGUFV2,
+        quantization: 'Q4_K_M',
+      },
+    ],
+  },
+  {
+    label: 'Flintlock 3B v0.1 (IQ4_XS Fast Instruct)',
+    model_name: 'flintlock-3b',
+    model_description:
+      'Flintlock 3B v0.1 (Llama-3.2 3B Instruct architecture, IQ4_XS imatrix, 131k context) — High-speed sovereign intelligence with zero thinking delay.',
+    context_length: 131072,
+    model_lang: ['en'],
+    model_ability: [ModelAbility.Chat, ModelAbility.Tools],
+    model_family: 'llama-3.1-instruct',
+    tool_parser: 'llama3',
+    stop_token_ids: [128001, 128009],
+    stop: ['<|eot_id|>', '<|end_of_text|>'],
+    model_specs: [
+      {
+        model_uri: '/Users/apple/Documents/wolinetai/models/llm/flintlock_3B_v0.1.IQ4_XS.gguf',
+        model_size_in_billions: 3,
+        model_format: ModelFormat.GGUFV2,
+        quantization: 'IQ4_XS',
+      },
+    ],
+  },
+  {
+    label: 'Qwen3.8 27B DFlash2 (Speculative r3)',
+    model_name: 'qwen-dflash',
+    model_description:
+      'Qwen DFlash2 Speculative Decoding — Frontier 27B class reasoning accelerated by Qwen3.8-27B-DFlash2-r3-Q4_K_M block drafter.',
+    context_length: 262144,
+    model_lang: ['en', 'zh'],
+    model_ability: [ModelAbility.Chat, ModelAbility.Tools, ModelAbility.Reasoning],
+    model_family: 'qwen3.8',
+    tool_parser: 'qwen',
+    reasoning_start_tag: '<think>',
+    reasoning_end_tag: '</think>',
+    stop_token_ids: [151643, 151644, 151645],
+    stop: ['<|endoftext|>', '<|im_end|>'],
+    model_specs: [
+      {
+        model_uri:
+          '/Users/apple/Documents/wolinetai/models/dflash/qwen3.8-27b-dflash2-r3-q4_k_m.gguf',
+        model_size_in_billions: 27,
+        model_format: ModelFormat.GGUFV2,
+        quantization: 'Q4_K_M',
+      },
+    ],
+  },
+  {
+    label: 'Wolinex Speculative (DFlash2 v2 Q8_0)',
+    model_name: 'wolinex-speculative',
+    model_description:
+      'Wolinex Speculative — Dual-Engine Speculative Acceleration combining Wolinet Brain R1 1.5B with DFlash2 block-diffusion draft layer.',
+    context_length: 131072,
+    model_lang: ['en', 'zh'],
+    model_ability: [ModelAbility.Chat, ModelAbility.Tools, ModelAbility.Reasoning],
+    model_family: 'deepseek-r1-distill-qwen',
+    tool_parser: 'qwen',
+    reasoning_start_tag: '<think>',
+    reasoning_end_tag: '</think>',
+    stop_token_ids: [151643, 151644, 151645],
+    stop: ['<|endoftext|>', '<|im_end|>'],
+    model_specs: [
+      {
+        model_uri: '/Users/apple/Documents/wolinetai/models/dflash/dflash2-v2-q8_0.gguf',
+        model_size_in_billions: 1.5,
+        model_format: ModelFormat.GGUFV2,
+        quantization: 'Q8_0',
+      },
+    ],
+  },
+  {
+    label: 'OrcaCyber Defense DFlash2 (Security Q8_0)',
+    model_name: 'orcacyber-defense-dflash',
+    model_description:
+      'OrcaCyber Defense DFlash2 — Autonomous Security & Threat Intelligence LLM (Q8_0 GGUF) integrated with OrcaCyber Guardrails (:8088).',
+    context_length: 131072,
+    model_lang: ['en', 'zh'],
+    model_ability: [ModelAbility.Chat, ModelAbility.Tools, ModelAbility.Reasoning],
+    model_family: 'qwen3.8',
+    tool_parser: 'qwen',
+    reasoning_start_tag: '<think>',
+    reasoning_end_tag: '</think>',
+    stop_token_ids: [151643, 151644, 151645],
+    stop: ['<|endoftext|>', '<|im_end|>'],
+    model_specs: [
+      {
+        model_uri:
+          '/Users/apple/Documents/wolinetai/models/dflash/orcacyber-defense-dflash2-q8_0.gguf',
+        model_size_in_billions: 3,
+        model_format: ModelFormat.GGUFV2,
+        quantization: 'Q8_0',
+      },
+    ],
+  },
+];
+
 export const REGISTER_MODEL_INIT_DATA = {
   [ModelType.LLM]: {
     version: 2,
-    model_name: 'custom-llm',
-    model_description: 'This is a custom model description.',
-    context_length: 2048,
-    model_lang: ['en'],
-    model_ability: [ModelAbility.Generate],
+    model_name: 'wolinet-brain-r1',
+    model_description:
+      'Wolinet Brain R1 1.5B Uncensored — Flagship Sovereign Reasoning Intelligence distilled from DeepSeek-R1 (Qwen2 architecture, IQ4_XS imatrix, 131k context window).',
+    context_length: 131072,
+    model_lang: ['en', 'zh'],
+    model_ability: [ModelAbility.Chat, ModelAbility.Tools, ModelAbility.Reasoning],
     model_specs: [
       {
-        model_uri: '/path/to/llama-1',
-        model_size_in_billions: 7,
-        model_format: ModelFormat.PyTorch,
-        quantization: 'none',
+        model_uri: '/Users/apple/Documents/wolinetai/models/llm/wolinet-brain-r1-1.5b.gguf',
+        model_size_in_billions: 1.5,
+        model_format: ModelFormat.GGUFV2,
+        quantization: 'Q4_K_M',
       },
     ],
-    model_family: 'your_custom_model',
+    model_family: 'deepseek-r1-distill-qwen',
+    tool_parser: 'qwen',
+    reasoning_start_tag: '<think>',
+    reasoning_end_tag: '</think>',
+    stop_token_ids: [151643, 151644, 151645],
+    stop: ['<|endoftext|>', '<|im_end|>'],
     virtualenv: {
       packages: [],
     },

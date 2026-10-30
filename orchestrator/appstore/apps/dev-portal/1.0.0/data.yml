@@ -1,0 +1,34 @@
+additionalProperties:
+  formFields:
+    - default: 8082
+      edit: true
+      envKey: PANEL_APP_PORT_HTTP
+      labelEn: Port
+      labelZh: 端口
+      label:
+        en: Port
+        zh: 端口
+      required: true
+      rule: paramPort
+      type: number
+    - default: "http://lango:4000"
+      edit: true
+      envKey: LANGO_API_BASE_URL
+      labelEn: Gateway Base URL
+      labelZh: 网关接入地址
+      label:
+        en: Gateway Base URL
+        zh: 网关接入地址
+      required: true
+      type: text
+    - default: "http://wolinex:8080"
+      edit: true
+      envKey: WOLINEX_API_BASE_URL
+      labelEn: Studio Base URL
+      labelZh: 工作室后端地址
+      label:
+        en: Studio Base URL
+        zh: 工作室后端地址
+      required: true
+      type: text
+

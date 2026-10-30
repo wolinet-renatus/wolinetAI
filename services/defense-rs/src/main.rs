@@ -150,10 +150,8 @@ async fn health_handler(State(state): State<AppState>) -> impl IntoResponse {
         "runtime": "native-rust-axum",
         "models": [
             "Secure Pro",
-            "Wolinet Secure Pro",
             "Wolinet Pro",
             "Wolinex Coder",
-            "Wolinet Coder",
             "Wolinet Turbo Draft",
             "OrcaCyber-Nano-1.0-AI-Defense"
         ],
@@ -176,15 +174,11 @@ async fn models_handler() -> impl IntoResponse {
 
     let models = vec![
         ("Secure Pro", "Sovereign AI Cyber Defense & Infrastructure Guard (Rust Native Core)", "rust-native-dflash"),
-        ("Wolinet Secure Pro", "Sovereign AI Cyber Defense & Infrastructure Guard", "rust-native-dflash"),
         ("Wolinet Pro", "Sovereign AI Flagship Intelligence Core", "dflash-fast"),
         ("Wolinex Coder", "Sovereign AI Systems & Software Engineering Core", "dflash-fast"),
-        ("Wolinet Coder", "Sovereign AI Systems & Software Engineering Core", "dflash-fast"),
         ("Wolinet Turbo Draft", "High-Speed Speculative Draft Acceleration Engine", "dflash-speculative"),
         ("OrcaCyber-Nano-1.0-AI-Defense", "OrcaCyber Nano 1.0 AI Defense & Guardrail", "dflash"),
         ("flintlock-3b", "Flintlock 3B Sovereign Intelligence Engine", "llama3"),
-        ("wolinex-coder", "Wolinex Coder Native Endpoint", "dflash-fast"),
-        ("wolinet-pro", "Wolinet Pro Native Endpoint", "dflash-fast"),
     ];
 
     let data: Vec<serde_json::Value> = models

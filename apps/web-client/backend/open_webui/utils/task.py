@@ -1,3 +1,4 @@
+import json
 import logging
 import math
 import re
@@ -9,6 +10,362 @@ from open_webui.config import DEFAULT_RAG_TEMPLATE
 from open_webui.utils.misc import get_last_user_message, get_messages_content
 
 log = logging.getLogger(__name__)
+
+_GREETING_STOPWORDS = {
+    'hi',
+    'hii',
+    'hig',
+    'hey',
+    'heyy',
+    'hello',
+    'hellow',
+    'helllow',
+    'hellwo',
+    'helll',
+    'helo',
+    'heloe',
+    'hola',
+    'habari',
+    'mambo',
+    'vipi',
+    'sasa',
+    'niaje',
+    'shikamoo',
+    'za leo',
+    'good morning',
+    'good afternoon',
+    'good evening',
+    'welcome',
+    'mr',
+    'test',
+    'testing',
+    'yo',
+    'sup',
+    'ok',
+    'okay',
+    'continue',
+    'too late',
+    'your welcome',
+    'you are welcome',
+    'so fun',
+    'mzima wew',
+    'umekula',
+    'ujala au',
+    'how are you',
+    'who are you',
+    'wewe ni nani',
+    'umekula nini',
+    'unclear mesaages',
+    'unclear messages',
+}
+
+_GENERIC_TITLE_PATTERNS = {
+    'new chat',
+    'welcome',
+    'welcome!',
+    'welcome chat',
+    'welcome to chat',
+    'hello',
+    'hellow',
+    'heloe',
+    'helo',
+    'helll',
+    'hellwo',
+    'hello user',
+    'hello wolinex',
+    'hello and welcome',
+    'hello & welcome',
+    'hello how can i help',
+    'friendly greeting',
+    'friendly greeting and welcome',
+    'friendly hello and welcome',
+    'friendly conversation starter',
+    'chat introduction',
+    'general chat greeting',
+    'initial chat greeting',
+    'unrecognized command',
+    'coding help',
+    'programming assistant',
+    'code security & infrastructure protection',
+    'code security infrastructure protection',
+    'salamu za leo',
+    'ai bot info',
+    'new conversation',
+    'quick chat',
+}
+
+_ACRONYM_UPPER = {
+    'ai',
+    'it',
+    'ict',
+    'ceo',
+    'ui',
+    'ux',
+    'api',
+    'mcp',
+    'sql',
+    'html',
+    'css',
+    'js',
+    'tbc',
+    'bbc',
+    'whois',
+    'png',
+    'svg',
+    'pdf',
+    'llm',
+    'gpu',
+    'cpu',
+}
+
+
+def _strip_title_decorations(text: str) -> str:
+    """Strip markdown symbols, quotes, leading '>' or '***', and extra whitespace."""
+    if not text:
+        return ''
+    # Remove <think>...</think> blocks and markdown code fences
+    text = re.sub(r'<think\b[^>]*>.*?</think>', '', text, flags=re.S | re.I)
+    text = re.sub(r'```(?:json)?\s*|\s*```', '', text, flags=re.I)
+    # Take first non-empty line if multiline
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    text = lines[0] if lines else text.strip()
+    # Strip leading/trailing markdown/blockquote/punctuation noise (> * # - ` " ' : ;)
+    text = re.sub(r'^[\s>*#\-_`"\':;|~•]+', '', text)
+    text = re.sub(r'[\s>*#\-_`"\';|~]+$', '', text)
+    # Collapse internal markdown bold/italic markers
+    text = re.sub(r'\*{2,}|_{2,}', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
+def _normalize_for_comparison(text: str) -> str:
+    """Lowercase alphanumeric normalization (strips emojis and punctuation)."""
+    cleaned = _strip_title_decorations(text).lower()
+    cleaned = re.sub(r'[^\w\s&]', ' ', cleaned, flags=re.UNICODE)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
+
+
+def is_greeting_or_placeholder_message(text: str) -> bool:
+    """Return True if a user message is only a short greeting, typo greeting, or filler."""
+    if not text or not isinstance(text, str):
+        return True
+    norm = _normalize_for_comparison(text)
+    if not norm:
+        return True
+    if norm in _GREETING_STOPWORDS:
+        return True
+    words = norm.split()
+    if len(words) <= 2 and all(w in _GREETING_STOPWORDS or re.match(r'^h+e*l+o*w*$', w) for w in words):
+        return True
+    return False
+
+
+def is_generic_or_unclear_title(title: str) -> bool:
+    """Return True if a chat title is malformed (e.g. '>Welcome! '), a generic greeting, or a raw long prompt."""
+    if not title or not isinstance(title, str):
+        return True
+    raw = title.strip()
+    # Explicitly catch leading markdown like '>Welcome! ' or '*** Code Security...'
+    if raw.startswith(('>', '*', '#', '`', '"', "'")) or '***' in raw:
+        return True
+    norm = _normalize_for_comparison(raw)
+    if not norm:
+        return True
+    if norm in _GENERIC_TITLE_PATTERNS:
+        return True
+    if is_greeting_or_placeholder_message(norm):
+        return True
+    # Catch variations like "Quick Greeting - Wolinet Pro" or "Welcome - ..."
+    if any(
+        norm.startswith(prefix)
+        for prefix in (
+            'welcome',
+            'quick greeting',
+            'new conversation',
+            'friendly greeting',
+            'friendly hello',
+            'initial chat greeting',
+            'general chat greeting',
+            'hello ',
+        )
+    ):
+        return True
+    # Overly long raw prompt dumped as title
+    if len(raw) > 62 or len(norm.split()) > 9:
+        return True
+    return False
+
+
+def _pick_topic_emoji(text: str) -> str:
+    low = text.lower()
+    if any(k in low for k in ('ceo', 'startup', 'start up', 'motivation', 'founder', 'mission', 'business')):
+        return '🚀'
+    if any(k in low for k in ('security', 'audit', 'defense', 'cyber', 'auth', 'credential', 'password', 'sign in')):
+        return '🛡️'
+    if any(k in low for k in ('option', 'trading', 'stock', 'finance', 'altcoin', 'blockchain', 'market', 'export')):
+        return '📈'
+    if any(k in low for k in ('league', 'ligi kuu', 'football', 'match', 'score', 'team')):
+        return '⚽'
+    if any(k in low for k in ('honey', 'harvest', 'agricultur', 'farm', 'crop')):
+        return '🌾'
+    if any(k in low for k in ('song', 'verse', 'music', 'poem', 'lyric')):
+        return '🎵'
+    if any(k in low for k in ('logo', 'png', 'image', 'design', 'icon', 'theme', 'light/dark')):
+        return '🎨'
+    if any(k in low for k in ('html', 'css', 'js', 'code', 'coding', 'web dev', 'single page', 'application', 'mcp', 'docs')):
+        return '💻'
+    if any(k in low for k in ('job', 'ajira', 'ict officer', 'application letter', 'career')):
+        return '💼'
+    if any(k in low for k in ('news', 'internet', 'browse', 'website', 'wolinet.com', 'tbc', 'obama', 'trump', 'roman empire')):
+        return '🌐'
+    return '💬'
+
+
+def synthesize_concise_title_from_messages(messages: list[dict], model_name: str = '') -> str:
+    """Build a clean, human-readable 3-5 word title with emoji from conversation messages."""
+    substantive_user_msgs: list[str] = []
+    for m in messages or []:
+        if not isinstance(m, dict) or m.get('role') != 'user':
+            continue
+        content = m.get('content', '')
+        if isinstance(content, list):
+            content = ' '.join(item.get('text', '') for item in content if isinstance(item, dict) and item.get('type') == 'text')
+        if not isinstance(content, str):
+            continue
+        content = content.strip()
+        if not content or is_greeting_or_placeholder_message(content):
+            continue
+        substantive_user_msgs.append(content)
+
+    if not substantive_user_msgs:
+        clean_model = _strip_title_decorations(model_name or 'Wolinet AI')
+        if clean_model.lower().startswith('wolinet'):
+            return f'💬 {clean_model} Conversation'
+        return f'💬 Wolinet {clean_model} Chat'.strip()
+
+    # Prefer a substantive user prompt that defines a concrete task/topic over short meta-questions
+    chosen = substantive_user_msgs[0]
+    for candidate in substantive_user_msgs:
+        low_c = candidate.lower().strip()
+        if candidate.startswith('###') or len(candidate) >= 240:
+            continue
+        if any(
+            low_c.startswith(p)
+            for p in ('your name', 'how are your name', 'where you can from', 'can you browse', 'how to make you browse')
+        ) and len(substantive_user_msgs) > 1:
+            continue
+        chosen = candidate
+        break
+
+    text = _strip_title_decorations(chosen)
+    # Strip URLs for cleaner words, keeping domain name if helpful
+    text = re.sub(r'https?://(?:www\.)?([^/\s]+)/?\S*', r'\1', text)
+    # Remove leading greeting + conversational filler prefixes
+    prefix_patterns = [
+        r'^(?:hell+o+w*|helo+e*|hi+|hey+|habari|za leo)[\s,!.:;-]*',
+        r'^(?:please\s+)?(?:can\s+you\s+|could\s+you\s+|can\s+)?(?:help\s+(?:me\s+)?(?:to\s+)?)?',
+        r'^(?:check\s+the\s+internet\s+and\s+browse\s+then\s+tell\s+(?:me\s+)?about\s+)',
+        r'^(?:check\s+internet\s+and\s+tell\s+me\s+about\s+)',
+        r'^(?:check\s+internet\s+(?:who\s+is|about|latest)\s+)',
+        r'^(?:check\s+what\s+is\s+this\s+website\s+about\s+)',
+        r'^(?:check\s+here\s+)',
+        r'^(?:what\s+challenges\s+do\s+you\s+anticipate\s+with\s+(?:this\s+)?)',
+        r'^(?:what\s+is\s+the\s+latest\s+news\s+about\s+)',
+        r'^(?:what\s+are\s+the\s+latest\s+news\s+and\s+updates\s+on\s+)',
+        r'^(?:who\s+are\s+you\s+and\s+what\s+)',
+        r'^(?:write\s+a\s+simple\s+|write\s+simple\s+|write\s+a\s+|write\s+)',
+        r'^(?:explain\s+|tell\s+me\s+a\s+random\s+|tell\s+me\s+about\s+|tell\s+be\s+about\s+|tell\s+about\s+)',
+        r'^(?:can\s+you\s+provide\s+a\s+|can\s+you\s+build\s+simple\s+|can\s+you\s+)',
+        r'^(?:using\s+html\s*,\s*css\s+and\s+js\s+create\s+a\s+)',
+        r'^(?:how\s+to\s+make\s+you\s+)',
+    ]
+    for pat in prefix_patterns:
+        text = re.sub(pat, '', text, flags=re.I).strip()
+
+    # Cut trailing subordinate clauses ("if I'm familiar with...", "just in summary", etc.)
+    text = re.split(r'\b(?:if\s+i\'?m|if\s+i\s+am|just\s+in\s+summary)\b', text, maxsplit=1, flags=re.I)[0].strip()
+    text = re.sub(r'\bstart\s+up\b', 'Startup', text, flags=re.I)
+    text = re.sub(r'\bhavesting\b', 'Harvesting', text, flags=re.I)
+    text = re.sub(r'\bintenet\b', 'Internet', text, flags=re.I)
+    text = re.sub(r'\boboma\s+sayid\b', 'Obama Said', text, flags=re.I)
+    text = re.sub(r'[^\w\s.\-&/]', ' ', text)
+    words = [w for w in text.split() if w]
+
+    # Filter out leading filler words
+    filler_lead = {'the', 'a', 'an', 'to', 'for', 'about', 'on', 'in', 'of', 'is', 'are', 'what', 'how', 'who', 'as'}
+    while len(words) > 4 and words[0].lower() in filler_lead:
+        words.pop(0)
+
+    selected_words = words[:5] if words else ['General', 'Topic']
+    formatted_words = []
+    for w in selected_words:
+        low_w = w.lower()
+        if low_w in _ACRONYM_UPPER:
+            formatted_words.append(low_w.upper())
+        elif '.' in w and not w.endswith('.'):
+            formatted_words.append(low_w)
+        else:
+            formatted_words.append(w.capitalize())
+
+    emoji = _pick_topic_emoji(chosen)
+    title_body = ' '.join(formatted_words).strip(' .,-:;')
+    return f'{emoji} {title_body}' if title_body else '💬 Wolinet AI Conversation'
+
+
+def extract_and_clean_title(raw_output: str, messages: list[dict], model_name: str = '') -> str:
+    """Extract a clean title from LLM output, falling back to smart topic synthesis when unclear."""
+    candidate = ''
+    if raw_output and isinstance(raw_output, str):
+        # First strip <think>...</think> so braces inside reasoning never break JSON extraction
+        stripped = re.sub(r'<think\b[^>]*>.*?</think>', '', raw_output, flags=re.S | re.I).strip()
+        # Look for JSON {"title": "..."} (use last match in case of preamble)
+        matches = list(re.finditer(r'\{[^{}]*"title"\s*:\s*"((?:[^"\\]|\\.)*)"[^{}]*\}', stripped))
+        if matches:
+            try:
+                candidate = json.loads(f'"{matches[-1].group(1)}"')
+            except Exception:
+                candidate = matches[-1].group(1)
+        else:
+            # Try standard json.loads on last {...} block
+            lbrace = stripped.rfind('{')
+            rbrace = stripped.rfind('}')
+            if lbrace != -1 and rbrace != -1 and rbrace > lbrace:
+                try:
+                    parsed = json.loads(stripped[lbrace : rbrace + 1])
+                    if isinstance(parsed, dict) and isinstance(parsed.get('title'), str):
+                        candidate = parsed['title']
+                except Exception:
+                    pass
+            if not candidate and '{' not in stripped:
+                candidate = stripped
+
+    raw_was_unclear = is_generic_or_unclear_title(candidate)
+    candidate = _strip_title_decorations(candidate)
+
+    # Check if conversation has substantive non-greeting user messages
+    has_substantive = any(
+        isinstance(m, dict)
+        and m.get('role') == 'user'
+        and isinstance(m.get('content'), str)
+        and not is_greeting_or_placeholder_message(m.get('content', ''))
+        for m in (messages or [])
+    )
+
+    if not has_substantive:
+        # Only a greeting so far — never return '>Welcome! ' or 'hellow' or 'heloe'
+        return synthesize_concise_title_from_messages(messages, model_name=model_name)
+
+    if not candidate or raw_was_unclear or is_generic_or_unclear_title(candidate):
+        return synthesize_concise_title_from_messages(messages, model_name=model_name)
+
+    # Ensure it has a leading emoji for visual consistency in the sidebar
+    if not re.match(r'^[\U00010000-\U0010ffff\u2600-\u27bf]', candidate):
+        emoji = _pick_topic_emoji(candidate)
+        candidate = f'{emoji} {candidate}'
+
+    return candidate
+
 
 
 # Let the right tool be given for the work at hand,
@@ -295,10 +652,33 @@ async def rag_template(template: str, context: str, query: str):
     return template
 
 
+def filter_substantive_messages_for_title(messages: list[dict]) -> list[dict]:
+    """Filter out pure greeting turns ('hellow', 'hi', etc.) when real topic messages exist."""
+    if not messages:
+        return []
+    filtered: list[dict] = []
+    skip_next_assistant = False
+    for m in messages:
+        if not isinstance(m, dict):
+            continue
+        role = m.get('role', '')
+        content = m.get('content', '')
+        if role == 'user' and isinstance(content, str) and is_greeting_or_placeholder_message(content):
+            skip_next_assistant = True
+            continue
+        if role == 'assistant' and skip_next_assistant:
+            skip_next_assistant = False
+            continue
+        skip_next_assistant = False
+        filtered.append(m)
+    return filtered if filtered else messages
+
+
 async def title_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
-    prompt = get_last_user_message(messages)
+    effective_messages = filter_substantive_messages_for_title(messages)
+    prompt = get_last_user_message(effective_messages) or get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
-    template = replace_messages_variable(template, messages)
+    template = replace_messages_variable(template, effective_messages)
 
     template = await prompt_template(template, user)
 

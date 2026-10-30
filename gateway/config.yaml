@@ -15,7 +15,7 @@ model_list:
       rpm: 2000
       tpm: 4000000
 
-  # Wolinet Coder / Wolinex Coder: Sovereign High-Speed Code Intelligence (Local Mitambo via Rust Core)
+  # Wolinex Coder: Sovereign High-Speed Code Intelligence (Local Mitambo via Rust Core)
   - model_name: "Wolinex Coder"
     litellm_params:
       model: "openai/Wolinex Coder"
@@ -26,21 +26,6 @@ model_list:
       id: "wolinex-coder"
       mode: chat
       base_model: "Wolinex Coder"
-      max_input_tokens: 32768
-      max_output_tokens: 16384
-      rpm: 2000
-      tpm: 4000000
-
-  - model_name: "Wolinet Coder"
-    litellm_params:
-      model: "openai/Wolinet Coder"
-      api_base: "http://host.docker.internal:8088/v1"
-      api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
-      merge_reasoning_content_in_choices: false
-    model_info:
-      id: "wolinet-coder"
-      mode: chat
-      base_model: "Wolinet Coder"
       max_input_tokens: 32768
       max_output_tokens: 16384
       rpm: 2000
@@ -63,19 +48,6 @@ model_list:
       max_output_tokens: 8192
       rpm: 3000
       tpm: 5000000
-
-  - model_name: "Wolinet Secure Pro"
-    litellm_params:
-      model: "openai/Wolinet Secure Pro"
-      api_base: "http://host.docker.internal:8088/v1"
-      api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
-      merge_reasoning_content_in_choices: false
-    model_info:
-      id: "wolinet-secure-pro"
-      mode: chat
-      base_model: "Wolinet Secure Pro"
-      max_input_tokens: 262144
-      max_output_tokens: 8192
 
   - model_name: "Wolinet Turbo Draft"
     litellm_params:
@@ -258,15 +230,6 @@ model_list:
       id: "dall-e-2"
       mode: image_generation
 
-  - model_name: "Wolinet Image"
-    litellm_params:
-      model: "gemini/gemini-3.1-flash-image"
-      api_base: "https://aiplatform.googleapis.com/v1/projects/194835052236/locations/global/publishers/google"
-      api_key: "AQ.Ab8RN6I6jDTRMgx2zJbueLK2_s7DMq6-Ec3Y4BUJuA8khozfYA"
-    model_info:
-      id: "wolinet-image"
-      mode: image_generation
-
   # Native Embeddings Models
   - model_name: "text-embedding-3-small"
     litellm_params:
@@ -349,6 +312,10 @@ litellm_settings:
     "wolinex-coder": "Wolinex Coder"
     "Wolinet Coder": "Wolinex Coder"
     "wolinet-coder": "Wolinex Coder"
+    "Wolinet Coder v2": "Wolinex Coder"
+    "wolinet-coder-v2": "Wolinex Coder"
+    "Wolinet Image": "Wolinet Max Image"
+    "wolinet-image": "Wolinet Max Image"
     "gpt-3.5-turbo": "Wolinet Pro"
 
     # --------------------------------------------------------------------------
@@ -450,69 +417,6 @@ mcp_servers:
     description: "Wolinet self-hosted Obscura browser and sovereign crawler/search index for local web searching, navigation, clean Markdown extraction, and interaction."
 
 router_settings:
-  model_group_alias:
-    # Tier A: Sovereign Local Models
-    "Wolinet Pro": "Wolinet Pro"
-    "wolinet-pro": "Wolinet Pro"
-    "Wolinex Coder": "Wolinex Coder"
-    "wolinex-coder": "Wolinex Coder"
-    "Wolinet Coder": "Wolinex Coder"
-    "wolinet-coder": "Wolinex Coder"
-    "gpt-3.5-turbo": "Wolinet Pro"
-
-    # Tier C: Gemini Enterprise Flagship (Wolinet Max)
-    "Wolinet Max": "Wolinet Max"
-    "wolinet-max": "Wolinet Max"
-    "Wolinet Turbo": "Wolinet Max"
-    "wolinet-turbo": "Wolinet Max"
-    "Wolinet Max Turbo": "Wolinet Max"
-    "wolinet-max-turbo": "Wolinet Max"
-    "gemini-cloud-preview": "Wolinet Max"
-    "gemini-3.8-flash": "Wolinet Max"
-    "gemini-3.5-flash": "Wolinet Max"
-    "gemini-2.5-flash": "Wolinet Max"
-    "gemini-flash-latest": "Wolinet Max"
-    "gemini-pro-latest": "Wolinet Max"
-    "gemini/gemini-3.8-flash": "Wolinet Max"
-    "gemini/gemini-3.5-flash": "Wolinet Max"
-    "gemini/gemini-2.5-flash": "Wolinet Max"
-    "gemini": "Wolinet Max"
-    "gpt-4o": "Wolinet Max"
-    "gpt-4o-mini": "Wolinet Max"
-    "gpt-4": "Wolinet Max"
-    "claude-3-5-sonnet": "Wolinet Max"
-
-    # Tier B: Moonshot Kimi K3.1 Pro MoE Flagship (Wolinet Max Pro)
-    "Wolinet Max Pro": "Wolinet Max Pro"
-    "wolinet-max-pro": "Wolinet Max Pro"
-    "kimi-k3.1-pro": "Wolinet Max Pro"
-    "kimi-k3.1-pro-highspeed": "Wolinet Max Pro"
-    "kimi-highspeed": "Wolinet Max Pro"
-    "kimi-k3.1-highspeed": "Wolinet Max Pro"
-    "kimi-k3": "Wolinet Max Pro"
-    "kimi": "Wolinet Max Pro"
-    "moonshot": "Wolinet Max Pro"
-    # Legacy Kimi K2 Series (Forward-mapped to Wolinet Max Pro)
-    "kimi-k2.7-code-highspeed": "Wolinet Max Pro"
-    "kimi-k2.7-code": "Wolinet Max Pro"
-    "kimi-k2.6": "Wolinet Max Pro"
-    "kimi-k2": "Wolinet Max Pro"
-
-    # Tier D: DeepSeek Models (Mapped to Scorpio / Scorpio Pro)
-    "Scorpio": "Scorpio"
-    "scorpio": "Scorpio"
-    "Scorpio Pro": "Scorpio Pro"
-    "scorpio-pro": "Scorpio Pro"
-    "deepseek-flash": "Scorpio"
-    "deepseek-v4.1-flash": "Scorpio"
-    "deepseek-v4-flash": "Scorpio"
-    "deepseek-v4-flash-vision-exp": "Scorpio"
-    "deepseek-chat": "Scorpio"
-    "deepseek-coder": "Scorpio"
-    "deepseek": "Scorpio"
-    "deepseek-v4-pro": "Scorpio Pro"
-    "deepseek-pro": "Scorpio Pro"
-    "deepseek-reasoner": "Scorpio Pro"
   fallbacks:
     - "Scorpio": ["Wolinet Max", "Wolinet Max Pro", "Wolinex Coder", "Wolinet Pro"]
     - "scorpio": ["Wolinet Max", "Wolinet Max Pro", "Wolinex Coder", "Wolinet Pro"]

@@ -89,7 +89,7 @@ else:
     print("   Engine: llama.cpp | Format: ggufv2 | Quant: Q4_K_M | CPU (n_ctx=32768, n_threads=10, 12GB RAM)")
     try:
         launch_args = {
-            "model_name": "deepseek-r1-distill-qwen",
+            "model_name": "wolinex-coder",
             "model_uid": uid,
             "model_engine": "llama.cpp",
             "model_format": "ggufv2",

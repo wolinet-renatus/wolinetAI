@@ -11,9 +11,11 @@
     "tools",
     "reasoning"
   ],
-  "model_description": "Wolinex Coder / Wolinet Pro - Sovereign AI Model distilled from DeepSeek-R1 (Qwen2 architecture, 1.5B, Uncensored, IQ4_XS). Optimized for high-speed local inference, reasoning, and autonomous coding workflows.",
+  "model_description": "Wolinex Coder / Wolinet Pro — Sovereign AI Model distilled from DeepSeek-R1 (Qwen2 architecture, 1.5B, Uncensored, IQ4_XS). Optimized for high-speed local inference, reasoning, and autonomous coding workflows.",
   "model_family": "deepseek-r1-distill-qwen",
   "tool_parser": "qwen",
+  "reasoning_start_tag": "<think>",
+  "reasoning_end_tag": "</think>",
   "model_specs": [
     {
       "model_format": "ggufv2",
@@ -21,6 +23,7 @@
       "quantization": "Q4_K_M",
       "model_id": "thirdeyeai/DeepSeek-R1-Distill-Qwen-1.5B-uncensored",
       "model_hub": "huggingface",
+      "model_uri": "/Users/apple/Documents/wolinetai/models/llm",
       "model_file_name_template": "wolinet-brain-r1-1.5b.gguf"
     }
   ],

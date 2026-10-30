@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from typing import Optional
@@ -22,11 +23,13 @@ from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
     autocomplete_generation_template,
     emoji_generation_template,
+    extract_and_clean_title,
     follow_up_generation_template,
     get_task_model_id,
     image_prompt_generation_template,
     moa_response_generation_template,
     query_generation_template,
+    synthesize_concise_title_from_messages,
     tags_generation_template,
     title_generation_template,
 )
@@ -223,13 +226,35 @@ async def generate_title(request: Request, form_data: dict, user=Depends(get_ver
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        res = await generate_chat_completion(request, form_data=payload, user=user)
+        if isinstance(res, dict) and res.get('choices'):
+            msg_obj = res['choices'][0].get('message', {})
+            raw_content = msg_obj.get('content') or msg_obj.get('reasoning_content') or ''
+            clean_title = extract_and_clean_title(
+                raw_content,
+                form_data.get('messages', []),
+                model_name=model_id,
+            )
+            res['choices'][0].setdefault('message', {})['content'] = json.dumps(
+                {'title': clean_title}, ensure_ascii=False
+            )
+        return res
     except Exception as e:
-        log.error('Exception occurred', exc_info=True)
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={'detail': 'An internal error has occurred.'},
+        log.error('Exception occurred in generate_title, falling back to synthesized title', exc_info=True)
+        fallback_title = synthesize_concise_title_from_messages(
+            form_data.get('messages', []),
+            model_name=model_id,
         )
+        return {
+            'choices': [
+                {
+                    'message': {
+                        'role': 'assistant',
+                        'content': json.dumps({'title': fallback_title}, ensure_ascii=False),
+                    }
+                }
+            ]
+        }
 
 
 @router.post('/follow_up/completions')

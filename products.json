@@ -60,6 +60,7 @@
       "sub_branch": "stack/dev-portal",
       "description": "Interactive developer documentation, API key onboarding, and playground",
       "ports": [8082],
+      "healthcheck": "http://localhost:8082/healthz",
       "build": {
         "type": "static_nginx",
         "image": "wolinet-dev-portal:latest",
@@ -67,18 +68,34 @@
       }
     },
     {
+      "id": "docs",
+      "name": "Wolinet API Documentation & Copilot",
+      "category": "web_app",
+      "deployable_to_server": true,
+      "path": "apps/docs",
+      "sub_branch": "stack/docs",
+      "description": "Scalar API reference, interactive sandbox, and domain documentation copilot",
+      "ports": [8083],
+      "healthcheck": "http://localhost:8083/healthz",
+      "build": {
+        "type": "static_nginx",
+        "image": "wolinet-docs:latest",
+        "dockerfile": "apps/docs/Dockerfile"
+      }
+    },
+    {
       "id": "homepage",
       "name": "Wolinet Homepage & Showcase",
       "category": "web_app",
       "deployable_to_server": true,
-      "path": "apps/homepage",
+      "path": "website",
       "sub_branch": "stack/homepage",
       "description": "Enterprise sovereign showcase, landing page, and product documentation",
-      "ports": [80],
+      "ports": [80, 8080, 3000],
       "build": {
         "type": "static_nginx",
         "image": "wolinet-homepage:latest",
-        "dockerfile": "apps/homepage/Dockerfile"
+        "dockerfile": "website/Dockerfile"
       }
     },
     {

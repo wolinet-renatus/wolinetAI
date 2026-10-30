@@ -954,6 +954,382 @@ button {
   font-size: 12px;
 }
 
+/* =========================================================================
+   Downloader & Desktop Workspace Section
+   ========================================================================= */
+.download-section {
+  position: relative;
+  border-top: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
+  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.08) 0%, transparent 60%);
+  padding: 80px 0;
+}
+
+.download-hero-card {
+  background: linear-gradient(135deg, rgba(18, 24, 38, 0.95) 0%, rgba(10, 14, 24, 0.85) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: var(--radius-xl);
+  padding: 40px;
+  margin-bottom: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(56, 189, 248, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.download-hero-card::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  right: -100px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.16) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.download-hero-left {
+  max-width: 680px;
+}
+
+.download-auto-detected {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #10b981;
+  margin-bottom: 16px;
+}
+
+.download-auto-detected .pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.download-hero-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  line-height: 1.25;
+}
+
+.download-hero-desc {
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.download-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.download-platforms-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.download-platform-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s var(--ease);
+  position: relative;
+}
+
+.download-platform-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.12);
+}
+
+.download-platform-card.recommended {
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.18);
+}
+
+.platform-badge-rec {
+  position: absolute;
+  top: -10px;
+  right: 20px;
+  background: var(--gradient-cyan);
+  color: #050608;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.platform-card-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.platform-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.platform-card-header h4 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.platform-card-header .platform-arch {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.platform-meta-list {
+  list-style: none;
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-grow: 1;
+}
+
+.platform-meta-item {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.platform-meta-label {
+  color: var(--text-muted);
+}
+
+.platform-meta-val {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.sha-copy-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.sha-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Swarm Roles & Execution Pillars */
+.agent-roles-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.agent-role-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s var(--ease);
+}
+
+.agent-role-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-4px);
+}
+
+.agent-role-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-cyan);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-role-card h4 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.agent-role-card p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  flex-grow: 1;
+  margin-bottom: 16px;
+}
+
+.agent-role-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.agent-role-tag {
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-muted);
+}
+
+.swarm-pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.swarm-pillar-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 24px;
+}
+
+.swarm-pillar-card h4 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.swarm-pillar-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Terminal Install Box */
+.terminal-install-box {
+  background: #090c14;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.terminal-install-header {
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.terminal-install-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.terminal-install-tab {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.terminal-install-tab:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.terminal-install-tab.active {
+  color: #ffffff;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.terminal-install-pre {
+  padding: 20px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #e2e8f0;
+  overflow-x: auto;
+}
+
+/* Generic SVG Helpers */
+.svg-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  margin-right: 6px;
+}
+
 /* Responsive Breakpoints */
 @media (max-width: 1024px) {
   .hero-grid {
@@ -969,6 +1345,19 @@ button {
   .studio-grid {
     grid-template-columns: 1fr;
   }
+  .download-hero-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .download-platforms-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .agent-roles-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .swarm-pillars-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
   .footer-top {
     grid-template-columns: 1fr 1fr;
   }
@@ -977,6 +1366,15 @@ button {
 @media (max-width: 768px) {
   .desktop-nav {
     display: none;
+  }
+  .download-platforms-grid {
+    grid-template-columns: 1fr;
+  }
+  .agent-roles-grid {
+    grid-template-columns: 1fr;
+  }
+  .swarm-pillars-grid {
+    grid-template-columns: 1fr;
   }
   .footer-top {
     grid-template-columns: 1fr;

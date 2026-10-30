@@ -12,7 +12,11 @@ import { useI18n } from '@/contexts/i18n-context';
 import { useForm } from '@/hooks/use-form';
 import { cn } from '@/lib/utils';
 import { ModelType, CUSTOM_MODEL_OPTIONS } from '@/constants';
-import { ModelFormat, REGISTER_MODEL_INIT_DATA } from '@/constants/register';
+import {
+  ModelFormat,
+  REGISTER_MODEL_INIT_DATA,
+  SOVEREIGN_LOCAL_LLM_PRESETS,
+} from '@/constants/register';
 import type { ModelPrompts, ModelFamily } from '@/types/services';
 import type { RegisterModelType } from '@/types/common';
 import AutoFill from './auto-fill';
@@ -130,14 +134,26 @@ const RegisterModel: FC<RegisterModelProps> = ({ modelType, modelName }) => {
         }
 
         if (Array.isArray(formData?.model_specs)) {
-          formData.model_specs = formData.model_specs.map((item: any) => ({
-            ...item,
-            model_size_in_billions:
-              typeof item?.model_size_in_billions === 'string' &&
-              item.model_size_in_billions.includes('_')
-                ? item.model_size_in_billions.replace('_', '.')
-                : item?.model_size_in_billions,
-          }));
+          formData.model_specs = formData.model_specs.map((item: any) => {
+            const rawUri = String(item?.model_uri || '');
+            const fileName = String(item?.model_file_name_template || '');
+            const fullUri =
+              item?.model_format === ModelFormat.GGUFV2 &&
+              rawUri &&
+              fileName &&
+              !rawUri.endsWith(fileName)
+                ? `${rawUri.replace(/\/$/, '')}/${fileName}`
+                : rawUri || (fileName ? `/Users/apple/Documents/wolinetai/models/llm/${fileName}` : '');
+            return {
+              ...item,
+              model_uri: fullUri,
+              model_size_in_billions:
+                typeof item?.model_size_in_billions === 'string' &&
+                item.model_size_in_billions.includes('_')
+                  ? item.model_size_in_billions.replace('_', '.')
+                  : item?.model_size_in_billions,
+            };
+          });
         }
         form.setFieldsValue(formData);
       } catch {
@@ -189,6 +205,55 @@ const RegisterModel: FC<RegisterModelProps> = ({ modelType, modelName }) => {
           </TabsList>
           <TabsContent value={modelType} className="flex px-1 pb-1">
             <div className="flex-1 min-w-0">
+              {isLLM && (
+                <div className="mb-5 rounded-lg border border-border/80 bg-muted/25 p-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-primary">
+                        Wolinet Sovereign Local Model Presets (Disk Weights)
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Click a local GGUF model preset below to auto-populate all registration fields, chat template, tool parser, and verified local weight path.
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {SOVEREIGN_LOCAL_LLM_PRESETS.map((preset) => (
+                      <Button
+                        key={preset.model_name}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="text-xs h-7"
+                        onClick={() => {
+                          const promptCfg = modelPromptsMap?.[preset.model_family];
+                          form.setFieldsValue({
+                            version: 2,
+                            model_name: preset.model_name,
+                            model_description: preset.model_description,
+                            context_length: preset.context_length,
+                            model_lang: preset.model_lang,
+                            model_ability: preset.model_ability,
+                            model_family: preset.model_family,
+                            tool_parser: preset.tool_parser || promptCfg?.tool_parser,
+                            reasoning_start_tag:
+                              preset.reasoning_start_tag || promptCfg?.reasoning_start_tag,
+                            reasoning_end_tag:
+                              preset.reasoning_end_tag || promptCfg?.reasoning_end_tag,
+                            chat_template: promptCfg?.chat_template,
+                            stop_token_ids: preset.stop_token_ids || promptCfg?.stop_token_ids || [''],
+                            stop: preset.stop || promptCfg?.stop || [''],
+                            model_specs: preset.model_specs,
+                            virtualenv: { packages: [] },
+                          });
+                        }}
+                      >
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <FormContent
                 modelType={modelType}
                 form={form}

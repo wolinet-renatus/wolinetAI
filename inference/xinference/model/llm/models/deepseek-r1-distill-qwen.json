@@ -9,8 +9,10 @@
     ],
     "model_ability": [
       "chat",
+      "tools",
       "reasoning"
     ],
+    "tool_parser": "qwen",
     "model_description": "deepseek-r1-distill-qwen is distilled from DeepSeek-R1 based on Qwen",
     "model_specs": [
       {

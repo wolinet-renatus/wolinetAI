@@ -21,14 +21,33 @@ class SiteParser(HTMLParser):
 
 class PublicSurfaceTests(unittest.TestCase):
     def test_homepage_exposes_each_product_and_download_destination(self) -> None:
+        raw_html = (ROOT / "website/index.html").read_text()
         parser = SiteParser()
-        parser.feed((ROOT / "apps/homepage/index.html").read_text())
+        parser.feed(raw_html)
 
-        for host in ("wolinex", "lango", "mitambo", "dev"):
-            self.assertTrue(any(f"https://{host}.wolinet.com" in link for link in parser.links))
-        self.assertTrue(any("apps.apple.com/app/wolinet-ai" in link for link in parser.links))
-        self.assertTrue(any("play.google.com/store/apps/details?id=com.wolinet.ai" in link for link in parser.links))
-        self.assertIn("mega-menu", parser.ids)
+        # 1. Assert all 4 native desktop platform releases are exposed
+        for platform_binary in (
+            "WolinetIDE-macOS-arm64.dmg",
+            "WolinetIDE-macOS-x64.dmg",
+            "WolinetIDE-Windows-x64-setup.exe",
+            "WolinetIDE-Linux-x86_64.AppImage",
+        ):
+            self.assertTrue(
+                any(f"/downloads/{platform_binary}" in link for link in parser.links),
+                f"Missing download link for {platform_binary}",
+            )
+
+        # 2. Assert dynamic OS detection & downloader UI elements
+        for required_id in ("hero-download-btn", "hero-download-label", "detected-os-pill", "terminal-install-code"):
+            self.assertIn(required_id, parser.ids, f"Missing required element id {required_id}")
+
+        # 3. Assert Studio and API reference portal bindings exist
+        self.assertIn('data-portal="wolinex"', raw_html)
+        self.assertIn('data-portal="docs"', raw_html)
+
+        # 4. Assert zero raw infrastructure leak in user-facing marketing copy
+        for leak in (":4000", ":9997", "litellm", "xinference"):
+            self.assertNotIn(leak, raw_html.lower())
 
     def test_developer_portal_has_session_key_and_assistant_contracts(self) -> None:
         page = (ROOT / "apps/dev-portal/index.html").read_text()
@@ -45,7 +64,7 @@ class PublicSurfaceTests(unittest.TestCase):
     def test_edge_routes_all_public_hosts_and_rewrites_the_session_cookie(self) -> None:
         config = (ROOT / "nginx/conf.d/wolinet.conf").read_text()
 
-        for host in ("ai", "wolinex", "lango", "mitambo", "dev"):
+        for host in ("ai", "wolinex", "lango", "mitambo", "dev", "docs"):
             self.assertIn(f"server_name {host}.wolinet.com", config)
         self.assertIn("Domain=.wolinet.com", config)
         self.assertIn("Secure; SameSite=Lax", config)
@@ -104,6 +123,67 @@ class PublicSurfaceTests(unittest.TestCase):
         except Exception:  # noqa: BLE001, S110
             # If live container is not running during isolated CI runs, file assertions above validate contract
             pass
+
+    def test_docs_portal_has_scalar_and_copilot_contracts(self) -> None:
+        index_html = (ROOT / "apps/docs/index.html").read_text()
+        client_js = (ROOT / "apps/docs/app.js").read_text()
+        nginx_conf = (ROOT / "apps/docs/nginx.conf").read_text()
+
+        # 1. Scalar API Reference contracts
+        self.assertIn("@scalar/api-reference", index_html)
+        self.assertIn('data-url="/openapi.json"', index_html)
+        self.assertIn('id="api-reference"', index_html)
+
+        # 2. Docs AI Copilot contracts
+        self.assertIn('id="floating-assistant-btn"', index_html)
+        self.assertIn('id="open-assistant-header-btn"', index_html)
+        self.assertIn('id="copilot-drawer"', index_html)
+        self.assertIn('id="copilot-form"', index_html)
+        self.assertIn("/v1/chat/completions", client_js)
+        self.assertIn("Wolinet AI Documentation Copilot", client_js)
+
+        # 3. Upstream proxy and SSE buffering configs
+        self.assertIn("set $lango_upstream lango:4000", nginx_conf)
+        self.assertIn("proxy_buffering off", nginx_conf)
+
+        # 4. Zero stack leaks in user-facing html
+        for leak in (":4000", ":9997", "litellm", "xinference"):
+            self.assertNotIn(leak, index_html.lower())
+
+    def test_docker_compose_and_appstore_contracts(self) -> None:
+        compose_prod = (ROOT / "docker-compose.prod.yml").read_text()
+        compose_core = (ROOT / "docker-compose.yml").read_text()
+        compose_dev = (ROOT / "docker-compose.dev.yml").read_text()
+
+        # 1. DevPortal and Docs in production compose
+        self.assertIn("devportal:", compose_prod)
+        self.assertIn("docs:", compose_prod)
+        self.assertIn("aliases:\n          - devportal", compose_prod)
+        self.assertIn("aliases:\n          - docs", compose_prod)
+        self.assertIn("- devportal", compose_prod)
+        self.assertIn("- docs", compose_prod)
+
+        # 2. Core & Dev compose manifests
+        self.assertIn("devportal:", compose_core)
+        self.assertIn("docs:", compose_core)
+        self.assertIn("8082:8082", compose_dev)
+        self.assertIn("8083:8083", compose_dev)
+
+        # 3. 1Panel App Store and Quadlet manifests
+        self.assertTrue((ROOT / "orchestrator/appstore/apps/dev-portal/data.yml").exists())
+        self.assertTrue((ROOT / "orchestrator/appstore/apps/dev-portal/1.0.0/data.yml").exists())
+        self.assertTrue((ROOT / "orchestrator/appstore/apps/dev-portal/1.0.0/docker-compose.yml").exists())
+        self.assertTrue((ROOT / "orchestrator/appstore/apps/docs/data.yml").exists())
+        self.assertTrue((ROOT / "orchestrator/appstore/apps/docs/1.0.0/data.yml").exists())
+        self.assertTrue((ROOT / "orchestrator/appstore/apps/docs/1.0.0/docker-compose.yml").exists())
+        self.assertTrue((ROOT / "orchestrator/podman/quadlets/wolinet-devportal.container").exists())
+        self.assertTrue((ROOT / "orchestrator/podman/quadlets/wolinet-docs.container").exists())
+        self.assertTrue((ROOT / "orchestrator/1apanel/core/app/template/wolinet-docs.container").exists())
+
+        # 4. Products catalog contains both dev-portal and docs
+        products_text = (ROOT / "products.json").read_text()
+        self.assertIn('"id": "dev-portal"', products_text)
+        self.assertIn('"id": "docs"', products_text)
 
 
 if __name__ == "__main__":

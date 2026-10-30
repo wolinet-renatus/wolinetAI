@@ -6,19 +6,19 @@
     <meta name="theme-color" content="#08090d" />
     <meta
       name="description"
-      content="Wolinet AI delivers sovereign foundation models, an enterprise AI workspace, and a high-speed OpenAI-compatible API with complete data privacy and zero unauthorized retention."
+      content="Wolinet AI delivers sovereign foundation models, an autonomous multi-agent developer platform, and high-speed OpenAI-compatible APIs with 100% data sovereignty."
     />
-    <meta property="og:title" content="Wolinet AI — Sovereign Intelligence & Developer Platform" />
+    <meta property="og:title" content="Wolinet AI — Sovereign Intelligence & Autonomous Agent Platform" />
     <meta
       property="og:description"
-      content="Deploy private foundation models, orchestrate collaborative agent workflows, and access developer endpoints with total data ownership."
+      content="Deploy private foundation models, orchestrate collaborative agent swarms, and download WolinetIDE for macOS, Windows, and Linux."
     />
     <meta property="og:image" content="/logo.png" />
     <meta property="og:type" content="website" />
-    <title>Wolinet AI — Sovereign Intelligence & Developer Platform</title>
+    <title>Wolinet AI — Sovereign Intelligence & Autonomous Agent Platform</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="stylesheet" href="/styles.css?v=20261019_v2" />
+    <link rel="stylesheet" href="/styles.css?v=20261030_v3" />
   </head>
   <body>
     <!-- Ambient Lighting Effects -->
@@ -39,15 +39,26 @@
 
         <nav class="desktop-nav" aria-label="Main Navigation">
           <a class="nav-item" href="#capabilities">Capabilities</a>
+          <a class="nav-item" href="#agent-swarm">Agent Swarm</a>
+          <a class="nav-item" href="#downloads">
+            <span>Downloads</span>
+            <span style="font-size: 10px; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: var(--brand-cyan); border: 1px solid rgba(56, 189, 248, 0.3); padding: 1px 6px; border-radius: 999px; margin-left: 4px;">v0.3.75</span>
+          </a>
           <a class="nav-item" href="#models">Models</a>
           <a class="nav-item" href="#developer-studio">Developer Studio</a>
-          <a class="nav-item" href="/docs" data-portal="docs">API Reference</a>
-          <a class="nav-item" href="#security">Sovereignty & Security</a>
+          <a class="nav-item" href="https://docs.wolinet.com" data-portal="docs" target="_blank" rel="noopener">API Reference</a>
+          <a class="nav-item" href="#security">Sovereignty</a>
         </nav>
 
         <div class="nav-actions">
-          <a class="btn btn-secondary btn-sm" href="#developer-studio">API Key</a>
-          <a class="btn btn-primary btn-sm" href="http://localhost:8080" data-portal="wolinex">Launch Studio ↗</a>
+          <a class="btn btn-secondary btn-sm" href="#downloads">
+            <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Download IDE</span>
+          </a>
+          <a class="btn btn-primary btn-sm" href="http://localhost:8081" data-portal="wolinex">
+            <span>Launch Studio</span>
+            <svg class="svg-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 2px;"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+          </a>
         </div>
       </div>
     </header>
@@ -59,24 +70,26 @@
           <div class="hero-content">
             <div class="pill-badge">
               <span class="status-dot"></span>
-              <span>Enterprise Foundation Models & Sovereign AI Platform</span>
+              <span>Sovereign Foundation Models &amp; Autonomous Agent Swarm</span>
             </div>
             <h1 class="hero-title">
               Intelligent Infrastructure.<br />
-              <span class="gradient-text">Engineered for Sovereign Scale.</span>
+              <span class="gradient-text">Engineered for Autonomous Scale.</span>
             </h1>
             <p class="hero-description">
-              Build, deploy, and scale with private foundation models. Access high-speed OpenAI-compatible APIs, orchestrate collaborative agent workflows, and keep 100% of your proprietary enterprise data under your direct control.
+              Wolinet AI unifies sovereign foundation models with autonomous multi-agent developer swarms. From planning and architecture to multi-viewport browser testing and zero-touch deployment, your code, files, and intelligence stay 100% sovereign.
             </p>
             <div class="hero-buttons">
-              <a class="btn btn-primary btn-lg" href="http://localhost:8080" data-portal="wolinex">
-                Launch WolinEx Studio <span aria-hidden="true">→</span>
+              <a class="btn btn-primary btn-lg" id="hero-download-btn" href="/downloads/WolinetIDE-macOS-x64.dmg">
+                <svg class="btn-icon svg-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span id="hero-download-label">Download for Mac</span>
+                <span style="opacity: 0.7; font-size: 12px; margin-left: 4px;">v0.3.75</span>
               </a>
-              <a class="btn btn-secondary btn-lg" href="#developer-studio">
-                Developer Console ↓
+              <a class="btn btn-secondary btn-lg" href="#downloads">
+                All Platforms ↓
               </a>
-              <a class="btn btn-outline btn-lg" href="/docs" data-portal="docs">
-                Interactive API Docs ↗
+              <a class="btn btn-outline btn-lg" href="http://localhost:8081" data-portal="wolinex">
+                Cloud Studio ↗
               </a>
             </div>
             <div class="hero-stats">
@@ -85,8 +98,8 @@
                 <span class="stat-label">Data Sovereignty</span>
               </div>
               <div class="stat-item">
-                <span class="stat-value">OpenAI</span>
-                <span class="stat-label">SDK Compatible</span>
+                <span class="stat-value">5 Agents</span>
+                <span class="stat-label">Concurrent Swarm</span>
               </div>
               <div class="stat-item">
                 <span class="stat-value">&lt; 50ms</span>
@@ -107,12 +120,13 @@
                 <span class="dot-yellow"></span>
                 <span class="dot-green"></span>
               </div>
-              <span class="console-title">wolinet-assistant // live-inference</span>
+              <span class="console-title">wolinet-assistant // sovereign-inference</span>
               <span class="pill-badge" style="margin-bottom: 0; padding: 2px 8px; font-size: 11px;">● Ready</span>
             </div>
             <div class="console-tabs">
               <button class="console-tab active" type="button" data-scenario="synthesis">Enterprise Synthesis</button>
               <button class="console-tab" type="button" data-scenario="code">Code Generation</button>
+              <button class="console-tab" type="button" data-scenario="selftrained">Wolinet Coder v2</button>
               <button class="console-tab" type="button" data-scenario="rag">Document Retrieval</button>
             </div>
             <div class="console-body">
@@ -122,11 +136,12 @@
                   <span id="active-model-tag" style="color: var(--brand-cyan);">Model: Wolinet Pro</span>
                 </div>
                 <p class="prompt-text" id="demo-prompt-text">
-                  Turn our scattered enterprise notes into three actionable operational priorities for next quarter.
+                  Synthesize enterprise performance logs and strategic goals into high-impact operational priorities.
                 </p>
                 <div class="prompt-tags">
                   <span class="prompt-tag active" data-preset="synthesis">Executive Summary</span>
                   <span class="prompt-tag" data-preset="code">API Stream</span>
+                  <span class="prompt-tag" data-preset="selftrained">Continuous Alignment</span>
                   <span class="prompt-tag" data-preset="rag">Semantic Search</span>
                 </div>
               </div>
@@ -136,13 +151,13 @@
                   <span id="output-latency">42 ms • 120 t/s</span>
                 </div>
                 <div class="output-content" id="demo-output-text">
-                  1. <strong>Accelerate First Value</strong>: Unify developer onboarding with drop-in SDK compatibility to slash time-to-market.<br />
-                  2. <strong>Enforce Zero-Trust Sovereignty</strong>: Run all model inferences on private infrastructure with isolated database persistence.<br />
-                  3. <strong>Autonomous Workflows</strong>: Deploy collaborative agent loops with real-time multi-model fallback routines.
+                  1. <strong>Autonomous Workflows</strong>: Deploy collaborative 5-role agent swarms with zero overlapping file leases.<br />
+                  2. <strong>Enforce Zero-Trust Sovereignty</strong>: Keep all foundation model weights, conversation ledgers, and document embeddings within sovereign boundaries.<br />
+                  3. <strong>Hardware Sleep Continuum</strong>: Ensure complex compilation loops persist uninterrupted even during client sleep states.
                 </div>
                 <div class="output-footer">
                   <span>Prompt: 48 tokens • Output: 184 tokens</span>
-                  <span>Privacy: Local Zero-Retention Boundary</span>
+                  <span>Privacy: Sovereign Zero-Retention Boundary</span>
                 </div>
               </div>
             </div>
@@ -157,7 +172,7 @@
             <span class="section-tag">Core Capabilities</span>
             <h2 class="section-title">What Wolinet AI Does For You</h2>
             <p class="section-description">
-              A comprehensive intelligence suite engineered to power enterprise productivity, agentic workflows, and mission-critical applications.
+              A comprehensive intelligence suite engineered to power sovereign productivity, autonomous developer agent swarms, and mission-critical applications.
             </p>
           </div>
 
@@ -165,29 +180,48 @@
             <!-- WolinEx Studio Card -->
             <article class="capability-card">
               <div class="capability-top">
-                <div class="capability-icon">⚡</div>
+                <div class="capability-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                  </svg>
+                </div>
                 <span class="capability-badge">Enterprise Workspace</span>
               </div>
               <h3>Collaborative AI Studio (WolinEx)</h3>
               <p>
-                A unified, private workspace where teams collaborate with foundation models, analyze documents, refine prompts, and automate daily tasks with complete security.
+                A unified sovereign workspace where teams collaborate with foundation models, analyze documents, refine prompts, and automate daily tasks with complete security.
               </p>
               <div class="capability-features">
                 <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Multi-Model Switching</span>
                 <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Document Analysis (RAG)</span>
                 <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Team Shared Workspaces</span>
-                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Role-Based Permissions</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Role-Based Governance</span>
               </div>
               <div class="capability-footer">
-                <span style="font-size: 13px; color: var(--text-muted);">Workspace for Teams &amp; Individuals</span>
-                <a class="btn btn-primary btn-sm" href="http://localhost:8080" data-portal="wolinex">Launch Studio ↗</a>
+                <span style="font-size: 13px; color: var(--text-muted);">Workspace for Teams &amp; Organizations</span>
+                <a class="btn btn-primary btn-sm" href="http://localhost:8081" data-portal="wolinex">Launch Studio ↗</a>
               </div>
             </article>
 
             <!-- High-Speed API Card -->
             <article class="capability-card">
               <div class="capability-top">
-                <div class="capability-icon">🔌</div>
+                <div class="capability-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                    <rect x="9" y="9" width="6" height="6"></rect>
+                    <line x1="9" y1="1" x2="9" y2="4"></line>
+                    <line x1="15" y1="1" x2="15" y2="4"></line>
+                    <line x1="9" y1="20" x2="9" y2="23"></line>
+                    <line x1="15" y1="20" x2="15" y2="23"></line>
+                    <line x1="20" y1="9" x2="23" y2="9"></line>
+                    <line x1="20" y1="14" x2="23" y2="14"></line>
+                    <line x1="1" y1="9" x2="4" y2="9"></line>
+                    <line x1="1" y1="14" x2="4" y2="14"></line>
+                  </svg>
+                </div>
                 <span class="capability-badge">Universal API</span>
               </div>
               <h3>OpenAI-Compatible Developer API</h3>
@@ -196,12 +230,12 @@
               </p>
               <div class="capability-features">
                 <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Standard /v1 Endpoints</span>
-                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Streaming Completions</span>
-                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Virtual Key Budgeting</span>
-                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Automatic High Availability</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Low-Latency Streaming</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Virtual Key Quotas</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> High Availability Fabric</span>
               </div>
               <div class="capability-footer">
-                <span style="font-size: 13px; color: var(--text-muted);">Python, Node.js, Go, cURL</span>
+                <span style="font-size: 13px; color: var(--text-muted);">Python, Node.js, Go, Rust, cURL</span>
                 <a class="btn btn-secondary btn-sm" href="/docs" data-portal="docs">Explore API Docs ↗</a>
               </div>
             </article>
@@ -209,7 +243,14 @@
             <!-- Document Intelligence & RAG -->
             <article class="capability-card">
               <div class="capability-top">
-                <div class="capability-icon">📚</div>
+                <div class="capability-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    <circle cx="14" cy="9" r="2.5"></circle>
+                    <path d="m16 11 2 2"></path>
+                  </svg>
+                </div>
                 <span class="capability-badge">Semantic Search</span>
               </div>
               <h3>Private Enterprise Retrieval (RAG)</h3>
@@ -217,22 +258,27 @@
                 Connect organizational knowledge bases, technical manuals, contracts, and internal repositories. Transform raw enterprise data into instant, grounded answers.
               </p>
               <div class="capability-features">
-                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Local Embedding Models</span>
-                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Vector Similarity Indexing</span>
-                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Source Document Attribution</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Sovereign Vector Embeddings</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Dense Cosine Similarity Indexing</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Grounded Document Attribution</span>
                 <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Zero Document Leakage</span>
               </div>
               <div class="capability-footer">
                 <span style="font-size: 13px; color: var(--text-muted);">Grounded on Your Content</span>
-                <a class="btn btn-secondary btn-sm" href="http://localhost:8080" data-portal="wolinex">Try in Studio ↗</a>
+                <a class="btn btn-secondary btn-sm" href="http://localhost:8081" data-portal="wolinex">Try in Studio ↗</a>
               </div>
             </article>
 
             <!-- Technical & Code Assistance -->
             <article class="capability-card">
               <div class="capability-top">
-                <div class="capability-icon">💻</div>
-                <span class="capability-badge">Technical Problem Solving</span>
+                <div class="capability-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                  </svg>
+                </div>
+                <span class="capability-badge">Software Engineering</span>
               </div>
               <h3>Context-Aware Coding Companions</h3>
               <p>
@@ -242,13 +288,403 @@
                 <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> 16K Context Memory</span>
                 <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Syntax &amp; Logic Verification</span>
                 <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Polyglot Language Support</span>
-                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Offline Self-Hosted Mode</span>
+                <span class="feature-check"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Sovereign Offline Mode</span>
               </div>
               <div class="capability-footer">
                 <span style="font-size: 13px; color: var(--text-muted);">Wolinet Coder Foundation Model</span>
                 <a class="btn btn-outline btn-sm" href="#developer-studio">Test in Console ↓</a>
               </div>
             </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Autonomous Agent Swarm Section -->
+      <section id="agent-swarm" class="section" style="background: rgba(255, 255, 255, 0.015); border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);">
+        <div class="shell">
+          <div class="section-header">
+            <span class="section-tag">Autonomous Engineering Swarm</span>
+            <h2 class="section-title">Human-Level Software Development at Swarm Velocity</h2>
+            <p class="section-description">
+              WolinetIDE agents operate with the full capabilities of senior human engineers: inspecting code, executing commands, browsing documentation, testing on simulated viewports, and coordinating over private sovereign channels.
+            </p>
+          </div>
+
+          <!-- 5 Autonomous Agent Roles -->
+          <div class="agent-roles-grid">
+            <!-- Planner Agent -->
+            <article class="agent-role-card">
+              <div class="agent-role-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+                <span>Role 01</span>
+              </div>
+              <h4>Planner Agent</h4>
+              <p>
+                Deconstructs product specs, analyzes project dependencies, and constructs an execution DAG before any code is modified.
+              </p>
+              <div class="agent-role-tags">
+                <span class="agent-role-tag">Dependency DAG</span>
+                <span class="agent-role-tag">Spec Breakdown</span>
+                <span class="agent-role-tag">Task Partitioning</span>
+              </div>
+            </article>
+
+            <!-- Designer Agent -->
+            <article class="agent-role-card">
+              <div class="agent-role-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>
+                <span>Role 02</span>
+              </div>
+              <h4>Designer Agent</h4>
+              <p>
+                Architects responsive user interfaces, unifies design tokens, and ensures pixel-perfect consistency across mobile and desktop.
+              </p>
+              <div class="agent-role-tags">
+                <span class="agent-role-tag">UI/UX Systems</span>
+                <span class="agent-role-tag">Responsive CSS</span>
+                <span class="agent-role-tag">Design Tokens</span>
+              </div>
+            </article>
+
+            <!-- Builder Agent -->
+            <article class="agent-role-card">
+              <div class="agent-role-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                <span>Role 03</span>
+              </div>
+              <h4>Builder Agent</h4>
+              <p>
+                Executes code modifications, implements algorithms, manages dependencies, and compiles binaries with full workspace file access.
+              </p>
+              <div class="agent-role-tags">
+                <span class="agent-role-tag">Polyglot Code</span>
+                <span class="agent-role-tag">File Leases</span>
+                <span class="agent-role-tag">Native Compilation</span>
+              </div>
+            </article>
+
+            <!-- Tester Agent -->
+            <article class="agent-role-card">
+              <div class="agent-role-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                <span>Role 04</span>
+              </div>
+              <h4>Tester Agent</h4>
+              <p>
+                Launches browser journeys, drives headless verification, tests simulated mobile viewports, and captures visual regression screenshots.
+              </p>
+              <div class="agent-role-tags">
+                <span class="agent-role-tag">Browser Lab</span>
+                <span class="agent-role-tag">Phone Simulation</span>
+                <span class="agent-role-tag">Visual QA</span>
+              </div>
+            </article>
+
+            <!-- Deployer Agent -->
+            <article class="agent-role-card">
+              <div class="agent-role-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M12 12v9"></path><path d="m16 16-4-4-4 4"></path></svg>
+                <span>Role 05</span>
+              </div>
+              <h4>Deployer Agent</h4>
+              <p>
+                Verifies build artifacts, enforces security sign-offs, coordinates container deployments, and conducts zero-downtime rollouts.
+              </p>
+              <div class="agent-role-tags">
+                <span class="agent-role-tag">Artifact Signing</span>
+                <span class="agent-role-tag">Sovereign Rollout</span>
+                <span class="agent-role-tag">Zero Downtime</span>
+              </div>
+            </article>
+          </div>
+
+          <!-- 4 Swarm Pillars -->
+          <div class="swarm-pillars-grid">
+            <div class="swarm-pillar-card">
+              <h4>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <span>Disjoint File Leases</span>
+              </h4>
+              <p>
+                Agents never collide. Each active agent claims an exclusive lock on assigned files through atomic lease tokens, preventing concurrent overwrite hazards.
+              </p>
+            </div>
+
+            <div class="swarm-pillar-card">
+              <h4>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>Sleep &amp; Cloud Continuum</span>
+              </h4>
+              <p>
+                Long-running compilation and testing tasks keep executing when your machine enters sleep mode, with continuous cloud handoff when offline.
+              </p>
+            </div>
+
+            <div class="swarm-pillar-card">
+              <h4>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                <span>Multi-Viewport Browser Lab</span>
+              </h4>
+              <p>
+                Agents spin up automated headless browser instances to validate DOM state, audit mobile breakpoints (iPhone, Android), and capture full-fidelity screenshots.
+              </p>
+            </div>
+
+            <div class="swarm-pillar-card">
+              <h4>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                <span>Deep Horizon Memory</span>
+              </h4>
+              <p>
+                Massive context windows combined with persistent episodic memory ensure architectural choices, error logs, and project history remain accessible across sessions.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Desktop Downloader Suite -->
+      <section id="downloads" class="download-section">
+        <div class="shell">
+          <div class="section-header">
+            <span class="section-tag">Sovereign Desktop Workspace</span>
+            <h2 class="section-title">Download WolinetIDE v0.3.75</h2>
+            <p class="section-description">
+              High-performance native development environment engineered with Rust and Tauri. Native execution speeds, minimal memory footprint, and full hardware acceleration.
+            </p>
+          </div>
+
+          <!-- Hero Auto-Detected Card -->
+          <div class="download-hero-card">
+            <div class="download-hero-left">
+              <div class="download-auto-detected" id="detected-os-pill">
+                <span class="pulse-dot"></span>
+                <span>Detected System: macOS (Apple Silicon &amp; Intel)</span>
+              </div>
+              <h3 class="download-hero-title">WolinetIDE for your Operating System</h3>
+              <p class="download-hero-desc">
+                Includes full autonomous 5-agent swarm orchestration, native file permissions, local and remote model routing, and embedded multi-device browser testing.
+              </p>
+              <div class="download-hero-actions">
+                <a class="btn btn-primary btn-lg" href="/downloads/WolinetIDE-macOS-x64.dmg">
+                  <svg class="btn-icon svg-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  <span>Download WolinetIDE</span>
+                  <span style="opacity: 0.75; font-size: 13px; margin-left: 4px;">(16.7 MB)</span>
+                </a>
+                <a class="btn btn-secondary btn-lg" href="#terminal-install-anchor">
+                  Terminal Install ↓
+                </a>
+              </div>
+            </div>
+
+            <div class="download-hero-meta" style="font-size: 13px; color: var(--text-secondary); line-height: 1.8;">
+              <div style="margin-bottom: 8px;"><strong style="color: var(--text-primary);">Release:</strong> v0.3.75 (Stable)</div>
+              <div style="margin-bottom: 8px;"><strong style="color: var(--text-primary);">Integrity:</strong> SHA-256 Verified</div>
+              <div style="margin-bottom: 8px;"><strong style="color: var(--text-primary);">Security:</strong> Zero External Telemetry</div>
+              <div><strong style="color: var(--text-primary);">License:</strong> Sovereign Enterprise Ready</div>
+            </div>
+          </div>
+
+          <!-- All Platforms Cards Grid -->
+          <div class="download-platforms-grid">
+            <!-- macOS Apple Silicon -->
+            <article class="download-platform-card" data-download-card="macos-arm64">
+              <div class="platform-card-header">
+                <div class="platform-icon-wrap">
+                  <svg width="24" height="24" viewBox="0 0 170 170" fill="currentColor">
+                    <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.7-11.64-13.99-5.99-9.13-10.74-19.64-14.25-31.54-3.52-11.9-5.27-23.11-5.27-33.64 0-14.35 3.73-26.4 11.2-36.14 7.46-9.75 16.96-14.75 28.48-15.01 4.02 0 8.79 1.11 14.31 3.35 5.53 2.23 9.4 3.35 11.62 3.35 2.01 0 6.07-1.17 12.18-3.52 6.12-2.34 11.04-3.3 14.75-2.88 10.84 1.13 19.57 5.75 26.2 13.86-9.47 5.73-14.1 13.79-13.88 24.18.23 8.35 3.37 15.35 9.42 20.98 6.05 5.63 13.25 8.91 21.6 9.85-2.02 6.08-4.43 12.1-7.23 18.06zM119.22 31.84c0-5.83 2.1-11.45 6.31-16.86 4.2-5.41 9.48-9.23 15.82-11.47.46 2.13.69 4.19.69 6.18 0 5.68-2.22 11.39-6.66 17.13-4.44 5.74-9.87 9.47-16.3 11.19-.11-2.04-.16-4.09-.16-6.17z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h4>macOS ARM64</h4>
+                  <span class="platform-arch">Apple Silicon (M1/M2/M3/M4)</span>
+                </div>
+              </div>
+
+              <ul class="platform-meta-list">
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Format:</span>
+                  <span class="platform-meta-val">DMG Disk Image</span>
+                </li>
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Architecture:</span>
+                  <span class="platform-meta-val">arm64 (Native Apple Silicon)</span>
+                </li>
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Package Size:</span>
+                  <span class="platform-meta-val">16.7 MB</span>
+                </li>
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">OS Version:</span>
+                  <span class="platform-meta-val">macOS 11.0+ (Big Sur &amp; later)</span>
+                </li>
+              </ul>
+
+              <a class="btn btn-primary btn-sm" href="/downloads/WolinetIDE-macOS-arm64.dmg" style="width: 100%; margin-bottom: 8px;">
+                <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Download for Apple Silicon</span>
+              </a>
+
+              <button class="sha-copy-btn" type="button" data-copy-sha="0add7a1cb073b54fc1f67cf8f06f8ca982c3d3739286c0ebf0012f71bd2f4d86">
+                <span>Copy SHA-256</span>
+                <span style="font-family: var(--font-mono); font-size: 10px;">0add7a1c…</span>
+              </button>
+            </article>
+
+            <!-- macOS Intel -->
+            <article class="download-platform-card" data-download-card="macos-x64">
+              <div class="platform-card-header">
+                <div class="platform-icon-wrap">
+                  <svg width="24" height="24" viewBox="0 0 170 170" fill="currentColor">
+                    <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.7-11.64-13.99-5.99-9.13-10.74-19.64-14.25-31.54-3.52-11.9-5.27-23.11-5.27-33.64 0-14.35 3.73-26.4 11.2-36.14 7.46-9.75 16.96-14.75 28.48-15.01 4.02 0 8.79 1.11 14.31 3.35 5.53 2.23 9.4 3.35 11.62 3.35 2.01 0 6.07-1.17 12.18-3.52 6.12-2.34 11.04-3.3 14.75-2.88 10.84 1.13 19.57 5.75 26.2 13.86-9.47 5.73-14.1 13.79-13.88 24.18.23 8.35 3.37 15.35 9.42 20.98 6.05 5.63 13.25 8.91 21.6 9.85-2.02 6.08-4.43 12.1-7.23 18.06zM119.22 31.84c0-5.83 2.1-11.45 6.31-16.86 4.2-5.41 9.48-9.23 15.82-11.47.46 2.13.69 4.19.69 6.18 0 5.68-2.22 11.39-6.66 17.13-4.44 5.74-9.87 9.47-16.3 11.19-.11-2.04-.16-4.09-.16-6.17z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h4>macOS Intel</h4>
+                  <span class="platform-arch">x86_64 64-bit Architecture</span>
+                </div>
+              </div>
+
+              <ul class="platform-meta-list">
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Format:</span>
+                  <span class="platform-meta-val">DMG Disk Image</span>
+                </li>
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Architecture:</span>
+                  <span class="platform-meta-val">x86_64 (Intel 64-bit)</span>
+                </li>
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Package Size:</span>
+                  <span class="platform-meta-val">16.7 MB</span>
+                </li>
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">OS Version:</span>
+                  <span class="platform-meta-val">macOS 10.15+ (Catalina &amp; later)</span>
+                </li>
+              </ul>
+
+              <a class="btn btn-secondary btn-sm" href="/downloads/WolinetIDE-macOS-x64.dmg" style="width: 100%; margin-bottom: 8px;">
+                <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Download for Mac (Intel)</span>
+              </a>
+
+              <button class="sha-copy-btn" type="button" data-copy-sha="0add7a1cb073b54fc1f67cf8f06f8ca982c3d3739286c0ebf0012f71bd2f4d86">
+                <span>Copy SHA-256</span>
+                <span style="font-family: var(--font-mono); font-size: 10px;">0add7a1c…</span>
+              </button>
+            </article>
+
+            <!-- Windows 11 / 10 -->
+            <article class="download-platform-card" data-download-card="windows-x64">
+              <div class="platform-card-header">
+                <div class="platform-icon-wrap">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+                  </svg>
+                </div>
+                <div>
+                  <h4>Windows 11 / 10</h4>
+                  <span class="platform-arch">x64 64-bit Architecture</span>
+                </div>
+              </div>
+
+              <ul class="platform-meta-list">
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Format:</span>
+                  <span class="platform-meta-val">Installer (.exe)</span>
+                </li>
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Architecture:</span>
+                  <span class="platform-meta-val">x64 (AMD64 / Intel 64)</span>
+                </li>
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Package Size:</span>
+                  <span class="platform-meta-val">16.7 MB</span>
+                </li>
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">OS Version:</span>
+                  <span class="platform-meta-val">Windows 10 / 11 (64-bit)</span>
+                </li>
+              </ul>
+
+              <a class="btn btn-secondary btn-sm" href="/downloads/WolinetIDE-Windows-x64-setup.exe" style="width: 100%; margin-bottom: 8px;">
+                <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Download for Windows</span>
+              </a>
+
+              <button class="sha-copy-btn" type="button" data-copy-sha="0add7a1cb073b54fc1f67cf8f06f8ca982c3d3739286c0ebf0012f71bd2f4d86">
+                <span>Copy SHA-256</span>
+                <span style="font-family: var(--font-mono); font-size: 10px;">0add7a1c…</span>
+              </button>
+            </article>
+
+            <!-- Linux AppImage -->
+            <article class="download-platform-card" data-download-card="linux-x64">
+              <div class="platform-card-header">
+                <div class="platform-icon-wrap">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                    <path d="m10 9-3 3 3 3"></path>
+                    <path d="m14 15 3-3-3-3"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h4>Linux x86_64</h4>
+                  <span class="platform-arch">Universal AppImage</span>
+                </div>
+              </div>
+
+              <ul class="platform-meta-list">
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Format:</span>
+                  <span class="platform-meta-val">Standalone AppImage</span>
+                </li>
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Architecture:</span>
+                  <span class="platform-meta-val">x86_64 Linux</span>
+                </li>
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Package Size:</span>
+                  <span class="platform-meta-val">16.7 MB</span>
+                </li>
+                <li class="platform-meta-item">
+                  <span class="platform-meta-label">Compatibility:</span>
+                  <span class="platform-meta-val">glibc 2.31+ (Ubuntu, Fedora, Arch)</span>
+                </li>
+              </ul>
+
+              <a class="btn btn-secondary btn-sm" href="/downloads/WolinetIDE-Linux-x86_64.AppImage" style="width: 100%; margin-bottom: 8px;">
+                <svg class="svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Download for Linux</span>
+              </a>
+
+              <button class="sha-copy-btn" type="button" data-copy-sha="0add7a1cb073b54fc1f67cf8f06f8ca982c3d3739286c0ebf0012f71bd2f4d86">
+                <span>Copy SHA-256</span>
+                <span style="font-family: var(--font-mono); font-size: 10px;">0add7a1c…</span>
+              </button>
+            </article>
+          </div>
+
+          <!-- Terminal Quick Install & Verification Box -->
+          <div class="terminal-install-box" id="terminal-install-anchor">
+            <div class="terminal-install-header">
+              <div class="terminal-install-tabs">
+                <button class="terminal-install-tab active" type="button" data-term-tab="gatekeeper">macOS Gatekeeper</button>
+                <button class="terminal-install-tab" type="button" data-term-tab="npx">Universal CLI (npx)</button>
+                <button class="terminal-install-tab" type="button" data-term-tab="linux">Linux Execution</button>
+                <button class="terminal-install-tab" type="button" data-term-tab="sha">Verify SHA-256</button>
+              </div>
+              <button class="copy-btn" id="copy-term-btn" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy Command</span>
+              </button>
+            </div>
+            <pre class="terminal-install-pre"><code id="terminal-install-code"># Clear macOS Gatekeeper attribute after downloading
+xattr -dr com.apple.quarantine /Applications/WolinetIDE.app
+
+# Open WolinetIDE
+open /Applications/WolinetIDE.app</code></pre>
           </div>
         </div>
       </section>
@@ -260,7 +696,7 @@
             <span class="section-tag">Model Roster</span>
             <h2 class="section-title">Foundation Models Available</h2>
             <p class="section-description">
-              Optimized models ready for immediate inference through WolinEx Studio or the universal API.
+              Optimized models ready for immediate inference through WolinEx Studio, WolinetIDE, or the universal API.
             </p>
           </div>
 
@@ -272,7 +708,7 @@
                   <h4 class="model-name">Wolinet Pro</h4>
                   <span style="font-size: 12px; color: var(--text-muted);">Flagship Enterprise Intelligence</span>
                 </div>
-                <span class="model-tag">GENERAL AI</span>
+                <span class="model-tag">GENERAL REASONING</span>
               </div>
               <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
                 High-capacity model for reasoning, document synthesis, multilingual business writing, and strategic decision support.
@@ -292,21 +728,21 @@
                 </div>
               </div>
               <div style="margin-top: 20px;">
-                <a class="btn btn-secondary btn-sm" style="width: 100%;" href="http://localhost:8080" data-portal="wolinex">Select in Studio ↗</a>
+                <a class="btn btn-secondary btn-sm" style="width: 100%;" href="http://localhost:8081" data-portal="wolinex">Select in Studio ↗</a>
               </div>
             </article>
 
-            <!-- Wolinet Coder -->
+            <!-- Wolinet Coder v2 -->
             <article class="model-card">
               <div class="model-header">
                 <div>
-                  <h4 class="model-name">Wolinet Coder</h4>
-                  <span style="font-size: 12px; color: var(--text-muted);">Technical &amp; Software Engineering</span>
+                  <h4 class="model-name">Wolinet Coder v2</h4>
+                  <span style="font-size: 12px; color: var(--text-muted);">Continuous Agent Alignment</span>
                 </div>
-                <span class="model-tag">CODE &amp; LOGIC</span>
+                <span class="model-tag">CODE &amp; AGENT SWARM</span>
               </div>
               <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
-                Tuned specifically for code generation, software architecture, refactoring, unit testing, and complex algorithms.
+                Tuned specifically for code generation, software architecture, refactoring, unit testing, and complex multi-agent execution loops.
               </p>
               <div style="flex-grow: 1;">
                 <div class="model-spec-row">
@@ -361,7 +797,7 @@
         </div>
       </section>
 
-      <!-- Developer Studio Section (Merged From dev-portal) -->
+      <!-- Developer Studio Section -->
       <section id="developer-studio" class="section developer-studio">
         <div class="shell">
           <div class="section-header">
@@ -396,7 +832,8 @@
                 <div class="key-actions">
                   <button id="reveal-key" class="btn btn-secondary btn-sm" type="button">Reveal Key</button>
                   <button id="rotate-key" class="btn btn-outline btn-sm" type="button">Rotate Key</button>
-                  <a class="btn btn-secondary btn-sm" href="http://localhost:8080" data-portal="wolinex">Studio Account ↗</a>
+                  <a class="btn btn-secondary btn-sm" href="http://localhost:8081" data-portal="wolinex">Studio Account ↗</a>
+                  <a class="btn btn-outline btn-sm" href="https://dev.wolinet.com" data-portal="dev" target="_blank" rel="noopener">Developer Studio App ↗</a>
                 </div>
                 <p id="key-message" style="font-size: 12px; color: var(--brand-cyan); margin-top: 10px; min-height: 18px;" aria-live="polite"></p>
               </div>
@@ -416,16 +853,16 @@
                 </div>
                 <pre class="quickstart-pre"><code id="quickstart-code-content">from openai import OpenAI
 
-# Initialize client pointing to Wolinet API
+# Initialize client pointing to sovereign Wolinet API
 client = OpenAI(
-    base_url="https://api.wolinet.com/v1",  # Local dev: http://localhost:3000/v1
+    base_url="https://ai.wolinet.com/v1",  # Local dev: http://localhost:3000/v1
     api_key="YOUR_WOLINET_KEY"
 )
 
 response = client.chat.completions.create(
     model="Wolinet Pro",
     messages=[
-        {"role": "system", "content": "You are Wolinet AI, an enterprise assistant."},
+        {"role": "system", "content": "You are Wolinet AI, a sovereign intelligence assistant."},
         {"role": "user", "content": "Explain our sovereign infrastructure in one sentence."}
     ]
 )
@@ -451,7 +888,7 @@ print(response.choices[0].message.content)</code></pre>
                 <!-- Live Chat Log -->
                 <div id="chat-log" class="chat-log">
                   <div class="chat-bubble assistant-bubble">
-                    Hello! I am the Wolinet Developer Assistant. Ask me how to make your first completion request, choose a model, or stream responses in Python or Node.js.
+                    Hello! I am the Wolinet Developer Assistant. Ask me how to make your first completion request, choose a model, stream responses, or configure an autonomous agent loop.
                   </div>
                 </div>
 
@@ -490,21 +927,41 @@ print(response.choices[0].message.content)</code></pre>
 
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
             <div style="background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 28px;">
-              <div style="font-size: 28px; margin-bottom: 16px;">🛡️</div>
+              <div style="width: 44px; height: 44px; border-radius: var(--radius-md); background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  <path d="m9 12 2 2 4-4"></path>
+                </svg>
+              </div>
               <h4 style="font-family: var(--font-display); font-size: 18px; margin-bottom: 10px;">Zero Training on Customer Data</h4>
               <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
                 Your prompts, document embeddings, and model responses are never stored for training or shared across organizational boundaries.
               </p>
             </div>
+
             <div style="background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 28px;">
-              <div style="font-size: 28px; margin-bottom: 16px;">🔒</div>
+              <div style="width: 44px; height: 44px; border-radius: var(--radius-md); background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </div>
               <h4 style="font-family: var(--font-display); font-size: 18px; margin-bottom: 10px;">Isolated Persistence</h4>
               <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
-                All operational state, user permissions, and conversational histories remain in dedicated, private database clusters under your governance.
+                All operational state, user permissions, and conversational histories remain in dedicated, private database clusters under your direct governance.
               </p>
             </div>
+
             <div style="background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 28px;">
-              <div style="font-size: 28px; margin-bottom: 16px;">📋</div>
+              <div style="width: 44px; height: 44px; border-radius: var(--radius-md); background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              </div>
               <h4 style="font-family: var(--font-display); font-size: 18px; margin-bottom: 10px;">Full Audit Logs &amp; Budgets</h4>
               <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
                 Granular token quotas, virtual key expiration, and request traceability ensure total oversight across engineering and business units.
@@ -525,43 +982,46 @@ print(response.choices[0].message.content)</code></pre>
               <span class="brand-text">WOLINET<span style="color: var(--brand-cyan);">AI</span></span>
             </div>
             <p>
-              Autonomous, high-performance artificial intelligence platform for sovereign enterprises and developers.
+              Autonomous, high-performance artificial intelligence platform for sovereign enterprises and developers. Serving at ai.wolinet.com.
             </p>
           </div>
           <div class="footer-col">
             <h5>Platform Services</h5>
             <ul class="footer-links">
-              <li><a href="http://localhost:8080" data-portal="wolinex">WolinEx AI Studio</a></li>
-              <li><a href="#developer-studio">Developer Console &amp; Keys</a></li>
-              <li><a href="/docs" data-portal="docs">Interactive API Docs</a></li>
-              <li><a href="#models">Model Catalog</a></li>
+              <li><a href="http://localhost:8081" data-portal="wolinex">WolinEx AI Studio</a></li>
+              <li><a href="#downloads">WolinetIDE Desktop Workspace</a></li>
+              <li><a href="#agent-swarm">Autonomous Agent Swarm</a></li>
+              <li><a href="https://dev.wolinet.com" data-portal="dev" target="_blank" rel="noopener">Developer Studio &amp; Keys</a></li>
+              <li><a href="https://docs.wolinet.com" data-portal="docs" target="_blank" rel="noopener">Scalar API Reference &amp; Copilot</a></li>
             </ul>
           </div>
           <div class="footer-col">
-            <h5>Developer Reference</h5>
+            <h5>Direct Downloads</h5>
             <ul class="footer-links">
-              <li><a href="/docs#POST/v1/chat/completions" data-portal="docs">Chat Completions API</a></li>
-              <li><a href="/docs#POST/v1/embeddings" data-portal="docs">Embeddings API</a></li>
-              <li><a href="#developer-studio">Python &amp; TypeScript SDKs</a></li>
-              <li><a href="https://github.com/wolinet-renatus/wolinetAI" target="_blank" rel="noopener">GitHub Repository ↗</a></li>
+              <li><a href="/downloads/WolinetIDE-macOS-arm64.dmg">macOS (Apple Silicon M1/M2/M3/M4)</a></li>
+              <li><a href="/downloads/WolinetIDE-macOS-x64.dmg">macOS (Intel 64-bit)</a></li>
+              <li><a href="/downloads/WolinetIDE-Windows-x64-setup.exe">Windows 11 / 10 (x64)</a></li>
+              <li><a href="/downloads/WolinetIDE-Linux-x86_64.AppImage">Linux (x86_64 AppImage)</a></li>
+              <li><a href="#terminal-install-anchor">CLI &amp; SHA-256 Checksums</a></li>
             </ul>
           </div>
           <div class="footer-col">
             <h5>Sovereignty &amp; Contact</h5>
             <ul class="footer-links">
               <li><a href="#security">Data Protection Policy</a></li>
+              <li><a href="/docs" data-portal="docs">API Reference</a></li>
               <li><a href="mailto:contact@wolinet.com">Enterprise Support</a></li>
-              <li><a href="mailto:hello@wolinet.com">Contact Sales</a></li>
+              <li><a href="mailto:hello@wolinet.com">Commercial Inquiries</a></li>
             </ul>
           </div>
         </div>
         <div class="footer-bottom">
-          <span>© <span id="year">2026</span> Wolinet Tech. Independent Intelligence Infrastructure.</span>
-          <span>Zero external telemetry • All processing governed by client policy</span>
+          <span>© <span id="year">2026</span> Wolinet Tech. Independent Sovereign Intelligence Infrastructure.</span>
+          <span>Zero external telemetry • All processing governed by client sovereign policy</span>
         </div>
       </div>
     </footer>
 
-    <script src="/app.js?v=20261019_v2" defer></script>
+    <script src="/app.js?v=20261030_v3" defer></script>
   </body>
 </html>

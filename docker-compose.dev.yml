@@ -141,13 +141,14 @@ services:
       - wolinet_dev
     ports:
       - "3000:3000"
+      - "8080:8080"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/healthz > /dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/healthz > /dev/null 2>&1 || wget -qO- http://localhost:8080/healthz > /dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # ── 4. Developer Portal & Docs (devportal) ─────────────────────────────────
+  # ── 4. Developer Portal & Studio (devportal) ──────────────────────────────
   devportal:
     build:
       context: ./apps/dev-portal
@@ -166,6 +167,27 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8082/healthz > /dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── 5. Scalar API Documentation & Copilot (docs) ──────────────────────────
+  docs:
+    build:
+      context: ./apps/docs
+      dockerfile: Dockerfile
+    image: wolinet-docs:latest
+    container_name: wolinet-dev-docs
+    restart: unless-stopped
+    networks:
+      - wolinet_dev
+    ports:
+      - "8083:8083"
+    depends_on:
+      lango:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/healthz > /dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

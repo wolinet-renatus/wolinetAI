@@ -113,8 +113,12 @@ from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import normalize_usage
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.task import (
+    extract_and_clean_title,
     get_task_model_id,
+    is_generic_or_unclear_title,
+    is_greeting_or_placeholder_message,
     rag_template,
+    synthesize_concise_title_from_messages,
     tools_function_calling_generation_template,
 )
 from open_webui.utils.tools import (
@@ -3201,6 +3205,25 @@ async def background_tasks_handler(ctx):
             message['model'] = form_data.get('model')
 
     if message and 'model' in message:
+        is_persistent_chat = (
+            bool(metadata.get('chat_id'))
+            and not metadata.get('chat_id', '').startswith('local:')
+            and not metadata.get('chat_id', '').startswith('channel:')
+        )
+        if is_persistent_chat and messages:
+            has_substantive_user_msg = any(
+                isinstance(m, dict)
+                and m.get('role') == 'user'
+                and isinstance(m.get('content'), str)
+                and not is_greeting_or_placeholder_message(m.get('content', ''))
+                for m in messages
+            )
+            if has_substantive_user_msg and not (tasks and tasks.get(TASKS.TITLE_GENERATION)):
+                current_title = await Chats.get_chat_title_by_id(metadata['chat_id'])
+                if is_generic_or_unclear_title(current_title or ''):
+                    tasks = dict(tasks or {})
+                    tasks[TASKS.TITLE_GENERATION] = True
+
         if tasks and messages:
             if TASKS.FOLLOW_UP_GENERATION in tasks and tasks[TASKS.FOLLOW_UP_GENERATION]:
                 res = await generate_follow_ups(
@@ -3282,20 +3305,16 @@ async def background_tasks_handler(ctx):
                                     or response_message.get(
                                         'reasoning_content',
                                     )
-                                    or message.get('content', user_message)
+                                    or ''
                                 )
                             else:
                                 title_string = ''
 
-                            title_string = title_string[title_string.find('{') : title_string.rfind('}') + 1]
-
-                            try:
-                                title = json.loads(title_string).get('title', user_message)
-                            except Exception as e:
-                                title = ''
-
-                            if not title:
-                                title = messages[0].get('content', user_message)
+                            title = extract_and_clean_title(
+                                title_string,
+                                messages,
+                                model_name=message.get('model', ''),
+                            )
 
                             await Chats.update_chat_title_by_id(metadata['chat_id'], title)
 
@@ -3306,15 +3325,18 @@ async def background_tasks_handler(ctx):
                                 }
                             )
 
-                    if title == None and len(messages) == 2 and (not messages_map or len(messages_map) <= 2):
-                        title = messages[0].get('content', user_message)
+                    if title is None and len(messages) == 2 and (not messages_map or len(messages_map) <= 2):
+                        title = synthesize_concise_title_from_messages(
+                            messages,
+                            model_name=message.get('model', ''),
+                        )
 
                         await Chats.update_chat_title_by_id(metadata['chat_id'], title)
 
                         await event_emitter(
                             {
                                 'type': 'chat:title',
-                                'data': message.get('content', user_message),
+                                'data': title,
                             }
                         )
 

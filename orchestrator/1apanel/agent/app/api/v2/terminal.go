@@ -299,7 +299,8 @@ var sovereignAppDirs = map[string]string{
 	"obscura":           "/Users/apple/Documents/wolinetai/apps/browser",
 	"wolinet-browser":   "/Users/apple/Documents/wolinetai/apps/browser",
 	"dev-portal":        "/Users/apple/Documents/wolinetai/apps/dev-portal",
-	"homepage":          "/Users/apple/Documents/wolinetai/apps/homepage",
+	"homepage":          "/Users/apple/Documents/wolinetai/website",
+	"website":           "/Users/apple/Documents/wolinetai/website",
 }
 
 var sovereignContainerAliases = map[string]string{

@@ -1,0 +1,19 @@
+services:
+  devportal:
+    image: ghcr.io/wolinet-renatus/wolinet-devportal:latest
+    container_name: ${CONTAINER_NAME}
+    restart: unless-stopped
+    ports:
+      - ${PANEL_APP_PORT_HTTP}:8082
+    environment:
+      - LANGO_UPSTREAM=${LANGO_API_BASE_URL}
+      - WOLINEX_UPSTREAM=${WOLINEX_API_BASE_URL}
+    networks:
+      - 1panel-network
+    labels:
+      createdBy: "Apps"
+
+networks:
+  1panel-network:
+    external: true
+
