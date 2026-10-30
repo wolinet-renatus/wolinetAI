@@ -64,7 +64,7 @@ export interface ChatCompletionChunk {
 }
 
 export interface EmbeddingOptions {
-  model: 'bge-small-en-v1.5' | (string & {});
+  model: string;
   input: string | string[];
   encoding_format?: 'float' | 'base64';
 }
@@ -86,7 +86,7 @@ export interface EmbeddingResponse {
 }
 
 export interface RerankOptions {
-  model: 'bge-reranker-v2-m3' | (string & {});
+  model: string;
   query: string;
   documents: string[];
   top_n?: number;

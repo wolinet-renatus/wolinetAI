@@ -39,7 +39,7 @@ for await (const chunk of client.chat.completions.stream({
 
 // 3. Dense Vector Embeddings
 const embeddings = await client.embeddings.create({
-  model: 'bge-small-en-v1.5',
+  model: 'wolinet-embeddings',
   input: 'Wolinet AI Sovereign Infrastructure',
 });
 console.log('Embedding dimension:', embeddings.data[0].embedding.length);

@@ -195,7 +195,7 @@ export interface ChatCompletionChunk {
 }
 
 export interface EmbeddingOptions {
-  model: 'bge-small-en-v1.5' | (string & {});
+  model: string;
   input: string | string[];
   encoding_format?: 'float' | 'base64';
 }
@@ -217,7 +217,7 @@ export interface EmbeddingResponse {
 }
 
 export interface RerankOptions {
-  model: 'bge-reranker-v2-m3' | (string & {});
+  model: string;
   query: string;
   documents: string[];
   top_n?: number;
@@ -501,7 +501,7 @@ for await (const chunk of client.chat.completions.stream({
 
 // 3. Dense Vector Embeddings
 const embeddings = await client.embeddings.create({
-  model: 'bge-small-en-v1.5',
+  model: 'wolinet-embeddings',
   input: 'Wolinet AI Sovereign Infrastructure',
 });
 console.log('Embedding dimension:', embeddings.data[0].embedding.length);
@@ -761,7 +761,7 @@ class _EmbeddingsSync:
     def __init__(self, client: "WolinetAI"):
         self._c = client
 
-    def create(self, model: str = "bge-small-en-v1.5", input: Union[str, List[str]] = "") -> EmbeddingResponse:
+    def create(self, model: str = "", input: Union[str, List[str]] = "") -> EmbeddingResponse:
         url = f"{self._c.base_url}/v1/embeddings"
         with httpx.Client(timeout=self._c.timeout) as http:
             resp = http.post(url, json={"model": model, "input": input}, headers=self._c._headers)
@@ -775,7 +775,7 @@ class _RerankSync:
 
     def create(
         self,
-        model: str = "bge-reranker-v2-m3",
+        model: str = "",
         query: str = "",
         documents: Optional[List[str]] = None,
         top_n: Optional[int] = None,
@@ -942,7 +942,7 @@ for chunk in client.chat.create(
 print()
 
 # 3. Dense Vector Embeddings
-emb = client.embeddings.create(model="bge-small-en-v1.5", input="Wolinet AI sovereign cloud")
+emb = client.embeddings.create(model="wolinet-embeddings", input="Wolinet AI sovereign cloud")
 print("Vector length:", len(emb.data[0].embedding))
 
 # 4. Check Cluster Status

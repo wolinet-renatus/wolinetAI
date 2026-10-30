@@ -23,7 +23,7 @@ for json_file in "${REG_DIR}"/*.json; do
     
     # Skip models already built into Xinference to prevent conflict errors
     case "$model_name" in
-        bge-small-en-v1.5|bge-reranker-v2-m3|whisper-small|whisper-large-v3-turbo)
+        whisper-small|whisper-large-v3-turbo)
             echo "[Register] ⏩ ${model_name} is built-in, ready to launch."
             continue
             ;;

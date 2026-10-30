@@ -25,9 +25,7 @@ models/
     ├── wolinex-coder.json                # Sovereign coding & reasoning intelligence manifest (wolinet-brain-r1-1.5b.gguf)
     ├── flintlock-3b.json                 # Flintlock 3B manifest (flintlock_3B_v0.1.IQ4_XS.gguf)
     ├── orcacyber-defense-dflash.json     # OrcaCyber AI Defense manifest (orcacyber-defense-dflash2-q8_0.gguf)
-    ├── wolinex-speculative.json          # DFlash2 speculative acceleration manifest (dflash2-v2-q8_0.gguf)
-    ├── bge-small-en-v1.5.json            # Sentence embeddings manifest
-    └── bge-reranker-v2-m3.json           # Neural reranker manifest
+    └── wolinex-speculative.json          # DFlash2 speculative acceleration manifest (dflash2-v2-q8_0.gguf)
 ```
 
 ---

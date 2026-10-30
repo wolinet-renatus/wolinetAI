@@ -34,7 +34,7 @@ for chunk in client.chat.create(
 print()
 
 # 3. Dense Vector Embeddings
-emb = client.embeddings.create(model="bge-small-en-v1.5", input="Wolinet AI sovereign cloud")
+emb = client.embeddings.create(model="wolinet-embeddings", input="Wolinet AI sovereign cloud")
 print("Vector length:", len(emb.data[0].embedding))
 
 # 4. Check Cluster Status

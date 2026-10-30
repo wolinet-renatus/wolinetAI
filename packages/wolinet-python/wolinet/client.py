@@ -121,7 +121,7 @@ class _EmbeddingsSync:
     def __init__(self, client: "WolinetAI"):
         self._c = client
 
-    def create(self, model: str = "bge-small-en-v1.5", input: Union[str, List[str]] = "") -> EmbeddingResponse:
+    def create(self, model: str = "", input: Union[str, List[str]] = "") -> EmbeddingResponse:
         url = f"{self._c.base_url}/v1/embeddings"
         with httpx.Client(timeout=self._c.timeout) as http:
             resp = http.post(url, json={"model": model, "input": input}, headers=self._c._headers)
@@ -135,7 +135,7 @@ class _RerankSync:
 
     def create(
         self,
-        model: str = "bge-reranker-v2-m3",
+        model: str = "",
         query: str = "",
         documents: Optional[List[str]] = None,
         top_n: Optional[int] = None,

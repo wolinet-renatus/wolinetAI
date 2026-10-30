@@ -49,7 +49,7 @@ if [ -d "${REGISTRATIONS_DIR}" ]; then
         [ -f "$json_file" ] || continue
         model_name=$(python3 -c "import json; d=json.load(open('${json_file}')); print(d.get('model_name',''))" 2>/dev/null)
         case "$model_name" in
-            bge-small-en-v1.5|bge-reranker-v2-m3|whisper-small)
+            whisper-small)
                 continue
                 ;;
         esac
