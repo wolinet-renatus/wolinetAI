@@ -35,13 +35,13 @@ test -f "${ROOT_DIR}/inference/xinference/ui/web/dist/index.html" || {
   echo "ERROR: inference/xinference/ui/web/dist/index.html is missing!" >&2
   exit 1
 }
-test -f "${ROOT_DIR}/website/index.html" || {
-  echo "ERROR: website/index.html is missing!" >&2
+test -f "${ROOT_DIR}/apps/website/index.html" || {
+  echo "ERROR: apps/website/index.html is missing!" >&2
   exit 1
 }
 
 # Harden host permissions so container workers (nginx, xinference, litellm) can read files
-chmod -R a+rX "${ROOT_DIR}/website" 2>/dev/null || true
+chmod -R a+rX "${ROOT_DIR}/apps/website" 2>/dev/null || true
 chmod -R a+rX "${ROOT_DIR}/inference/xinference/ui/web/dist" 2>/dev/null || true
 chmod -R a+rX "${ROOT_DIR}/inference/frontend/out" 2>/dev/null || true
 chmod -R a+rX "${ROOT_DIR}/apps/dev-portal" 2>/dev/null || true
@@ -49,7 +49,7 @@ chmod +x "${ROOT_DIR}/inference/start-mitambo.sh" 2>/dev/null || true
 chmod +x "${ROOT_DIR}/gateway/start-gateway.sh" 2>/dev/null || true
 
 echo "==> [wolinet] Verified $(find "${ROOT_DIR}/inference/xinference/ui/web/dist" -type f | wc -l) files in xinference UI dist"
-echo "==> [wolinet] Verified $(find "${ROOT_DIR}/website" -type f | wc -l) files in website dist"
+echo "==> [wolinet] Verified $(find "${ROOT_DIR}/apps/website" -type f | wc -l) files in website dist"
 
 echo "==> [wolinet] 5/5 Pulling pre-built images and starting stack fresh..."
 COMPOSE_FILE="docker-compose.yml"

@@ -3,7 +3,7 @@
 Wolinet AI — Local Web Portals Service Daemon
 =============================================
 Runs dedicated HTTP servers for each distinct service:
-  1. Port 3000: Wolinet AI Home & Marketing Website (website/)
+  1. Port 3000: Wolinet AI Home & Marketing Website (apps/website/)
   2. Port 8082: Developer Portal & Studio (apps/dev-portal/)
      - Proxies /v1/ to Lango Gateway (port 4000)
      - Proxies /docs to Gateway API Docs (port 4000/docs)
@@ -19,7 +19,7 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-WEBSITE_DIR = BASE_DIR / "website"
+WEBSITE_DIR = BASE_DIR / "apps" / "website"
 DEVPORTAL_DIR = BASE_DIR / "apps" / "dev-portal"
 DOCS_DIR = BASE_DIR / "apps" / "docs"
 

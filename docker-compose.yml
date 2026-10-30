@@ -343,7 +343,7 @@ services:
         delay: 10s
 
   # The existing web-home image is a static nginx server; publish it only via
-  # Dokploy's domain router. Mount the site's built files at ./website.
+  # Dokploy's domain router. Mount the site's built files at ./apps/website.
   website:
     image: ${WEBSITE_IMAGE:-nginx:1.27-alpine}
     restart: unless-stopped
@@ -362,8 +362,8 @@ services:
           - wolinet-homepage
     expose: ["80", "8080", "3000"]
     volumes:
-      - ./website:/usr/share/nginx/html:ro
-      - ./website/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./apps/website:/usr/share/nginx/html:ro
+      - ./apps/website/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1 || wget -qO- http://127.0.0.1:3000/healthz >/dev/null 2>&1"]
       interval: 15s

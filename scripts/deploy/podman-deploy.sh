@@ -204,8 +204,8 @@ else
         --name wolinet-website \
         --pod "${POD_NAME}" \
         --restart always \
-        -v "${BASE_DIR}/website:/usr/share/nginx/html:ro" \
-        -v "${BASE_DIR}/website/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+        -v "${BASE_DIR}/apps/website:/usr/share/nginx/html:ro" \
+        -v "${BASE_DIR}/apps/website/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
         docker.io/library/nginx:1.27-alpine
 fi
 

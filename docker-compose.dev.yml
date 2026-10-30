@@ -132,7 +132,7 @@ services:
   # ── 3. Marketing / Home Page (website) ────────────────────────────────────
   website:
     build:
-      context: ./website
+      context: ./apps/website
       dockerfile: Dockerfile
     image: wolinet-website:latest
     container_name: wolinet-dev-website

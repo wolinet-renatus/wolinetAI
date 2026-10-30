@@ -21,7 +21,7 @@ class SiteParser(HTMLParser):
 
 class PublicSurfaceTests(unittest.TestCase):
     def test_homepage_exposes_each_product_and_download_destination(self) -> None:
-        raw_html = (ROOT / "website/index.html").read_text()
+        raw_html = (ROOT / "apps/website/index.html").read_text()
         parser = SiteParser()
         parser.feed(raw_html)
 
@@ -50,7 +50,7 @@ class PublicSurfaceTests(unittest.TestCase):
             self.assertNotIn(leak, raw_html.lower())
 
     def test_homepage_exposes_sdks_and_pnpm_support(self) -> None:
-        raw_html = (ROOT / "website/index.html").read_text()
+        raw_html = (ROOT / "apps/website/index.html").read_text()
         parser = SiteParser()
         parser.feed(raw_html)
 

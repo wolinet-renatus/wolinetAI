@@ -72,7 +72,7 @@ class WolinetSystemController:
         """Collect status metrics across all 4 operational tiers."""
         # 1. Clients
         webui_ok, webui_code, _ = self.check_http("http://localhost:8081/health")
-        homepage_ok = Path("website/index.html").exists()
+        homepage_ok = Path("apps/website/index.html").exists()
         browser_mcp_ok = self.check_tcp("127.0.0.1", 8080)
 
         # 2. Lango Gateway
@@ -118,7 +118,7 @@ class WolinetSystemController:
         return {
             "clients": {
                 "open_webui": {"status": "ONLINE" if webui_ok else "OFFLINE", "port": 8081},
-                "homepage": {"status": "READY" if homepage_ok else "MISSING", "path": "website"},
+                "homepage": {"status": "READY" if homepage_ok else "MISSING", "path": "apps/website"},
                 "browser_mcp": {"status": "ONLINE" if browser_mcp_ok else "OFFLINE", "port": 8080},
                 "ide_integrations": ["Antigravity IDE", "Cursor (.cursor)", "Claude Code CLI (.claude)"]
             },
