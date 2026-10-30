@@ -1,32 +1,32 @@
-name: "1Panel AI 门户"
+name: "WAP (Wolinet AI Panel)"
 tags:
   - AI
-title: "面向 1Panel 企业版，为用户提供自助式的 API Key 管理、技能市场和 MCP 市场能力"
-description: "面向 1Panel 企业版，为用户提供自助式的 API Key 管理、技能市场和 MCP 市场能力"
+title: "WAP - 面向 Wolinet AI 生态的自主 AI 控制面板与门户，提供 API Key 配额管理、模型广场与技能市场"
+description: "WAP (Wolinet AI Panel) 为团队提供自主可控的 AI 自助服务门户，集成 Lango 统一网关、API Key 配额、技能市场与 MCP 市场能力"
 additionalProperties:
   key: ai-portal
-  name: "1Panel AI 门户"
+  name: "WAP (Wolinet AI Panel)"
   tags:
     - AI
-  shortDescZh: "面向 1Panel 企业版，为用户提供自助式的 API Key 管理、技能市场和 MCP 市场能力"
-  shortDescEn: "Self-service AI portal for 1Panel Enterprise with API Key management, skill marketplace, and MCP marketplace"
+  shortDescZh: "WAP - 面向 Wolinet AI 生态的自主 AI 控制面板与门户，提供 API Key 配额管理、模型广场与技能市场"
+  shortDescEn: "WAP (Wolinet AI Panel) - Sovereign AI self-service control panel & portal with API key quotas, Model Arena, and Skillctl hub"
   description:
-    en: "Self-service AI portal for 1Panel Enterprise with API Key management, skill marketplace, and MCP marketplace"
-    es-es: "Portal de IA de autoservicio para 1Panel Enterprise con gestión de API Key, mercado de habilidades y mercado MCP"
-    ja: "API Key 管理、スキルマーケット、MCP マーケットを提供する 1Panel Enterprise 向けセルフサービス AI ポータル"
-    ms: "Portal AI layan diri untuk 1Panel Enterprise dengan pengurusan API Key, pasaran kemahiran dan pasaran MCP"
-    pt-br: "Portal de IA de autosserviço para o 1Panel Enterprise com gerenciamento de API Key, marketplace de skills e marketplace MCP"
-    ru: "AI-портал самообслуживания для 1Panel Enterprise с управлением API Key, магазином навыков и MCP-маркетом"
-    ko: "API Key 관리, 스킬 마켓, MCP 마켓을 제공하는 1Panel Enterprise용 셀프서비스 AI 포털"
-    zh-Hant: "面向 1Panel 企業版，為使用者提供自助式 API Key 管理、技能市場和 MCP 市場能力"
-    zh: "面向 1Panel 企业版，为用户提供自助式的 API Key 管理、技能市场和 MCP 市场能力"
-    tr: "1Panel Enterprise için API Key yönetimi, beceri pazarı ve MCP pazarı sunan self servis AI portalı"
+    en: "WAP (Wolinet AI Panel) - Sovereign self-service AI portal for enterprise teams with API key quotas, Model Arena, skill marketplace, and MCP catalog powered by Lango Gateway"
+    es-es: "WAP (Wolinet AI Panel) - Portal de IA soberano para equipos con gestión de cuotas de API Key, Model Arena y mercado de habilidades potenciado por Lango"
+    ja: "WAP (Wolinet AI Panel) - Lango ゲートウェイによる API Key クォータ管理、モデルアリーナ、スキルマーケットプレイスを備えた自律型 AI ポータル"
+    ms: "WAP (Wolinet AI Panel) - Portal AI berdaulat dengan pengurusan kuota API Key, Model Arena, dan pasaran kemahiran dikuasakan oleh Gateway Lango"
+    pt-br: "WAP (Wolinet AI Panel) - Portal de IA soberano com gerenciamento de cotas de API Key, Model Arena e marketplace de skills alimentado pelo Lango Gateway"
+    ru: "WAP (Wolinet AI Panel) - Суверенный портал самообслуживания ИИ с квотами API Key, ареной моделей и каталогом навыков на базе Lango Gateway"
+    ko: "WAP (Wolinet AI Panel) - Lango 게이트웨이 기반의 API Key 쿼터 관리, 모델 아레나, 스킬 마켓플레이스를 제공하는 엔터프라이즈 AI 포털"
+    zh-Hant: "WAP (Wolinet AI Panel) - 面向 Wolinet AI 生態的自主 AI 控制面板與門戶，提供 API Key 配額管理、模型廣場與技能市場"
+    zh: "WAP (Wolinet AI Panel) - 面向 Wolinet AI 生态的自主 AI 控制面板与门户，提供 API Key 配额管理、模型广场与技能市场"
+    tr: "WAP (Wolinet AI Panel) - Lango Gateway destekli API Key kota yönetimi, Model Arena ve beceri pazarı sunan egemen AI kontrol paneli"
   type: website
   crossVersionUpdate: true
   limit: 0
   architectures:
     - amd64
     - arm64
-  website: https://1panel.cn/enterprise.html
-  github: https://github.com/1Panel-dev/AI-Portal
-  document: https://1panel.cn/enterprise.html
+  website: https://wolinet.ai
+  github: https://github.com/wolinet/wolinetai
+  document: https://docs.wolinet.ai
