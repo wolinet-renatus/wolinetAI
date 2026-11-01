@@ -1,0 +1,2 @@
+import{n as e,t}from"./marked.esm-jPE91NeI.js";var n=/^(?:(?:(?:f|ht)tps?|mailto|tel|file|jdt):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,r=new t({gfm:!0,breaks:!1});function i(t){let i=r.parse(t,{async:!1});return e.sanitize(i,{USE_PROFILES:{html:!0},ALLOWED_URI_REGEXP:n})}export{i as markdownToSafeHtml};
+//# sourceMappingURL=markdownParser-CNITApfn.js.map

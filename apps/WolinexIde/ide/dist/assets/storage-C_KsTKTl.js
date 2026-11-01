@@ -1,0 +1,2 @@
+function e(e,t){try{let n=globalThis.localStorage?.getItem(e);return n?{...t,...JSON.parse(n)}:t}catch{return t}}function t(e,t){try{globalThis.localStorage?.setItem(e,JSON.stringify(t))}catch{}}export{t as n,e as t};
+//# sourceMappingURL=storage-C_KsTKTl.js.map

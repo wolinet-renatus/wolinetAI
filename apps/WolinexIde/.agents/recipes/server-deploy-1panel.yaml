@@ -1,0 +1,27 @@
+version: 1.0.0
+title: "Zero-Knowledge 1-Click Server Deploy"
+description: "Deploy full-stack web and Docker services to DEC 1Panel (:9999) or VPS via SSH"
+
+parameters:
+  - key: "server_host"
+    input_type: string
+    requirement: required
+    description: "Target VPS IP or domain"
+  - key: "service_name"
+    input_type: string
+    requirement: required
+    description: "Name of the application or Docker stack"
+
+instructions: |
+  Deploy {{service_name}} to server {{server_host}}:
+  1. Verify SSH connectivity or DEC 1Panel API endpoint (:9999).
+  2. Inspect docker-compose.yml or container definitions for port conflicts and volume mounts.
+  3. Preflight environment variables (.env.production) with secret masking.
+  4. Build and launch container stack with automatic health check polling.
+  5. Configure reverse proxy (Caddy / Nginx) and report live SSL HTTPS endpoint.
+
+prompt: Follow the instructions to execute the server deployment.
+
+extensions:
+  - type: platform
+    name: developer

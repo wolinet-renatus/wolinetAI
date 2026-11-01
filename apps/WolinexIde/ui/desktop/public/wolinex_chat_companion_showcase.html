@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wolinex AI — Fluid Chat & Mobile Companion Dock</title>
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --bg-tertiary: #f1f5f9;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --card-bg: #ffffff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #0a0b10;
+        --bg-secondary: #12141c;
+        --bg-tertiary: #1a1d28;
+        --border: #272a38;
+        --accent: #3b82f6;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --card-bg: #11131a;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top Wolinex Header */
+    header {
+      height: 48px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .brand-icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sim-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #3b82f6;
+      background: #2563eb;
+      color: white;
+      box-shadow: 0 1px 3px rgba(37,99,235,0.3);
+      transition: all 0.15s ease;
+    }
+
+    .sim-toggle-btn:hover {
+      background: #1d4ed8;
+    }
+
+    /* Main Split Body: Left Chat (62%), Right Companion Dock (38%) */
+    .split-layout {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* Left Chat Stream */
+    .chat-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: var(--bg-primary);
+      position: relative;
+    }
+
+    .chat-scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 32px 100px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .user-msg-bubble {
+      align-self: flex-end;
+      max-width: 80%;
+      background: #2563eb;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 16px 16px 4px 16px;
+      font-size: 14px;
+      line-height: 1.5;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+    }
+
+    .assistant-msg {
+      align-self: flex-start;
+      width: 100%;
+      max-width: 880px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .assistant-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .assistant-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-main);
+    }
+
+    /* Compact Code Card */
+    .code-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-secondary);
+      overflow: hidden;
+      margin-top: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .code-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+
+    .code-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .mobile-badge {
+      font-size: 10px;
+      color: #10b981;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.2);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    .code-card-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-pill {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.15s;
+    }
+
+    .btn-pill:hover {
+      background: var(--border);
+    }
+
+    .btn-pill.active {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+
+    .code-editor-box {
+      height: 220px;
+      overflow-y: auto;
+      background: #181a1f;
+      color: #abb2bf;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    /* Bottom Chat Input */
+    .chat-input-bar {
+      position: absolute;
+      bottom: 16px;
+      left: 32px;
+      right: 32px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+
+    .chat-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 13px;
+    }
+
+    /* Right Companion Mobile Simulator */
+    .companion-pane {
+      width: 440px;
+      border-left: 1px solid var(--border);
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .companion-header {
+      height: 44px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 12px;
+    }
+
+    .companion-title {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .companion-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      overflow: hidden;
+      background: radial-gradient(circle at top, rgba(59,130,246,0.08), transparent 70%), var(--bg-primary);
+    }
+
+    /* iPhone 16 Pro Mockup (scaled to fit) */
+    .iphone-frame {
+      width: 320px;
+      height: 640px;
+      background: #000;
+      border-radius: 44px;
+      padding: 8px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4), 0 0 0 2px #383b48;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .dynamic-island {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 95px;
+      height: 22px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .status-bar {
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 18px 0 18px;
+      font-size: 10px;
+      font-weight: 600;
+      color: white;
+      z-index: 30;
+    }
+
+    .iphone-screen {
+      flex: 1;
+      background: #0f172a;
+      border-radius: 36px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-inner {
+      flex: 1;
+      padding: 40px 16px 16px 16px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: linear-gradient(180deg, #090d16 0%, #1e1b4b 100%);
+    }
+
+    .app-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #38bdf8;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .app-desc {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 24px;
+    }
+
+    .counter-val {
+      font-size: 64px;
+      font-weight: 800;
+      color: #f8fafc;
+      margin-bottom: 24px;
+      font-family: monospace;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .counter-btn {
+      padding: 10px 20px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .home-bar {
+      height: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .home-indicator {
+      width: 100px;
+      height: 4px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 4px;
+    }
+
+    .interaction-chip {
+      font-size: 10px;
+      background: rgba(59,130,246,0.15);
+      color: #3b82f6;
+      border: 1px solid rgba(59,130,246,0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">W</div>
+      <span>Wolinex AI Workstation</span>
+      <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">v1.57</span>
+    </div>
+
+    <div class="header-actions">
+      <button class="sim-toggle-btn" id="btnToggleCompanion">
+        📱 Live Simulator Dock
+      </button>
+    </div>
+  </header>
+
+  <!-- Body -->
+  <div class="split-layout">
+    <!-- Left Chat Stream -->
+    <div class="chat-pane">
+      <div class="chat-scroll-area">
+        <!-- User Request -->
+        <div class="user-msg-bubble">
+          BUILD A REACT NATIVE MOBILE COUNTER APP AND SHOW LIVE MOBILE PREVIEW SIDE BY SIDE
+        </div>
+
+        <!-- Assistant Message -->
+        <div class="assistant-msg">
+          <div class="assistant-meta">
+            <strong>Wolinex Sovereign Coder</strong>
+            <span>• Just now</span>
+            <span class="mobile-badge">Native Responsive</span>
+          </div>
+
+          <div class="assistant-text">
+            Here is the complete mobile component with native touch gestures, state persistence, and responsive viewport support. You can test it right now in the docked live simulator on the right, or toggle side-by-side inside this code block.
+          </div>
+
+          <!-- Code Card -->
+          <div class="code-card">
+            <div class="code-card-header">
+              <div class="code-badge">
+                <span>tsx</span>
+                <span class="mobile-badge">📱 Mobile Ready</span>
+              </div>
+              <div class="code-card-actions">
+                <button class="btn-pill active">◫ Side by Side</button>
+                <button class="btn-pill">📱 Simulator</button>
+                <button class="btn-pill" style="color: #3b82f6;">⇥ Dock to Right</button>
+                <button class="btn-pill">📋 Copy</button>
+              </div>
+            </div>
+
+            <div class="code-editor-box">
+<span style="color: #c678dd;">import</span> React, { useState } <span style="color: #c678dd;">from</span> <span style="color: #98c379;">'react'</span>;
+<span style="color: #c678dd;">import</span> { View, Text, TouchableOpacity, StyleSheet } <span style="color: #c678dd;">from</span> <span style="color: #98c379;">'react-native'</span>;
+
+<span style="color: #c678dd;">export default function</span> <span style="color: #61afef;">App</span>() {
+  <span style="color: #c678dd;">const</span> [count, setCount] = useState(0);
+
+  <span style="color: #c678dd;">return</span> (
+    &lt;<span style="color: #e06c75;">View</span> style={styles.container}&gt;
+      &lt;<span style="color: #e06c75;">Text</span> style={styles.title}&gt;WOLINEX SOVEREIGN COUNTER&lt;/<span style="color: #e06c75;">Text</span>&gt;
+      &lt;<span style="color: #e06c75;">Text</span> style={styles.counter}&gt;{count}&lt;/<span style="color: #e06c75;">Text</span>&gt;
+      &lt;<span style="color: #e06c75;">View</span> style={styles.buttonRow}&gt;
+        &lt;<span style="color: #e06c75;">TouchableOpacity</span> onPress={() =&gt; setCount(count - 1)} style={styles.btnDec}&gt;
+          &lt;<span style="color: #e06c75;">Text</span> style={styles.btnText}&gt;-&lt;/<span style="color: #e06c75;">Text</span>&gt;
+        &lt;/<span style="color: #e06c75;">TouchableOpacity</span>&gt;
+        &lt;<span style="color: #e06c75;">TouchableOpacity</span> onPress={() =&gt; setCount(count + 1)} style={styles.btnInc}&gt;
+          &lt;<span style="color: #e06c75;">Text</span> style={styles.btnText}&gt;+&lt;/<span style="color: #e06c75;">Text</span>&gt;
+        &lt;/<span style="color: #e06c75;">TouchableOpacity</span>&gt;
+      &lt;/<span style="color: #e06c75;">View</span>&gt;
+    &lt;/<span style="color: #e06c75;">View</span>&gt;
+  );
+}
+            </div>
+          </div>
+
+          <!-- Live Assistant Thinking / Activity Indicator in the conversation stream -->
+          <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px; background: var(--bg-secondary); border: 1px solid var(--border); font-size: 12px; color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-top: 10px; width: fit-content;">
+            <span style="display: flex; width: 8px; height: 8px; position: relative;">
+              <span style="position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; opacity: 0.75; animation: ping 1s cubic-bezier(0,0,0.2,1) infinite;"></span>
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #2563eb;"></span>
+            </span>
+            <span style="font-weight: 500;">wolinex is working on it…</span>
+            <span style="font-family: monospace; font-size: 10px; color: var(--text-muted);">(DeepSeek-Coder active)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Pill pinned right above input bar (Never hidden behind input bar) -->
+      <div style="position: absolute; bottom: 74px; left: 32px; z-index: 30;">
+        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 20px; background: var(--card-bg); border: 1px solid var(--border); font-size: 11px; color: var(--text-main); box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+          <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
+          <span style="font-weight: 500;">Wolinex Neural Engine: Active response in progress</span>
+        </div>
+      </div>
+
+      <!-- Bottom Chat Input Bar -->
+      <div class="chat-input-bar">
+        <input class="chat-input" placeholder="Type prompt or command for Wolinex..." value="Enhance app with sound effects and animated spring transitions" readonly />
+        <button style="background: #2563eb; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">
+          Send
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Companion Simulator Dock -->
+    <div class="companion-pane">
+      <div class="companion-header">
+        <div class="companion-title">
+          <span>📱 iPhone 16 Pro Companion</span>
+          <span class="interaction-chip">● Live Dock</span>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn-pill" title="Take App Store Snapshot">📸</button>
+          <button class="btn-pill" title="Reload App State">🔄</button>
+          <button class="btn-pill" title="Close Companion">✕</button>
+        </div>
+      </div>
+
+      <div class="companion-stage">
+        <div class="iphone-frame">
+          <div class="dynamic-island">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: #222;"></div>
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></div>
+          </div>
+
+          <div class="status-bar">
+            <span>9:41</span>
+            <span>5G ▮▮▮</span>
+          </div>
+
+          <div class="iphone-screen">
+            <div class="app-inner">
+              <div class="app-title">WOLINEX MOBILE</div>
+              <div class="app-desc">Sovereign React Native Runtime</div>
+
+              <div class="counter-val" id="counterVal">42</div>
+
+              <div class="btn-group">
+                <button class="counter-btn" style="background: #ef4444; color: white;" onclick="dec()">-</button>
+                <button class="counter-btn" style="background: #334155; color: white;" onclick="reset()">Reset</button>
+                <button class="counter-btn" style="background: #10b981; color: white;" onclick="inc()">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="home-bar">
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let count = 42;
+    function inc() { count++; document.getElementById('counterVal').textContent = count; }
+    function dec() { count--; document.getElementById('counterVal').textContent = count; }
+    function reset() { count = 0; document.getElementById('counterVal').textContent = count; }
+  </script>
+</body>
+</html>
+

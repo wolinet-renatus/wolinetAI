@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wolinex OpenIDEA — Expo & Metro Production Suite</title>
+  <style>
+    :root {
+      --bg-main: #141518;
+      --bg-sidebar: #101114;
+      --bg-editor: #191b20;
+      --bg-bottom: #121316;
+      --border: #262932;
+      --accent: #06b6d4;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-main);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top IDE Titlebar */
+    .titlebar {
+      height: 38px;
+      background: var(--bg-sidebar);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      font-size: 12px;
+      user-select: none;
+    }
+
+    .titlebar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge-openidea {
+      background: #1e293b;
+      color: #38bdf8;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(56,189,248,0.2);
+    }
+
+    /* Main Area: Sidebar + Editor + Split Simulator */
+    .main-workspace {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 220px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      font-size: 12px;
+    }
+
+    .sidebar-header {
+      padding: 8px 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .file-tree {
+      flex: 1;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .tree-item {
+      padding: 5px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-dim);
+    }
+
+    .tree-item.active {
+      background: #1e293b;
+      color: #38bdf8;
+    }
+
+    /* Center: Editor + Simulator Split */
+    .editor-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .editor-tabs {
+      height: 34px;
+      background: var(--bg-sidebar);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      gap: 4px;
+    }
+
+    .tab {
+      padding: 4px 12px;
+      background: var(--bg-editor);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      font-size: 12px;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .editor-split-row {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .code-col {
+      flex: 1;
+      background: var(--bg-editor);
+      padding: 16px;
+      font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #abb2bf;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+    }
+
+    /* Split Phone Simulator */
+    .simulator-col {
+      width: 360px;
+      background: #090a0f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      position: relative;
+    }
+
+    .mini-iphone {
+      width: 270px;
+      height: 520px;
+      background: #000;
+      border-radius: 40px;
+      padding: 6px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 0 2px #334155;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .mini-island {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 18px;
+      background: #000;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      z-index: 10;
+    }
+
+    .mini-screen {
+      flex: 1;
+      background: #0f172a;
+      border-radius: 34px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+      padding: 16px;
+    }
+
+    /* Bottom Tool Windows: Expo & Metro Suite */
+    .bottom-tool-window {
+      height: 250px;
+      background: var(--bg-bottom);
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .tool-tabs {
+      height: 32px;
+      background: var(--bg-sidebar);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .tool-tab-btn {
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-dim);
+      border: none;
+      background: transparent;
+    }
+
+    .tool-tab-btn.active {
+      background: #1e293b;
+      color: #06b6d4;
+      font-weight: 600;
+      border-bottom: 2px solid #06b6d4;
+    }
+
+    .expo-toolbar {
+      height: 38px;
+      background: #15171d;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 11px;
+    }
+
+    .expo-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-action {
+      background: #222631;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-action:hover {
+      background: #2d3342;
+    }
+
+    .btn-stop {
+      background: rgba(239,68,68,0.15);
+      color: #f87171;
+      border-color: rgba(239,68,68,0.3);
+    }
+
+    .expo-split {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+      overflow: hidden;
+      padding: 8px;
+      gap: 8px;
+    }
+
+    .metro-terminal {
+      flex: 1;
+      background: #090a0d;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      overflow-y: auto;
+      color: #94a3b8;
+    }
+
+    .log-green { color: #10b981; }
+    .log-cyan { color: #06b6d4; }
+    .log-white { color: #f8fafc; font-weight: 600; }
+
+    .expo-companion-box {
+      width: 280px;
+      background: #181a22;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Titlebar -->
+  <div class="titlebar">
+    <div class="titlebar-left">
+      <span class="badge-openidea">OpenIDEA Sovereign IDE</span>
+      <span>project: <strong>wolinet-mobile-app</strong></span>
+    </div>
+    <div style="display: flex; gap: 8px; font-size: 11px; color: var(--text-dim);">
+      <span>Git: <strong style="color: #fb923c;">main</strong></span>
+      <span>Runtime: <strong style="color: #10b981;">Rust Core v0.1.32</strong></span>
+    </div>
+  </div>
+
+  <!-- Workspace -->
+  <div class="main-workspace">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">Project Explorer</div>
+      <div class="file-tree">
+        <div class="tree-item">📁 src</div>
+        <div class="tree-item">📁 components</div>
+        <div class="tree-item active">📄 App.tsx</div>
+        <div class="tree-item">📄 app.json</div>
+        <div class="tree-item">📄 package.json</div>
+        <div class="tree-item">📄 tsconfig.json</div>
+      </div>
+    </div>
+
+    <!-- Center: Editor + Split Simulator -->
+    <div class="editor-stage">
+      <div class="editor-tabs">
+        <div class="tab">
+          <span>⚛ App.tsx</span>
+          <span style="font-size: 10px; opacity: 0.7;">✕</span>
+        </div>
+      </div>
+
+      <div class="editor-split-row">
+        <!-- Code Editor -->
+        <div class="code-col">
+<span style="color: #c678dd;">import</span> { StatusBar } <span style="color: #c678dd;">from</span> <span style="color: #98c379;">'expo-status-bar'</span>;
+<span style="color: #c678dd;">import</span> { StyleSheet, Text, View, Pressable } <span style="color: #c678dd;">from</span> <span style="color: #98c379;">'react-native'</span>;
+<span style="color: #c678dd;">import</span> { useState } <span style="color: #c678dd;">from</span> <span style="color: #98c379;">'react'</span>;
+
+<span style="color: #c678dd;">export default function</span> <span style="color: #61afef;">App</span>() {
+  <span style="color: #c678dd;">const</span> [energy, setEnergy] = useState(100);
+
+  <span style="color: #c678dd;">return</span> (
+    &lt;<span style="color: #e06c75;">View</span> style={styles.container}&gt;
+      &lt;<span style="color: #e06c75;">Text</span> style={styles.title}&gt;Wolinex Mobile Neural Node&lt;/<span style="color: #e06c75;">Text</span>&gt;
+      &lt;<span style="color: #e06c75;">Text</span> style={styles.status}&gt;Current Pulse: {energy}%&lt;/<span style="color: #e06c75;">Text</span>&gt;
+      &lt;<span style="color: #e06c75;">Pressable</span> onPress={() =&gt; setEnergy(e =&gt; e + 10)} style={styles.btn}&gt;
+        &lt;<span style="color: #e06c75;">Text</span> style={styles.btnText}&gt;⚡ Inject Quantum Pulse&lt;/<span style="color: #e06c75;">Text</span>&gt;
+      &lt;/<span style="color: #e06c75;">Pressable</span>&gt;
+      &lt;<span style="color: #e06c75;">StatusBar</span> style=<span style="color: #98c379;">"auto"</span> /&gt;
+    &lt;/<span style="color: #e06c75;">View</span>&gt;
+  );
+}
+        </div>
+
+        <!-- Split Live Device Simulator -->
+        <div class="simulator-col">
+          <div class="mini-iphone">
+            <div class="mini-island"></div>
+            <div class="mini-screen">
+              <div style="font-size: 15px; font-weight: 700; color: #38bdf8; margin-bottom: 6px;">
+                Wolinex Mobile Node
+              </div>
+              <div style="font-size: 10px; color: #94a3b8; margin-bottom: 18px;">
+                Connected to Metro :8081
+              </div>
+              <div style="font-size: 38px; font-weight: 800; color: #10b981; font-family: monospace; margin-bottom: 20px;">
+                100%
+              </div>
+              <button style="background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer;">
+                ⚡ Inject Quantum Pulse
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Tool Windows: Expo & Metro Suite -->
+  <div class="bottom-tool-window">
+    <div class="tool-tabs">
+      <button class="tool-tab-btn">Terminal</button>
+      <button class="tool-tab-btn active">
+        <span>📱 Expo & Mobile</span>
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+      </button>
+      <button class="tool-tab-btn">Git / VCS</button>
+      <button class="tool-tab-btn">Code Insight</button>
+      <button class="tool-tab-btn">HTTP Client</button>
+      <button class="tool-tab-btn">Database</button>
+      <button class="tool-tab-btn">Run Console</button>
+    </div>
+
+    <!-- Expo Toolbar -->
+    <div class="expo-toolbar">
+      <div class="expo-actions">
+        <span style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: #10b981;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
+          Metro Active (Port 8081)
+        </span>
+        <button class="btn-action btn-stop">⏹ Stop Server</button>
+      </div>
+
+      <div class="expo-actions">
+        <button class="btn-action">🔄 Reload (r)</button>
+        <button class="btn-action">📱 iOS Sim (i)</button>
+        <button class="btn-action">🤖 Android (a)</button>
+        <button class="btn-action">🌐 Web (w)</button>
+        <button class="btn-action" style="color: #38bdf8; border-color: rgba(56,189,248,0.4); background: rgba(56,189,248,0.1);">
+          📱 Sync with IDE Simulator
+        </button>
+        <button class="btn-action">🧹 Clear</button>
+      </div>
+    </div>
+
+    <!-- Expo Split Body -->
+    <div class="expo-split">
+      <!-- Live Terminal Streaming Logs -->
+      <div class="metro-terminal">
+        <div class="log-cyan">▶ Starting Mobile Dev Server: [npx expo start --web] in /Users/apple/Documents/wolinetai</div>
+        <div>Starting Metro Bundler on port 8081...</div>
+        <div class="log-green">✔ Fast Refresh enabled. Metro waiting on exp://192.168.1.105:8081</div>
+        <div class="log-green">✔ Web is available at http://localhost:8081</div>
+        <div>› Press <strong>r</strong> to reload app</div>
+        <div>› Press <strong>i</strong> to open iOS simulator (via xcrun simctl)</div>
+        <div>› Press <strong>a</strong> to open Android emulator (via adb)</div>
+        <div>› Press <strong>w</strong> to open web browser</div>
+        <div class="log-white">Android Bundling complete 1240ms (src/App.tsx)</div>
+        <div class="log-white">iOS Bundling complete 1110ms (src/App.tsx)</div>
+        <div class="log-green">Compiled 104 modules (100%) in 480ms</div>
+      </div>
+
+      <!-- Right Companion: Expo Go QR & App Store Tools -->
+      <div class="expo-companion-box">
+        <div>
+          <div style="font-weight: 600; color: #f8fafc; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>📷 Expo Go Testing</span>
+            <span style="font-size: 9px; background: rgba(6,182,212,0.15); color: #06b6d4; padding: 1px 4px; border-radius: 3px;">Device</span>
+          </div>
+          <div style="color: var(--text-dim); font-size: 10px; line-height: 1.4; margin-bottom: 8px;">
+            Scan terminal QR code with Expo Go on your physical iPhone or Android.
+          </div>
+          <div style="background: #111217; padding: 6px; border-radius: 4px; border: 1px solid var(--border); font-family: monospace; font-size: 9px; color: #38bdf8;">
+            URL: exp://192.168.1.105:8081
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--border); padding-top: 6px;">
+          <button class="btn-action" style="justify-content: space-between;">
+            <span>📦 Export Web Static</span>
+            <span style="font-family: monospace; color: var(--text-dim);">web</span>
+          </button>
+          <button class="btn-action" style="justify-content: space-between;">
+            <span>🚀 EAS App Store Build</span>
+            <span style="font-family: monospace; color: var(--text-dim);">eas</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

@@ -1,0 +1,26 @@
+version: 1.0.0
+title: "Tanzania WhatsApp & TG Commerce Bot"
+description: "Conversational storefront bot with M-Pesa mobile money payment verification"
+
+parameters:
+  - key: "business_name"
+    input_type: string
+    requirement: required
+    description: "Business or merchant trading name"
+  - key: "catalog_file"
+    input_type: string
+    requirement: required
+    description: "JSON or CSV product catalog"
+
+instructions: |
+  Configure commerce bot for {{business_name}} using {{catalog_file}}:
+  1. Parse product inventory, SKU variants, and pricing (TZS / USD).
+  2. Implement WhatsApp Cloud API / Telegram bot webhook for incoming inquiries.
+  3. Wire automated M-Pesa C2B / Lipa Kwa Simu reference code validation.
+  4. Generate customer confirmation receipts and push fulfillment alert to merchant dashboard.
+
+prompt: Follow the instructions to configure and launch the commerce bot.
+
+extensions:
+  - type: platform
+    name: developer

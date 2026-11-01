@@ -130,6 +130,31 @@ models/*.onnx
 !models/configs/
 !models/checkpoints/**/README.md
 !models/checkpoints/**/*.json
+inference/models/**/*.gguf
+inference/models/**/*.bin
+inference/models/**/*.safetensors
+inference/models/**/*.pt
+inference/models/**/*.onnx
+inference/models/*.gguf
+inference/models/*.bin
+inference/models/*.safetensors
+inference/models/*.pt
+inference/models/*.onnx
+!inference/models/registrations/
+!inference/models/configs/
+!inference/models/checkpoints/**/README.md
+!inference/models/checkpoints/**/*.json
+
+# UI and Binaries
+apps/WolinexIde/ui/desktop/out/
+apps/WolinexIde/ui/desktop/.electron-cache/
+apps/WolinexIde/bin/
+apps/WolinexIde/ui/desktop/src/bin/openidea-server*
+apps/WolinexIde/ui/desktop/src/bin/goose*
+openidea-server*
+gtwall*
+*.app/
+*.zip
 
 # Logs & Runtime Storage
 *.log

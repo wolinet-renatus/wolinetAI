@@ -1,0 +1,2 @@
+import{X as e,gt as t}from"./ui-C0UjezFX.js";import{J as n,K as r,q as i}from"./index-r43D1Jnz.js";var a=t();function o(){let t=n(e=>e.autoMarkViewed);return(0,a.jsx)(`div`,{className:r.page,children:(0,a.jsx)(e,{checked:t,onChange:e=>i({autoMarkViewed:e}),label:`Automatically mark opened files as viewed`})})}export{o as GithubSettingsPage};
+//# sourceMappingURL=GithubSettingsPage-Bds_LJ8V.js.map

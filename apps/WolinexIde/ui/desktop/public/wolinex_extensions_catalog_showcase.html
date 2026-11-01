@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wolinex AI — Extensions Directory & MCP Store</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-primary: #0a0b10;
+      --bg-secondary: #12141c;
+      --bg-tertiary: #181b26;
+      --border: #222634;
+      --border-focus: #3b82f6;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --card-bg: rgba(18, 20, 28, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --tag-builtin: rgba(59, 130, 246, 0.15);
+      --tag-builtin-text: #60a5fa;
+      --tag-community: rgba(168, 85, 247, 0.15);
+      --tag-community-text: #c084fc;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Left Sidebar */
+    .sidebar {
+      width: 240px;
+      background: #0d0f15;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      padding: 16px 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      padding: 0 8px 18px 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 13px;
+    }
+
+    .nav-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      padding: 10px 8px 4px 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      margin-bottom: 2px;
+    }
+
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+    }
+
+    .nav-item.active {
+      background: rgba(37, 99, 235, 0.15);
+      color: #60a5fa;
+      font-weight: 600;
+    }
+
+    /* Main Content Area */
+    .main-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      background: var(--bg-primary);
+    }
+
+    .header-section {
+      padding: 40px 36px 20px 36px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .header-title {
+      font-size: 32px;
+      font-weight: 300;
+      letter-spacing: -0.02em;
+    }
+
+    .header-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      max-width: 820px;
+      line-height: 1.5;
+      margin-bottom: 6px;
+    }
+
+    .header-note {
+      font-size: 12.5px;
+      color: #64748b;
+      margin-bottom: 20px;
+    }
+
+    /* Tabs & Controls */
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .tab-pills {
+      display: flex;
+      background: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      gap: 4px;
+    }
+
+    .tab-btn {
+      padding: 6px 14px;
+      border-radius: 7px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-action {
+      height: 32px;
+      padding: 0 14px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      border: 1px solid #3b82f6;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-tertiary);
+    }
+
+    /* Content Area */
+    .content-area {
+      padding: 24px 36px 48px 36px;
+    }
+
+    /* Search & Filter Bar */
+    .filter-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .search-input-box {
+      position: relative;
+      width: 100%;
+    }
+
+    .search-input-box i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .search-input {
+      width: 100%;
+      height: 40px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0 16px 0 40px;
+      font-size: 13px;
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--border-focus);
+    }
+
+    .category-pills {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .cat-pill {
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: var(--bg-secondary);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .cat-pill:hover {
+      color: var(--text-main);
+      border-color: #3b82f6;
+    }
+
+    .cat-pill.active {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 165px;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .card:hover {
+      border-color: rgba(59, 130, 246, 0.35);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .card-name-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .card-name {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .badge-builtin {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--tag-builtin);
+      color: var(--tag-builtin-text);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+
+    .badge-community {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--tag-community);
+      color: var(--tag-community-text);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+    }
+
+    .star-link {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: #94a3b8;
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .star-link:hover {
+      color: #fbbf24;
+    }
+
+    .star-link i {
+      color: #fbbf24;
+      font-size: 10px;
+    }
+
+    .card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+      margin-bottom: 12px;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-foot {
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .cmd-preview {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 10.5px;
+      color: #64748b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .status-installed {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: #10b981;
+      font-weight: 500;
+    }
+
+    .switch-ui {
+      position: relative;
+      width: 34px;
+      height: 18px;
+      background: #10b981;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .switch-ui::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 14px;
+      height: 14px;
+      background: white;
+      border-radius: 50%;
+    }
+
+    .btn-install {
+      width: 100%;
+      height: 28px;
+      border-radius: 6px;
+      background: #2563eb;
+      color: white;
+      font-size: 12px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s ease;
+    }
+
+    .btn-install:hover {
+      background: #1d4ed8;
+    }
+
+    .key-badge {
+      font-size: 9.5px;
+      padding: 1px 5px;
+      background: rgba(245, 158, 11, 0.12);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Left Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="fa-solid fa-feather"></i>
+      </div>
+      <span>Wolinex</span>
+      <span style="font-size: 10px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 2px 6px; border-radius: 4px; margin-left: auto;">IDE</span>
+    </div>
+
+    <div class="nav-section-title">Workspace</div>
+    <div class="nav-item"><i class="fa-solid fa-plus"></i> New Chat</div>
+    <div class="nav-item"><i class="fa-solid fa-code"></i> Code</div>
+    <div class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Session History</div>
+
+    <div class="nav-section-title">Agents</div>
+    <div class="nav-item"><i class="fa-solid fa-network-wired"></i> Swarm</div>
+    <div class="nav-item"><i class="fa-solid fa-bolt"></i> Skills</div>
+    <div class="nav-item"><i class="fa-regular fa-file-lines"></i> Recipes</div>
+
+    <div class="nav-section-title">Automate</div>
+    <div class="nav-item"><i class="fa-regular fa-clock"></i> Scheduler</div>
+
+    <div class="nav-section-title">Integrate</div>
+    <div class="nav-item active"><i class="fa-solid fa-puzzle-piece"></i> Extensions</div>
+    <div class="nav-item"><i class="fa-solid fa-cube"></i> Apps</div>
+  </aside>
+
+  <!-- Main Panel -->
+  <main class="main-panel">
+    <!-- Header -->
+    <header class="header-section">
+      <div class="header-top">
+        <div>
+          <h1 class="header-title">Extensions</h1>
+          <p class="header-desc">
+            These enterprise extensions use the Model Context Protocol (MCP). They expand Wolinex capabilities with contextual intelligence, shared data resources, and automated developer tooling.
+          </p>
+          <p class="header-note">
+            Extensions enabled here are used as the default for new chats. You can also toggle active extensions during chat.
+          </p>
+        </div>
+      </div>
+
+      <!-- Controls & Tabs -->
+      <div class="controls-bar">
+        <div class="tab-pills">
+          <button class="tab-btn"><i class="fa-solid fa-layer-group"></i> Installed Extensions (13)</button>
+          <button class="tab-btn active"><i class="fa-solid fa-compass"></i> Browse Directory (57)</button>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-action btn-primary"><i class="fa-solid fa-plus"></i> Add custom extension</button>
+          <button class="btn-action btn-secondary"><i class="fa-solid fa-location-crosshairs"></i> Browse extensions</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <section class="content-area">
+      <!-- Search & Category Filters -->
+      <div class="filter-wrapper">
+        <div class="search-input-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" class="search-input" placeholder="Search community extensions (e.g. GitHub, Supabase, Playwright, Blender, Context7)...">
+        </div>
+
+        <div class="category-pills">
+          <span class="cat-pill active">All (57)</span>
+          <span class="cat-pill">Built-in (8)</span>
+          <span class="cat-pill">Developer Tools</span>
+          <span class="cat-pill">Web Scraping</span>
+          <span class="cat-pill">Data & Database</span>
+          <span class="cat-pill">Design & 3D</span>
+          <span class="cat-pill">Automation</span>
+          <span class="cat-pill">AI & Memory</span>
+          <span class="cat-pill">Fintech & Web3</span>
+          <span class="cat-pill">DevOps</span>
+          <span class="cat-pill">Knowledge</span>
+        </div>
+      </div>
+
+      <!-- Section: Built-in Extensions -->
+      <h2 class="section-title"><i class="fa-solid fa-microchip" style="color: #60a5fa;"></i> Built-in Core Extensions (8)</h2>
+      <div class="grid-container">
+        <!-- Auto Visualiser -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Auto Visualiser</span>
+                <span class="badge-builtin">Built-in</span>
+              </div>
+              <a href="https://github.com/aaif-goose/goose/tree/main/crates/goose-mcp/src/autovisualiser" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 56.0k</a>
+            </div>
+            <p class="card-desc">Automatic data visualisation via MCP-UI with interactive charts, sankey, radar, donut, and treemaps.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span><i class="fa-solid fa-cpu"></i> native core</span></div>
+            <div class="card-actions">
+              <span class="status-installed"><i class="fa-solid fa-circle-check"></i> Installed</span>
+              <div class="switch-ui"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Code Mode -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Code Mode</span>
+                <span class="badge-builtin">Built-in</span>
+              </div>
+              <a href="https://github.com/aaif-goose/goose/tree/main/crates/goose/src/agents/platform_extensions/code_execution.rs" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 56.0k</a>
+            </div>
+            <p class="card-desc">Execute JavaScript code to interact with MCP tools efficiently and minimize token overhead.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span><i class="fa-solid fa-cpu"></i> native core</span></div>
+            <div class="card-actions">
+              <span class="status-installed"><i class="fa-solid fa-circle-check"></i> Installed</span>
+              <div class="switch-ui"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Computer Controller -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Computer Controller</span>
+                <span class="badge-builtin">Built-in</span>
+              </div>
+              <a href="https://github.com/aaif-goose/goose/tree/main/crates/goose-mcp/src/computercontroller" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 56.0k</a>
+            </div>
+            <p class="card-desc">Built-in computer controls for webscraping, file caching, keyboard/mouse actions, and automations.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span><i class="fa-solid fa-cpu"></i> native core</span></div>
+            <div class="card-actions">
+              <span class="status-installed"><i class="fa-solid fa-circle-check"></i> Installed</span>
+              <div class="switch-ui"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Developer -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Developer</span>
+                <span class="badge-builtin">Built-in</span>
+              </div>
+              <a href="https://github.com/aaif-goose/goose/tree/main/crates/goose-mcp/src/developer" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 56.0k</a>
+            </div>
+            <p class="card-desc">Built-in developer tools for file editing, directory inspection, and shell command execution.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span><i class="fa-solid fa-cpu"></i> native core</span></div>
+            <div class="card-actions">
+              <span class="status-installed"><i class="fa-solid fa-circle-check"></i> Installed</span>
+              <div class="switch-ui"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Memory -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Memory</span>
+                <span class="badge-builtin">Built-in</span>
+              </div>
+              <a href="https://github.com/aaif-goose/goose/tree/main/crates/goose-mcp/src/memory" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 56.0k</a>
+            </div>
+            <p class="card-desc">Built-in memory system for persistent context, user preferences, and information storage across agent sessions.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span><i class="fa-solid fa-cpu"></i> native core</span></div>
+            <div class="card-actions">
+              <span class="status-installed"><i class="fa-solid fa-circle-check"></i> Installed</span>
+              <div class="switch-ui"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summon -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Summon</span>
+                <span class="badge-builtin">Built-in</span>
+              </div>
+              <a href="https://github.com/aaif-goose/goose/tree/main/crates/goose/src/agents/platform_extensions/summon.rs" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 56.0k</a>
+            </div>
+            <p class="card-desc">Load skills, subagent teams, and delegate specialized tasks to autonomous multi-agent swarms.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span><i class="fa-solid fa-cpu"></i> native core</span></div>
+            <div class="card-actions">
+              <span class="status-installed"><i class="fa-solid fa-circle-check"></i> Installed</span>
+              <div class="switch-ui"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top of Mind -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Top of Mind</span>
+                <span class="badge-builtin">Built-in</span>
+              </div>
+              <a href="https://github.com/aaif-goose/goose/tree/main/crates/goose/src/agents/platform_extensions/tom.rs" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 56.0k</a>
+            </div>
+            <p class="card-desc">Inject persistent instructions into working memory every turn via MOIM message hooks.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span><i class="fa-solid fa-cpu"></i> native core</span></div>
+            <div class="card-actions">
+              <span class="status-installed"><i class="fa-solid fa-circle-check"></i> Installed</span>
+              <div class="switch-ui"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tutorial -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Tutorial</span>
+                <span class="badge-builtin">Built-in</span>
+              </div>
+              <a href="https://github.com/aaif-goose/goose/tree/main/crates/goose-mcp/src/tutorial" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 56.0k</a>
+            </div>
+            <p class="card-desc">Built-in tutorial and learning management system with step-by-step interactive walk-throughs.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span><i class="fa-solid fa-cpu"></i> native core</span></div>
+            <div class="card-actions">
+              <span class="status-installed"><i class="fa-solid fa-circle-check"></i> Installed</span>
+              <div class="switch-ui"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Community Extensions -->
+      <h2 class="section-title"><i class="fa-solid fa-globe" style="color: #c084fc;"></i> Community Extensions (49 Available)</h2>
+      <div class="grid-container">
+        <!-- GitHub -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">GitHub</span>
+                <span class="badge-community">Developer Tools</span>
+              </div>
+              <a href="https://github.com/modelcontextprotocol/servers" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 18.5k</a>
+            </div>
+            <p class="card-desc">Full GitHub integration: manage repositories, issues, pull requests, commits, and workflows.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span>npx -y @modelcontextprotocol/server-github</span> <span class="key-badge"><i class="fa-solid fa-key"></i> API Key</span></div>
+            <button class="btn-install"><i class="fa-solid fa-download"></i> Configure & Install</button>
+          </div>
+        </div>
+
+        <!-- Supabase -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Supabase</span>
+                <span class="badge-community">Data & Database</span>
+              </div>
+              <a href="https://github.com/supabase/mcp-server" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 5.4k</a>
+            </div>
+            <p class="card-desc">Manage Postgres schemas, run SQL queries, view tables, and control Supabase projects.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span>npx -y @supabase/mcp-server</span> <span class="key-badge"><i class="fa-solid fa-key"></i> API Key</span></div>
+            <button class="btn-install"><i class="fa-solid fa-download"></i> Configure & Install</button>
+          </div>
+        </div>
+
+        <!-- Playwright -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Playwright</span>
+                <span class="badge-community">Automation</span>
+              </div>
+              <a href="https://github.com/modelcontextprotocol/servers" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 8.9k</a>
+            </div>
+            <p class="card-desc">Automated browser control, end-to-end testing, visual regression, and screenshot capture.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span>npx -y @modelcontextprotocol/server-playwright</span></div>
+            <button class="btn-install"><i class="fa-solid fa-download"></i> Install</button>
+          </div>
+        </div>
+
+        <!-- Chrome DevTools -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Chrome DevTools</span>
+                <span class="badge-community">Developer Tools</span>
+              </div>
+              <a href="https://github.com/ChromeDevTools/chrome-devtools-mcp" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 3.8k</a>
+            </div>
+            <p class="card-desc">Inspect DOM elements, run console diagnostics, network monitoring, and performance profiling.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span>npx -y chrome-devtools-mcp</span></div>
+            <button class="btn-install"><i class="fa-solid fa-download"></i> Install</button>
+          </div>
+        </div>
+
+        <!-- Excalidraw MCP App -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Excalidraw</span>
+                <span class="badge-community">MCP Apps</span>
+              </div>
+              <a href="https://github.com/modelcontextprotocol/server-excalidraw" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 6.7k</a>
+            </div>
+            <p class="card-desc">Interactive collaborative whiteboard, diagram generation, and architecture sketches with MCP-UI.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span>npx -y @modelcontextprotocol/server-excalidraw</span></div>
+            <button class="btn-install"><i class="fa-solid fa-download"></i> Install</button>
+          </div>
+        </div>
+
+        <!-- Exa Search -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Exa Search</span>
+                <span class="badge-community">Web Search</span>
+              </div>
+              <a href="https://github.com/exa-labs/exa-mcp-server" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 3.1k</a>
+            </div>
+            <p class="card-desc">Neural search engine for finding clean, high-relevance web content, research, and papers.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span>npx -y exa-mcp-server</span> <span class="key-badge"><i class="fa-solid fa-key"></i> API Key</span></div>
+            <button class="btn-install"><i class="fa-solid fa-download"></i> Configure & Install</button>
+          </div>
+        </div>
+
+        <!-- Context7 -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Context7</span>
+                <span class="badge-community">Knowledge</span>
+              </div>
+              <a href="https://github.com/context7-ai/context7-mcp" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 4.2k</a>
+            </div>
+            <p class="card-desc">Real-time documentation lookup for thousands of modern libraries, frameworks, and APIs.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span>npx -y context7-mcp</span></div>
+            <button class="btn-install"><i class="fa-solid fa-download"></i> Install</button>
+          </div>
+        </div>
+
+        <!-- Repomix -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Repomix</span>
+                <span class="badge-community">Developer Tools</span>
+              </div>
+              <a href="https://github.com/yamadashy/repomix" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 7.8k</a>
+            </div>
+            <p class="card-desc">Pack entire codebases into clean, AI-optimized markdown packages for holistic reasoning.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span>npx -y repomix</span></div>
+            <button class="btn-install"><i class="fa-solid fa-download"></i> Install</button>
+          </div>
+        </div>
+
+        <!-- Blender -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Blender</span>
+                <span class="badge-community">Design & 3D</span>
+              </div>
+              <a href="https://github.com/ahujas/blender-mcp" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 2.4k</a>
+            </div>
+            <p class="card-desc">Full 3D modeling, rigging, procedural geometry, and Cycles/Eevee rendering in Blender.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span>uvx blender-mcp</span></div>
+            <button class="btn-install"><i class="fa-solid fa-download"></i> Install</button>
+          </div>
+        </div>
+
+        <!-- Fetch -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">Fetch</span>
+                <span class="badge-community">Web Scraping</span>
+              </div>
+              <a href="https://github.com/modelcontextprotocol/servers" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 14.2k</a>
+            </div>
+            <p class="card-desc">Fast web fetching tool converting any webpage or API response into pristine Markdown.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span>npx -y @modelcontextprotocol/server-fetch</span></div>
+            <button class="btn-install"><i class="fa-solid fa-download"></i> Install</button>
+          </div>
+        </div>
+
+        <!-- JetBrains -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">JetBrains</span>
+                <span class="badge-community">Developer Tools</span>
+              </div>
+              <a href="https://github.com/JetBrains/mcp-proxy" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 2.1k</a>
+            </div>
+            <p class="card-desc">Connect with IntelliJ IDEA, WebStorm, PyCharm, and GoLand for live editor synchronization.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span>npx -y @jetbrains/mcp-proxy</span></div>
+            <button class="btn-install"><i class="fa-solid fa-download"></i> Install</button>
+          </div>
+        </div>
+
+        <!-- ElevenLabs -->
+        <div class="card">
+          <div>
+            <div class="card-head">
+              <div class="card-name-group">
+                <span class="card-name">ElevenLabs</span>
+                <span class="badge-community">Audio & Voice</span>
+              </div>
+              <a href="https://github.com/elevenlabs/elevenlabs-mcp" class="star-link" target="_blank"><i class="fa-solid fa-star"></i> 2.9k</a>
+            </div>
+            <p class="card-desc">Ultra-realistic AI voice generation, speech synthesis, and multi-lingual voice cloning.</p>
+          </div>
+          <div class="card-foot">
+            <div class="cmd-preview"><span>npx -y elevenlabs-mcp</span> <span class="key-badge"><i class="fa-solid fa-key"></i> API Key</span></div>
+            <button class="btn-install"><i class="fa-solid fa-download"></i> Configure & Install</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+</body>
+</html>
+

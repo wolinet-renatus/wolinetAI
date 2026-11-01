@@ -1,0 +1,26 @@
+version: 1.0.0
+title: "Assignment Grading & Rubric Assessment"
+description: "Automated student repository evaluation against pedagogical rubrics and unit tests"
+
+parameters:
+  - key: "student_repo"
+    input_type: string
+    requirement: required
+    description: "Path to student submission repository"
+  - key: "rubric_file"
+    input_type: string
+    requirement: required
+    description: "Markdown or YAML rubric detailing criteria and point allocation"
+
+instructions: |
+  Evaluate the submission in {{student_repo}} against the criteria in {{rubric_file}}:
+  1. Inspect directory structure and code quality (naming, modularity, comments).
+  2. Execute existing unit tests or test suites and record pass/fail results.
+  3. Score each criterion with specific code-pointer justification.
+  4. Generate a constructive feedback report for the student with improvement recommendations.
+
+prompt: Follow the instructions to produce the grading feedback.
+
+extensions:
+  - type: platform
+    name: developer

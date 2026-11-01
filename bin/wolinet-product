@@ -56,8 +56,10 @@ def cmd_list(args: argparse.Namespace) -> None:
     print("-" * 88)
     for p in products:
         deploy_str = "SERVER" if p.get("deployable_to_server") else "CLIENT"
+        sub_branch = p.get("sub_branch", "N/A")
+        p_path = p.get("path", p.get("distribution_path", "N/A"))
         print(
-            f"{p['id']:<14} {p['category']:<16} {deploy_str:<8} {p['sub_branch']:<20} {p['path']:<24}"
+            f"{p['id']:<14} {p['category']:<16} {deploy_str:<8} {sub_branch:<20} {p_path:<24}"
         )
     print("-" * 88)
     print(f"Total Managed Products: {len(products)}")
@@ -81,13 +83,13 @@ def cmd_status(args: argparse.Namespace) -> None:
     )
 
     for p in products:
-        p_path = p["path"]
-        sub_branch = p["sub_branch"]
+        p_path = p.get("path", p.get("distribution_path", ""))
+        sub_branch = p.get("sub_branch", "N/A")
         branch_status = "✓ Ready" if sub_branch in local_branches else "✗ Not initialized"
         
         # Check files modified in this product path
         matched_changes = [
-            l for l in changed_lines if p_path in l or (l.startswith("??") and l.endswith(p_path + "/"))
+            l for l in changed_lines if p_path and (p_path in l or (l.startswith("??") and l.endswith(p_path + "/")))
         ]
         
         change_indicator = f"⚡ {len(matched_changes)} modified files" if matched_changes else "✓ Clean"

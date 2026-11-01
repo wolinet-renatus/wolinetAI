@@ -1,0 +1,26 @@
+version: 1.0.0
+title: "Academic Literature Synthesis"
+description: "Cross-paper synthesis, thematic matrix extraction, and bibtex citation validation"
+
+parameters:
+  - key: "topic"
+    input_type: string
+    requirement: required
+    description: "Research topic or problem statement"
+  - key: "papers_dir"
+    input_type: string
+    requirement: required
+    description: "Directory containing PDFs or paper text files"
+
+instructions: |
+  Perform a structured literature review synthesis on {{topic}} using files in {{papers_dir}}:
+  1. Extract key contributions, methodology, datasets, and limitations from each paper.
+  2. Synthesize findings into a comparative thematic matrix (Markdown table).
+  3. Validate all author-year citations against standard BibTeX format.
+  4. Highlight research gaps and emerging opportunities for follow-up investigations.
+
+prompt: Follow the instructions to produce the literature synthesis report.
+
+extensions:
+  - type: platform
+    name: developer

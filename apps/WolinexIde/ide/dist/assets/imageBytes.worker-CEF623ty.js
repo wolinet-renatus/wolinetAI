@@ -1,0 +1,2 @@
+(function(){self.onmessage=async e=>{try{let t=e.data,n=typeof t==`string`?Array.from(atob(t.slice(t.indexOf(`,`)+1)),e=>e.charCodeAt(0)):Array.from(new Uint8Array(await t.arrayBuffer()));self.postMessage({data:n})}catch(e){self.postMessage({error:String(e)})}}})();
+//# sourceMappingURL=imageBytes.worker-CEF623ty.js.map

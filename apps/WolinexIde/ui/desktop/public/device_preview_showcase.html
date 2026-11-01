@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wolinex Live Device Simulator Showcase</title>
+  <style>
+    :root {
+      --bg-canvas: #0c0d12;
+      --bg-panel: #131418;
+      --bg-editor: #181a1f;
+      --border: #262933;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-cyan: #06b6d4;
+      --text-main: #f3f4f6;
+      --text-dim: #9ca3af;
+      --text-code: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Bar */
+    header {
+      height: 52px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 16px;
+      color: white;
+      box-shadow: 0 0 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .brand-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-engine {
+      font-family: monospace;
+      font-size: 10px;
+      background: rgba(37, 99, 235, 0.2);
+      color: #60a5fa;
+      border: 1px solid rgba(37, 99, 235, 0.4);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .nav-pills {
+      display: flex;
+      background: #1a1c23;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 4px;
+    }
+
+    .nav-pill {
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-dim);
+      border-radius: 6px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .nav-pill.active {
+      background: #252834;
+      color: #fff;
+    }
+
+    .status-live {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-family: monospace;
+      color: #34d399;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.8; }
+    }
+
+    /* Main Split Area */
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Left Pane: Editor (50%) */
+    .pane-editor {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-editor);
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .editor-tabs {
+      height: 36px;
+      background: #101116;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      gap: 4px;
+    }
+
+    .tab {
+      padding: 6px 12px;
+      font-size: 11px;
+      color: var(--text-dim);
+      border-radius: 4px 4px 0 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab.active {
+      background: var(--bg-editor);
+      color: #fff;
+      border-top: 2px solid var(--accent);
+      font-weight: 500;
+    }
+
+    .tab-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #f59e0b;
+    }
+
+    .editor-toolbar {
+      height: 32px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: monospace;
+    }
+
+    .btn-save {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .code-canvas {
+      flex: 1;
+      display: flex;
+      background: #14161b;
+      font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      overflow: auto;
+    }
+
+    .gutter {
+      width: 44px;
+      padding: 12px 8px;
+      text-align: right;
+      color: #4b5563;
+      background: #101115;
+      border-right: 1px solid #1e2129;
+      user-select: none;
+      font-size: 11px;
+    }
+
+    .code-content {
+      flex: 1;
+      padding: 12px 16px;
+      color: var(--text-code);
+      white-space: pre;
+    }
+
+    .kw { color: #c084fc; font-weight: 600; }
+    .str { color: #34d399; }
+    .fn { color: #60a5fa; }
+    .tag { color: #38bdf8; }
+    .prop { color: #fbbf24; }
+    .comment { color: #6b7280; font-style: italic; }
+
+    .agent-feedback-box {
+      height: 130px;
+      background: #101115;
+      border-top: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .agent-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+
+    .agent-desc {
+      font-size: 11.5px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    .prompt-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .prompt-input {
+      flex: 1;
+      background: #191b22;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: #fff;
+      font-size: 11.5px;
+      outline: none;
+    }
+
+    .btn-iterate {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    /* Right Pane: Device Simulator (50%) */
+    .pane-simulator {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      background: #090a0d;
+      overflow: hidden;
+    }
+
+    .sim-toolbar {
+      height: 44px;
+      background: #111318;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      flex-shrink: 0;
+    }
+
+    .device-switcher {
+      display: flex;
+      background: #181a22;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .btn-device {
+      padding: 4px 10px;
+      font-size: 11px;
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-device.active {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .app-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11.5px;
+    }
+
+    .badge-dim {
+      font-family: monospace;
+      font-size: 10px;
+      background: #1a1d26;
+      color: #94a3b8;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .sim-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-snapshot {
+      background: #1e222e;
+      color: #e2e8f0;
+      border: 1px solid #33384a;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .btn-snapshot:hover {
+      background: #272c3d;
+      border-color: #475569;
+    }
+
+    /* Simulator Canvas Stage */
+    .sim-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: auto;
+      background: radial-gradient(ellipse at top, #161922 0%, #0a0b10 70%);
+    }
+
+    /* iPhone 16 Pro Realistic Frame */
+    .device-iphone {
+      position: relative;
+      width: 375px;
+      height: 760px;
+      max-height: 100%;
+      background: #000;
+      border-radius: 50px;
+      padding: 10px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 0 2px #383b48, 0 0 0 6px #1a1c24;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      user-select: none;
+      transition: all 0.3s ease;
+    }
+
+    .device-tablet {
+      position: relative;
+      width: 580px;
+      height: 760px;
+      max-height: 100%;
+      background: #000;
+      border-radius: 36px;
+      padding: 12px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 0 3px #2a2c36;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+    }
+
+    .device-desktop {
+      width: 100%;
+      height: 100%;
+      background: #121318;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+    }
+
+    /* Dynamic Island */
+    .dynamic-island {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 110px;
+      height: 28px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+    }
+
+    .camera-lens {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #111;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .status-sensor {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.8);
+      animation: pulse 1.5s infinite;
+    }
+
+    /* iOS Status Bar */
+    .status-bar {
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 28px 0 28px;
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+      z-index: 30;
+      pointer-events: none;
+      flex-shrink: 0;
+    }
+
+    /* Inner Screen */
+    .screen-inner {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      background: #0d0f15;
+      border-radius: 40px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .device-tablet .screen-inner {
+      border-radius: 26px;
+    }
+
+    .device-desktop .screen-inner {
+      border-radius: 0;
+    }
+
+    .app-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
+    }
+
+    /* iOS Home Bar */
+    .home-bar {
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 30;
+      flex-shrink: 0;
+    }
+
+    .home-pill {
+      width: 130px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="brand-group">
+      <div class="brand-logo">W</div>
+      <div class="brand-meta">
+        <div class="brand-title">
+          Wolinex Studio Pro
+          <span class="badge-engine">OpenIDEA v0.1.32</span>
+        </div>
+        <div class="brand-subtitle">Autonomous Vibe-Coding & Real-Time Device Simulator</div>
+      </div>
+    </div>
+
+    <div class="nav-pills">
+      <button class="nav-pill active">IDE Code View</button>
+      <button class="nav-pill">Sovereign Mesh</button>
+      <button class="nav-pill">Mitambo Engine</button>
+    </div>
+
+    <div class="status-live">
+      <div class="live-dot"></div>
+      <span>HMR Hot-Reloading Active</span>
+    </div>
+  </header>
+
+  <!-- Split Pane -->
+  <main>
+    <!-- Left: Code Editor (50%) -->
+    <div class="pane-editor">
+      <div class="editor-tabs">
+        <div class="tab active">
+          <span>TodoList.tsx</span>
+          <div class="tab-dot"></div>
+        </div>
+        <div class="tab"><span>App.tsx</span></div>
+        <div class="tab"><span>package.json</span></div>
+      </div>
+
+      <div class="editor-toolbar">
+        <div>/Users/wolinet/vibe-code/components/<strong style="color: #fff;">TodoList.tsx</strong></div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span style="color: #60a5fa; background: rgba(37,99,235,0.15); padding: 2px 6px; border-radius: 4px; font-size: 10px;">⚡ Sovereign Coder</span>
+          <button class="btn-save">Save (⌘S)</button>
+        </div>
+      </div>
+
+      <div class="code-canvas">
+        <div class="gutter">
+          1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17<br>18<br>19<br>20<br>21
+        </div>
+        <div class="code-content">
+<span class="kw">import</span> React, { useState } <span class="kw">from</span> <span class="str">'react'</span>;
+<span class="kw">import</span> { View, Text, TouchableOpacity, ScrollView } <span class="kw">from</span> <span class="str">'react-native'</span>;
+
+<span class="kw">export default function</span> <span class="fn">TodoList</span>() {
+  <span class="kw">const</span> [tasks, setTasks] = useState([
+    { id: <span class="str">'1'</span>, text: <span class="str">'Design Sovereign UI'</span>, done: <span class="kw">true</span> },
+    { id: <span class="str">'2'</span>, text: <span class="str">'Export to Expo & App Store'</span>, done: <span class="kw">false</span> }
+  ]);
+
+  <span class="kw">return</span> (
+    &lt;<span class="tag">View</span> <span class="prop">style</span>={{ flex: 1, backgroundColor: <span class="str">'#0a0b10'</span> }}&gt;
+      &lt;<span class="tag">Text</span> <span class="prop">style</span>={{ fontSize: 24, fontWeight: <span class="str">'bold'</span>, color: <span class="str">'#fff'</span> }}&gt;
+        tasks
+      &lt;/<span class="tag">Text</span>&gt;
+      <span class="comment">{/* Live HMR syncing with device simulator */}</span>
+    &lt;/<span class="tag">View</span>&gt;
+  );
+}
+        </div>
+      </div>
+
+      <div class="agent-feedback-box">
+        <div class="agent-header">
+          <div style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: #60a5fa;"></div>
+            <span>⚡ Autonomous Agent Feedback</span>
+          </div>
+          <span style="font-family: monospace; color: #64748b; font-size: 10px;">TodoList.tsx: Updated</span>
+        </div>
+        <div class="agent-desc">
+          I've updated the todo list app to include categories with horizontal scrolling, color badges, and instant hot-reloading in the device frame.
+        </div>
+        <div class="prompt-row">
+          <input type="text" class="prompt-input" value="Add category filtering and App Store screenshot export" />
+          <button class="btn-iterate">Iterate App</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Device Simulator Frame (50%) -->
+    <div class="pane-simulator">
+      <div class="sim-toolbar">
+        <div class="device-switcher">
+          <button id="btnIphone" onclick="setDevice('iphone')" class="btn-device active">📱 iPhone 16 Pro</button>
+          <button id="btnTablet" onclick="setDevice('tablet')" class="btn-device">📟 iPad</button>
+          <button id="btnDesktop" onclick="setDevice('desktop')" class="btn-device">💻 Web</button>
+        </div>
+
+        <div class="app-meta">
+          <span style="font-weight: 600; color: #fff;">Wolinet Sovereign App</span>
+          <span id="dimensionBadge" class="badge-dim">393 × 852 (6.7")</span>
+        </div>
+
+        <div class="sim-actions">
+          <button onclick="captureNotice()" class="btn-snapshot">
+            <span>📸 App Store Snapshot</span>
+          </button>
+          <button onclick="reloadFrame()" class="btn-snapshot" style="padding: 5px 8px;">
+            <span>🔄</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="sim-stage">
+        <!-- iPhone 16 Pro Mockup Frame -->
+        <div id="deviceContainer" class="device-iphone">
+          <!-- Dynamic Island -->
+          <div class="dynamic-island">
+            <div class="camera-lens"></div>
+            <div class="status-sensor"></div>
+          </div>
+
+          <!-- iOS Status Bar -->
+          <div class="status-bar">
+            <span>9:41</span>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span>5G</span>
+              <div style="width: 16px; height: 8px; border: 1px solid rgba(255,255,255,0.7); border-radius: 2px; padding: 1px;">
+                <div style="width: 100%; height: 100%; background: #fff; border-radius: 1px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inner Screen -->
+          <div class="screen-inner">
+            <iframe id="appIframe" src="/wolinet_app_demo.html" class="app-iframe"></iframe>
+          </div>
+
+          <!-- Home Bar -->
+          <div class="home-bar">
+            <div class="home-pill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const container = document.getElementById('deviceContainer');
+    const badge = document.getElementById('dimensionBadge');
+    const iframe = document.getElementById('appIframe');
+
+    function setDevice(type) {
+      document.getElementById('btnIphone').className = 'btn-device';
+      document.getElementById('btnTablet').className = 'btn-device';
+      document.getElementById('btnDesktop').className = 'btn-device';
+
+      if (type === 'iphone') {
+        document.getElementById('btnIphone').className = 'btn-device active';
+        container.className = 'device-iphone';
+        badge.textContent = '393 × 852 (6.7")';
+      } else if (type === 'tablet') {
+        document.getElementById('btnTablet').className = 'btn-device active';
+        container.className = 'device-tablet';
+        badge.textContent = '768 × 1024';
+      } else {
+        document.getElementById('btnDesktop').className = 'btn-device active';
+        container.className = 'device-desktop';
+        badge.textContent = '100% Fluid Web';
+      }
+    }
+
+    function captureNotice() {
+      alert('📸 App Store Snapshot Captured! Image exported at high DPI.');
+    }
+
+    function reloadFrame() {
+      iframe.src = iframe.src;
+    }
+  </script>
+</body>
+</html>

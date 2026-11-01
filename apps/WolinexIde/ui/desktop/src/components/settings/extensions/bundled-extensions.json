@@ -1,0 +1,136 @@
+[
+  {
+    "id": "developer",
+    "name": "developer",
+    "display_name": "Developer",
+    "description": "Built-in developer tools for file editing and shell command execution.",
+    "enabled": true,
+    "type": "builtin",
+    "env_keys": [],
+    "timeout": 300,
+    "bundled": true
+  },
+  {
+    "id": "computercontroller",
+    "name": "computercontroller",
+    "display_name": "Computer Controller",
+    "description": "Built-in computer controls for webscraping, file caching, and automations.",
+    "enabled": true,
+    "type": "builtin",
+    "env_keys": [],
+    "timeout": 300,
+    "bundled": true
+  },
+  {
+    "id": "autovisualiser",
+    "name": "autovisualiser",
+    "display_name": "Auto Visualiser",
+    "description": "Automatic data visualisation via MCP-UI with interactive charts and diagrams.",
+    "enabled": true,
+    "type": "builtin",
+    "env_keys": [],
+    "timeout": 300,
+    "bundled": true
+  },
+  {
+    "id": "memory",
+    "name": "memory",
+    "display_name": "Memory",
+    "description": "Built-in memory system for persistent context and information storage.",
+    "enabled": true,
+    "type": "builtin",
+    "env_keys": [],
+    "timeout": 300,
+    "bundled": true
+  },
+  {
+    "id": "tutorial",
+    "name": "tutorial",
+    "display_name": "Tutorial",
+    "description": "Built-in tutorial and learning management system.",
+    "enabled": true,
+    "type": "builtin",
+    "env_keys": [],
+    "bundled": true
+  },
+  {
+    "id": "code_execution",
+    "name": "code_execution",
+    "display_name": "Code Mode",
+    "description": "Execute JavaScript code to interact with MCP tools efficiently.",
+    "enabled": true,
+    "type": "platform",
+    "env_keys": [],
+    "bundled": true
+  },
+  {
+    "id": "summon",
+    "name": "summon",
+    "display_name": "Summon",
+    "description": "Load skills and delegate tasks to subagents.",
+    "enabled": true,
+    "type": "platform",
+    "env_keys": [],
+    "bundled": true
+  },
+  {
+    "id": "tom",
+    "name": "tom",
+    "display_name": "Top of Mind",
+    "description": "Inject persistent instructions into goose's working memory every turn.",
+    "enabled": true,
+    "type": "platform",
+    "env_keys": [],
+    "bundled": true
+  },
+  {
+    "id": "apps",
+    "name": "apps",
+    "display_name": "Apps",
+    "description": "Create and manage custom sandboxed apps and graphical interfaces.",
+    "enabled": true,
+    "type": "platform",
+    "env_keys": [],
+    "bundled": true
+  },
+  {
+    "id": "analyze",
+    "name": "analyze",
+    "display_name": "Analyze",
+    "description": "Analyze code structure with tree-sitter: directory overviews, file details, symbol call graphs.",
+    "enabled": true,
+    "type": "platform",
+    "env_keys": [],
+    "bundled": true
+  },
+  {
+    "id": "chatrecall",
+    "name": "chatrecall",
+    "display_name": "Chat Recall",
+    "description": "Search past conversations and load session summaries for contextual memory.",
+    "enabled": true,
+    "type": "platform",
+    "env_keys": [],
+    "bundled": true
+  },
+  {
+    "id": "todo",
+    "name": "todo",
+    "display_name": "Todo",
+    "description": "Enable a structured task and todo checklist for persistent project tracking.",
+    "enabled": true,
+    "type": "platform",
+    "env_keys": [],
+    "bundled": true
+  },
+  {
+    "id": "summarize",
+    "name": "summarize",
+    "display_name": "Summarize",
+    "description": "Load files and directories and generate comprehensive LLM summaries in a single step.",
+    "enabled": true,
+    "type": "platform",
+    "env_keys": [],
+    "bundled": true
+  }
+]
