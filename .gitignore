@@ -146,6 +146,8 @@ inference/models/*.onnx
 !inference/models/checkpoints/**/*.json
 
 # UI and Binaries
+dist/
+release/
 apps/WolinexIde/ui/desktop/out/
 apps/WolinexIde/ui/desktop/.electron-cache/
 apps/WolinexIde/bin/
