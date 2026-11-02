@@ -151,6 +151,8 @@ release/
 apps/WolinexIde/ui/desktop/out/
 apps/WolinexIde/ui/desktop/.electron-cache/
 apps/WolinexIde/bin/
+apps/ide/bin/
+apps/ide/out/
 apps/WolinexIde/ui/desktop/src/bin/openidea-server*
 apps/WolinexIde/ui/desktop/src/bin/goose*
 openidea-server*

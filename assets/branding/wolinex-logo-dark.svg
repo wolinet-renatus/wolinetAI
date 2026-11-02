@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 450" width="1600" height="450">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="goldGradHoriz" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="50%" stop-color="#fdb515"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+
+    <linearGradient id="blueGradHoriz" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5ec2ff"/>
+      <stop offset="50%" stop-color="#30a2ff"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+
+    <linearGradient id="cyanGradHoriz" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="70%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#5ec2ff"/>
+    </linearGradient>
+
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="450" fill="#070a13"/>
+
+  <!-- Emblem on Left -->
+  <g transform="translate(220, 225) scale(0.32)" filter="url(#logoShadow)">
+    <!-- Right Blue Wing -->
+    <path d="M 120 -280 L 290 -280 C 320 -280 345 -260 335 -225 L 140 270 C 125 310 85 325 50 310 L -20 280 L 75 40 Z" 
+          fill="url(#blueGradHoriz)" />
+
+    <!-- Left Gold Wing -->
+    <path d="M -290 -100 L -130 -100 C -100 -100 -80 -80 -90 -50 L -210 270 C -225 310 -265 325 -300 310 L -340 285 C -365 260 -360 220 -345 180 Z" 
+          fill="url(#goldGradHoriz)" />
+
+    <!-- Center Cyan Apex -->
+    <path d="M -110 -280 L 50 -280 C 75 -280 90 -260 80 -235 L -60 130 C -75 165 -110 180 -140 165 L -190 140 L -75 -160 Z" 
+          fill="url(#cyanGradHoriz)" opacity="0.95" />
+
+    <!-- Accents -->
+    <circle cx="160" cy="-210" r="22" fill="#ffffff" filter="url(#glow)"/>
+    <circle cx="-160" cy="-30" r="16" fill="#fde047" filter="url(#glow)"/>
+    <circle cx="0" cy="220" r="14" fill="#5ec2ff" filter="url(#glow)"/>
+  </g>
+
+  <!-- Typography "WOLINEX" -->
+  <g transform="translate(420, 255)">
+    <text font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+          font-size="142" 
+          font-weight="900" 
+          letter-spacing="14" 
+          fill="url(#textGrad)">WOLIN<tspan fill="url(#goldGradHoriz)">EX</tspan></text>
+          
+    <text x="8" y="65" 
+          font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif" 
+          font-size="28" 
+          font-weight="700" 
+          letter-spacing="10" 
+          fill="#5ec2ff" 
+          opacity="0.92">SOVEREIGN AI WORKSTATION</text>
+  </g>
+</svg>

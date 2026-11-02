@@ -131,16 +131,30 @@
     },
     {
       "id": "wolinex-ide",
-      "name": "Wolinex IDE (Sovereign Desktop AI Workstation)",
+      "name": "Wolinex Workstation (Sovereign Desktop AI Workstation)",
       "category": "client_desktop",
       "deployable_to_server": false,
       "path": "apps/WolinexIde",
       "sub_branch": "stack/wolinex-ide",
-      "description": "Sovereign desktop workstation bundling Goose agentic core, OpenIDEA Rust editor engine, Goosetown swarm orchestration, and Lango LiteLLM proxy",
+      "description": "Sovereign desktop workstation bundling Goose agentic core, Goosetown swarm orchestration, MCP Apps, mobile simulator, and Lango LiteLLM proxy",
       "api_dependency": "Connects via Lango LiteLLM Gateway (:4000/v1 or hosted Lango)",
       "build": {
         "type": "electron_forge",
         "command": "cd apps/WolinexIde/ui/desktop && pnpm run start-gui"
+      }
+    },
+    {
+      "id": "wolinex-code",
+      "name": "Wolinex Code (Sovereign Rust Full-Stack IDE)",
+      "category": "client_desktop",
+      "deployable_to_server": false,
+      "path": "apps/ide",
+      "sub_branch": "stack/wolinex-code",
+      "description": "High-performance Rust IDE engine (OpenIDEA) featuring Tree-sitter AST, LSP for 60+ languages, DAP debugging, integrated terminal, and ACP agent pairing",
+      "api_dependency": "Connects via Lango LiteLLM Gateway (:4000/v1) and local Goose ACP",
+      "build": {
+        "type": "rust_vite",
+        "command": "cd apps/ide && pnpm run build"
       }
     },
     {

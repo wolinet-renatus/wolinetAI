@@ -14,6 +14,7 @@ import {
   Edit3,
   RefreshCw,
   Smartphone,
+  ExternalLink,
 } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -85,6 +86,32 @@ export const CodeView: React.FC = () => {
   >([]);
   const [selectedModel, setSelectedModel] = useState<string>('⚡ Wolinet Coder');
   const [isAgentExecuting, setIsAgentExecuting] = useState<boolean>(false);
+  const [isStandaloneInstalled, setIsStandaloneInstalled] = useState<boolean>(true);
+
+  // Check standalone Wolinex Code installation
+  useEffect(() => {
+    async function checkIde() {
+      try {
+        if (window.electron?.openidea?.checkInstalled) {
+          const res = await window.electron.openidea.checkInstalled();
+          setIsStandaloneInstalled(res?.installed ?? false);
+        }
+      } catch (e) {
+        console.error('Failed to check Wolinex Code installation:', e);
+      }
+    }
+    checkIde();
+  }, []);
+
+  const handleLaunchStandalone = async () => {
+    try {
+      if (window.electron?.openidea?.launchStandalone) {
+        await window.electron.openidea.launchStandalone(projectRoot);
+      }
+    } catch (e) {
+      console.error('Failed to launch standalone Wolinex Code:', e);
+    }
+  };
 
   // Initialize native OpenIDEA Rust backend
   useEffect(() => {
@@ -564,6 +591,18 @@ export const CodeView: React.FC = () => {
             >
               <Play className="w-3 h-3 fill-white" />
               <span>Run</span>
+            </button>
+
+            <button
+              onClick={handleLaunchStandalone}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-xs transition-all shadow-sm"
+              title="Open current workspace and session in standalone Wolinex Code IDE"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Open in Wolinex Code</span>
+              {isStandaloneInstalled && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Installed in /Applications" />
+              )}
             </button>
           </div>
         </div>

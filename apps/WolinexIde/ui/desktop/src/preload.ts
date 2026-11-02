@@ -141,6 +141,8 @@ type ElectronAPI = {
     rename: (fromPath: string, toPath: string) => Promise<boolean>;
     gitStatus: () => Promise<Record<string, unknown>>;
     invoke: <T = unknown>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
+    checkInstalled: () => Promise<{ installed: boolean; isApp: boolean; path: string }>;
+    launchStandalone: (projectPath?: string, sessionId?: string) => Promise<{ success: boolean; mode: string; projectPath: string; sessionId: string }>;
   };
   terminal: {
     exec: (command: string, cwd?: string) => Promise<{ output: string; exitCode: number; cwd: string }>;
@@ -279,6 +281,8 @@ const electronAPI: ElectronAPI = {
     rename: (fromPath: string, toPath: string) => ipcRenderer.invoke('openidea:rename', fromPath, toPath),
     gitStatus: () => ipcRenderer.invoke('openidea:git-status'),
     invoke: (cmd: string, args: Record<string, unknown> = {}) => ipcRenderer.invoke('openidea:invoke', cmd, args),
+    checkInstalled: () => ipcRenderer.invoke('openidea:check-installed'),
+    launchStandalone: (projectPath?: string, sessionId?: string) => ipcRenderer.invoke('openidea:launch-standalone', projectPath, sessionId),
   },
   terminal: {
     exec: (command: string, cwd?: string) => ipcRenderer.invoke('terminal:exec', command, cwd),

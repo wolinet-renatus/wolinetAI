@@ -1,0 +1,12 @@
+{
+  "name": "wolinex-code",
+  "productName": "Wolinex Code",
+  "version": "0.1.32",
+  "description": "Sovereign Full-Stack Rust IDE Engine with Tree-sitter, LSP, and Autonomous Agent Pairing",
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "package": "bash package_app.sh"
+  },
+  "dependencies": {}
+}

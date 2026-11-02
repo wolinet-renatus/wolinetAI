@@ -2416,6 +2416,52 @@ ipcMain.handle('post-town-wall', async (_event, message: string) => {
 });
 
 // OpenIDEA native Rust backend integration
+ipcMain.handle('openidea:check-installed', async () => {
+  const appPath = '/Applications/WolinexCode.app';
+  const installed = fsSync.existsSync(appPath);
+  return {
+    installed,
+    isApp: installed,
+    path: installed ? appPath : path.join(process.cwd(), 'apps', 'ide'),
+  };
+});
+
+ipcMain.handle('openidea:launch-standalone', async (_event, projectPath?: string, sessionId?: string) => {
+  const root = projectPath || process.cwd();
+  const session = sessionId || '';
+  
+  // Persist shared state in ~/.wolinex
+  const wolinexDir = path.join(os.homedir(), '.wolinex');
+  const stateFile = path.join(wolinexDir, 'active_state.json');
+  try {
+    await fs.mkdir(wolinexDir, { recursive: true });
+    let current: Record<string, unknown> = {};
+    if (fsSync.existsSync(stateFile)) {
+      current = JSON.parse(await fs.readFile(stateFile, 'utf-8'));
+    }
+    current.active_project = root;
+    current.active_session = session;
+    current.gateway_url = process.env.LITELLM_HOST || 'http://127.0.0.1:4000';
+    current.updated_at = new Date().toISOString();
+    await fs.writeFile(stateFile, JSON.stringify(current, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('[OpenIDEA] Failed to write active state:', err);
+  }
+
+  // Launch via app or shell protocol
+  const appPath = '/Applications/WolinexCode.app';
+  if (fsSync.existsSync(appPath)) {
+    const { exec } = await import('node:child_process');
+    exec(`open -a "${appPath}" --args --project "${root}" --session "${session}"`);
+    return { success: true, mode: 'app', projectPath: root, sessionId: session };
+  } else {
+    // Fallback: deep-link url
+    const deepLink = `wolinex-code://open?project=${encodeURIComponent(root)}&session=${encodeURIComponent(session)}`;
+    shell.openExternal(deepLink);
+    return { success: true, mode: 'protocol', projectPath: root, sessionId: session };
+  }
+});
+
 ipcMain.handle('openidea:init', async () => {
   return await OpenIdeaService.getInstance().start();
 });

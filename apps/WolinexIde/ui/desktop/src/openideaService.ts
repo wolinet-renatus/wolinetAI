@@ -39,6 +39,8 @@ export class OpenIdeaService {
 
   private resolveBinaryPath(): string {
     const candidates = [
+      path.join(process.cwd(), 'apps', 'ide', 'bin', 'openidea-server'),
+      path.join(os.homedir(), 'Documents', 'wolinetai', 'apps', 'ide', 'bin', 'openidea-server'),
       path.join(process.cwd(), 'bin', 'openidea-server'),
       path.join(process.cwd(), 'src', 'bin', 'openidea-server'),
       path.join(process.cwd(), 'apps', 'WolinexIde', 'bin', 'openidea-server'),
