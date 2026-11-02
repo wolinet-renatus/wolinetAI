@@ -9,7 +9,7 @@
  */
 import { executeAction, type Action } from "@/platform/actions";
 import { t } from "@/platform/i18n";
-import { call, commands, isCancelled, isTauri } from "@/platform/ipc";
+import { call, commands, IpcError, isCancelled, isTauri } from "@/platform/ipc";
 import {
   basename,
   confirmLeaveProject,
@@ -29,6 +29,7 @@ import { showWorkspaceDialog } from "./WorkspaceDialog";
 export const LAUNCH_EVENT = "openidea://launch";
 
 function errorText(e: unknown) {
+  if (e instanceof IpcError) return e.message;
   return e instanceof Error ? e.message : String(e);
 }
 

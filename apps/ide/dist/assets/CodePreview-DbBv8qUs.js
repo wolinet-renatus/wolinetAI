@@ -1,3 +1,0 @@
-import{i as e}from"./rolldown-runtime-COiEfhsA.js";import{ct as t}from"./keymap-D2-SJ0ji.js";import{_t as n,gt as r}from"./ui-C0UjezFX.js";import{r as i}from"./markdown-CRPZ7hBP.js";import{t as a}from"./Database.module-Pq246nG-.js";var o=e(t(),1),s=r();function c({text:e,sql:t=!1,className:r,"aria-label":c}){let l=(0,o.useRef)(null);(0,o.useEffect)(()=>{let n=l.current;n&&(n.textContent=e,t&&i(n,e,`SQL`))},[e,t]);let u=e.split(`
-`).length;return(0,s.jsxs)(`div`,{className:n(a.codePreview,r),children:[(0,s.jsx)(`div`,{className:a.codeGutter,"aria-hidden":!0,children:Array.from({length:u},(e,t)=>(0,s.jsx)(`div`,{children:t+1},t))}),(0,s.jsx)(`pre`,{ref:l,className:a.codeText,"aria-label":c})]})}export{c as t};
-//# sourceMappingURL=CodePreview-DbBv8qUs.js.map

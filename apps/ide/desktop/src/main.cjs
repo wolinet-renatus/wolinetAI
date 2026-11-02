@@ -595,10 +595,14 @@ ipcMain.handle('openidea:invoke', async (_event, cmd, args = {}, options = {}) =
     }
 
     if (cmd === 'project_trust_status') {
-      return { status: 'trusted' };
+      return {
+        root: args.path || '',
+        trusted: true,
+        decided: true,
+      };
     }
     if (cmd === 'project_trust_list') {
-      return { locations: [], projects: {} };
+      return { locations: [], projects: [], restricted: [] };
     }
     if (cmd === 'project_trust_set' || cmd === 'project_trust_remove_location') {
       return null;
@@ -612,6 +616,28 @@ ipcMain.handle('openidea:invoke', async (_event, cmd, args = {}, options = {}) =
     }
 
     if (cmd === 'window_open_project') {
+      let targetPath = args.path;
+      if (targetPath) {
+        if (!path.isAbsolute(targetPath)) {
+          const candidates = [
+            path.resolve(os.homedir(), 'Desktop', targetPath),
+            path.resolve(os.homedir(), 'Documents', targetPath),
+            path.resolve(os.homedir(), targetPath),
+            path.resolve(process.cwd(), targetPath),
+          ];
+          const found = candidates.find((c) => fs.existsSync(c));
+          targetPath = found || path.resolve(targetPath);
+        }
+        if (!fs.existsSync(targetPath)) {
+          return {
+            __isTauriError: true,
+            error: {
+              kind: 'notFound',
+              message: `cannot open ${targetPath}: No such file or directory`,
+            },
+          };
+        }
+      }
       return { kind: 'current' };
     }
     if (cmd === 'window_open_files') {
@@ -671,8 +697,34 @@ ipcMain.handle('openidea:invoke', async (_event, cmd, args = {}, options = {}) =
 
     // 7. Open Project
     if (cmd === 'open_project') {
-      const targetPath = args.path;
+      let targetPath = args.path;
+      if (!targetPath) {
+        return {
+          __isTauriError: true,
+          error: { kind: 'invalid', message: 'Project path is required' },
+        };
+      }
+      if (!path.isAbsolute(targetPath)) {
+        const candidates = [
+          path.resolve(os.homedir(), 'Desktop', targetPath),
+          path.resolve(os.homedir(), 'Documents', targetPath),
+          path.resolve(os.homedir(), targetPath),
+          path.resolve(process.cwd(), targetPath),
+        ];
+        const found = candidates.find((c) => fs.existsSync(c));
+        targetPath = found || path.resolve(targetPath);
+      }
       log('[Open Project Request]', targetPath);
+      if (!fs.existsSync(targetPath)) {
+        log('[Open Project Error] Directory not found:', targetPath);
+        return {
+          __isTauriError: true,
+          error: {
+            kind: 'notFound',
+            message: `cannot open ${targetPath}: No such file or directory`,
+          },
+        };
+      }
       const res = await sendRpc('invoke', {
         window: 'main',
         cmd: 'open_project',
@@ -690,12 +742,14 @@ ipcMain.handle('openidea:invoke', async (_event, cmd, args = {}, options = {}) =
     const norm = normalizeArgs(args);
     return await sendRpc('invoke', { window: 'main', cmd, args: norm });
   } catch (err) {
-    log(`[RPC Error Handled] cmd=${cmd}:`, err.message || err);
+    const kind = (err && err.kind) ? err.kind : 'internal';
+    let message = (err && err.message) ? err.message : (typeof err === 'string' ? err : JSON.stringify(err));
+    log(`[RPC Error Handled] cmd=${cmd}:`, message);
     return {
       __isTauriError: true,
       error: {
-        kind: err.kind || 'internal',
-        message: err.message || String(err),
+        kind,
+        message,
       },
     };
   }

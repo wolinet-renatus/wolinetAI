@@ -32,6 +32,13 @@ function HeaderButtons() {
   return (
     <div className={styles.headerButtons}>
       <Button
+        role="default"
+        disabled={opening}
+        onClick={() => void executeAction("file.newProject")}
+      >
+        <T>New Project</T>
+      </Button>
+      <Button
         disabled={opening}
         onClick={() => void executeAction("file.openProject")}
         title={openKey ? tx`Open (${openKey})` : "Open"}
@@ -61,16 +68,27 @@ function Landing() {
   return (
     <div className={styles.landing}>
       <div className={styles.landingTitle}>
-        <T>Welcome to OpenIDEA</T>
+        <T>Welcome to Wolinex Code</T>
       </div>
       <p className={styles.landingText}>
         {canClone
-          ? tx("Open a folder from disk or clone a repository from version control.")
-          : tx("Open a folder from disk.")}
+          ? tx("Create a new project, open a folder from disk, or clone a repository.")
+          : tx("Create a new project or open a folder from disk.")}
         <br />
         <T>You can also drop a folder onto this window.</T>
       </p>
       <div className={styles.landingActions}>
+        <button
+          type="button"
+          className={styles.landingAction}
+          disabled={opening}
+          onClick={() => void executeAction("file.newProject")}
+        >
+          <span className={styles.landingIcon}>
+            <Icon name="plus" size={20} />
+          </span>
+          <T>New Project</T>
+        </button>
         <button
           type="button"
           className={styles.landingAction}

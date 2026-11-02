@@ -1,2 +1,0 @@
-import{E as e}from"./keymap-D2-SJ0ji.js";import{m as t}from"./project-B1I6-AdF.js";import{n}from"./zoom-axic-5Dk.js";function r(r,i=e.getState().os,a=window.devicePixelRatio||1,o=n(t.getState().settings?.appearance?.zoom)/100){let s=i===`windows`?a:o;return{x:r.x/s,y:r.y/s}}export{r as t};
-//# sourceMappingURL=nativeDrop-CSCwwl8-.js.map

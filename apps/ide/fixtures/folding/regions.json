@@ -1,0 +1,15 @@
+{
+  "languages": ["java", "python", "javascript", "rust"],
+  "markers": [
+    { "start": "region Docs", "end": "endregion", "name": "Docs" },
+    { "start": "#region", "end": "#endregion", "name": "" },
+    { "start": "region", "end": "endregion", "name": "" },
+    { "start": "#region MySection", "end": "#endregion", "name": "MySection" }
+  ],
+  "invalid": [
+    "not a region",
+    "regional",
+    "endregional",
+    "regionary"
+  ]
+}

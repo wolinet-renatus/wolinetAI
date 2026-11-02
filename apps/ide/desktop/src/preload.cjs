@@ -19,11 +19,20 @@ ipcRenderer.on('tauri:callback', (_event, { id, data }) => {
 
 const tauriInternals = {
   invoke: async (cmd, args = {}, options = {}) => {
-    const res = await ipcRenderer.invoke('openidea:invoke', cmd, args, options);
-    if (res && res.__isTauriError) {
-      return Promise.reject(res.error);
+    try {
+      const res = await ipcRenderer.invoke('openidea:invoke', cmd, args, options);
+      if (res && res.__isTauriError) {
+        return Promise.reject(res.error);
+      }
+      return res;
+    } catch (e) {
+      let kind = 'internal';
+      let message = e && e.message ? e.message : String(e);
+      message = message.replace(/^Error:\s*Error invoking remote method '[^']+':\s*/i, '');
+      if (message.includes('not found') || message.includes('No such file')) kind = 'notFound';
+      else if (message.includes('already exists')) kind = 'alreadyExists';
+      return Promise.reject({ kind, message });
     }
-    return res;
   },
   transformCallback: (callback, once = false) => {
     const id = callbackIdCounter++;
@@ -61,7 +70,7 @@ try {
 contextBridge.exposeInMainWorld('electron', {
   openidea: {
     init: () => ipcRenderer.invoke('openidea:init'),
-    invoke: (cmd, args) => ipcRenderer.invoke('openidea:invoke', cmd, args),
+    invoke: (cmd, args, options) => tauriInternals.invoke(cmd, args, options),
     readDir: (dirPath) => ipcRenderer.invoke('openidea:read-dir', dirPath),
     docOpen: (filePath) => ipcRenderer.invoke('openidea:doc-open', filePath),
     docSave: (filePath, content) => ipcRenderer.invoke('openidea:doc-save', filePath, content),
@@ -77,11 +86,7 @@ contextBridge.exposeInMainWorld('electron', {
 contextBridge.exposeInMainWorld('__TAURI__', {
   core: {
     invoke: async (cmd, args, options) => {
-      const res = await ipcRenderer.invoke('openidea:invoke', cmd, args, options);
-      if (res && res.__isTauriError) {
-        return Promise.reject(res.error);
-      }
-      return res;
+      return tauriInternals.invoke(cmd, args, options);
     },
   },
   event: {
