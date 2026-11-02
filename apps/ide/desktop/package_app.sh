@@ -61,6 +61,9 @@ mkdir -p "${TMP_SRC}/src"
 cp "${SCRIPT_DIR}/package.json" "${TMP_SRC}/"
 cp "${SCRIPT_DIR}/src/main.cjs" "${TMP_SRC}/src/"
 cp "${SCRIPT_DIR}/src/preload.cjs" "${TMP_SRC}/src/"
+if [ -f "${SCRIPT_DIR}/src/languages.json" ]; then
+  cp "${SCRIPT_DIR}/src/languages.json" "${TMP_SRC}/src/"
+fi
 cp -R "${IDE_DIR}/dist" "${TMP_SRC}/dist"
 
 ASAR_CLI="${ROOT_DIR}/apps/WolinexIde/ui/node_modules/.bin/asar"
@@ -78,6 +81,7 @@ fi
 
 # Copy openidea-server binary
 if [ -f "${IDE_DIR}/bin/openidea-server" ]; then
+  mkdir -p "${TARGET_APP}/Contents/Resources/bin"
   cp "${IDE_DIR}/bin/openidea-server" "${TARGET_APP}/Contents/Resources/bin/openidea-server"
   chmod +x "${TARGET_APP}/Contents/Resources/bin/openidea-server"
 fi
