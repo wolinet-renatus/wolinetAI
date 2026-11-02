@@ -535,7 +535,7 @@ export default function BaseChat({
               onDragOver={handleDragOver}
               data-drop-zone="true"
               paddingX={6}
-              paddingY={0}
+              paddingY={2}
             >
               {recipe?.title && (
                 <div className="sticky top-0 z-10 bg-background-primary px-0 -mx-6 mb-6 pt-6">
@@ -568,7 +568,7 @@ export default function BaseChat({
                         submitElicitationResponse={submitElicitationResponse}
                       />
 
-                      {/* In-stream Assistant Thinking / Activity Indicator */}
+                      {/* In-stream Assistant Activity Indicator */}
                       {chatState !== ChatState.Idle && (
                         <div className="mt-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-background-secondary border border-border-subtle w-fit text-xs text-text-primary shadow-xs animate-fade-slide-up">
                           <LoadingGoose chatState={chatState} message={progressMessage} />
@@ -577,22 +577,14 @@ export default function BaseChat({
                     </div>
                   </SearchView>
 
-                  <div className="block h-8" />
+                  {/* Breathing room above the input box */}
+                  <div className="block h-14" />
                 </>
               ) : null}
             </ScrollArea>
 
-            {/* Clear, Native Status Pill pinned right above Chat Input Bar */}
-            {chatState !== ChatState.Idle && (
-              <div className="mx-4 mb-2 flex items-center justify-between z-30">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-background-secondary/95 border border-border-subtle shadow-xs backdrop-blur-xs text-xs text-text-primary">
-                  <LoadingGoose chatState={chatState} message={progressMessage} />
-                </div>
-              </div>
-            )}
-
             {acpRecovering && (
-              <div role="status" className="mx-4 mb-2 text-sm text-text-secondary">
+              <div role="status" className="mx-4 mb-2 text-sm text-text-secondary shrink-0">
                 {intl.formatMessage(i18n.reconnecting)}
               </div>
             )}
@@ -624,7 +616,7 @@ export default function BaseChat({
             ) : (
               <ChatInputCard
                 className={cn(
-                  'relative z-30 mx-4 mb-4',
+                  'shrink-0 relative z-30 mx-4 mb-4',
                   !disableAnimation && 'animate-[fadein_400ms_ease-in_forwards]'
                 )}
               >

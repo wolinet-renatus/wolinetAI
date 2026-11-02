@@ -1,8 +1,23 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, protocol, net } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const { spawn } = require('node:child_process');
 const os = require('node:os');
+const { pathToFileURL } = require('node:url');
+
+// Register app scheme as privileged before app is ready
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+    },
+  },
+]);
 
 let mainWindow = null;
 let serverProc = null;
@@ -206,6 +221,10 @@ function createWindow() {
     },
   });
 
+  mainWindow.webContents.on('console-message', (_e, level, message) => {
+    log(`[IDE UI Level ${level}]: ${message}`);
+  });
+
   const candidateIndices = [
     path.join(__dirname, '..', 'dist', 'index.html'),
     path.join(__dirname, 'dist', 'index.html'),
@@ -213,8 +232,8 @@ function createWindow() {
   ];
   const distIndex = candidateIndices.find((p) => fs.existsSync(p));
   if (distIndex) {
-    log('Loading Workbench UI from:', distIndex);
-    mainWindow.loadFile(distIndex);
+    log('Loading Workbench UI from app://localhost/index.html via dist:', path.dirname(distIndex));
+    mainWindow.loadURL('app://localhost/index.html');
   } else {
     log('Loading dev server at http://localhost:5174');
     mainWindow.loadURL('http://localhost:5174');
@@ -262,6 +281,36 @@ ipcMain.handle('openidea:open-workstation', async (_event, projectPath, sessionI
 });
 
 app.whenReady().then(() => {
+  const candidateIndices = [
+    path.join(__dirname, '..', 'dist', 'index.html'),
+    path.join(__dirname, 'dist', 'index.html'),
+    path.join(__dirname, '..', '..', 'dist', 'index.html'),
+  ];
+  const distIndex = candidateIndices.find((p) => fs.existsSync(p));
+  const distDir = distIndex ? path.dirname(distIndex) : null;
+
+  if (distDir) {
+    protocol.handle('app', (request) => {
+      try {
+        const parsedUrl = new URL(request.url);
+        let pathname = decodeURIComponent(parsedUrl.pathname);
+        if (pathname.startsWith('/')) pathname = pathname.slice(1);
+        if (!pathname || pathname === 'index.html') {
+          return net.fetch(pathToFileURL(distIndex).toString());
+        }
+        const candidate = path.join(distDir, pathname);
+        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+          return net.fetch(pathToFileURL(candidate).toString());
+        }
+        // Fallback for single-page app routing
+        return net.fetch(pathToFileURL(distIndex).toString());
+      } catch (err) {
+        log('Protocol handler error for url:', request.url, err);
+        return new Response('Not Found', { status: 404 });
+      }
+    });
+  }
+
   startOpenIdeaServer();
   createWindow();
 

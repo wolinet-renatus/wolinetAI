@@ -165,19 +165,19 @@ function GooseMessage({
             )}
 
             {toolRequests.length === 0 && (
-              <div className="relative flex items-center justify-between">
-                {!isStreaming && (
-                  <div className="text-xs font-mono text-text-secondary pt-1 transition-all duration-200 group-hover:-translate-y-4 group-hover:opacity-0">
-                    {timestamp}
-                  </div>
-                )}
-                {displayText.trim() && !isStreaming && (
-                  <div className="absolute left-0 pt-1">
-                    <MessageCopyLink text={displayText} contentRef={contentRef} />
-                  </div>
-                )}
+              <div className="h-6 flex items-center justify-between text-xs pt-1 select-none">
+                <div className="flex items-center gap-2">
+                  {displayText.trim() && !isStreaming && (
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <MessageCopyLink text={displayText} contentRef={contentRef} />
+                    </div>
+                  )}
+                  {!isStreaming && !hideTimestamp && (
+                    <span className="font-mono text-[11px] text-text-secondary">{timestamp}</span>
+                  )}
+                </div>
                 {!isStreaming && hasMessageDetails && (
-                  <div className="pt-1 transition-all duration-200 opacity-0 group-hover:opacity-100 -translate-y-4 group-hover:translate-y-0">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                     <MessageUsageStats
                       usage={message.metadata.usage}
                       operationLogs={message.metadata.operationLogs}

@@ -348,33 +348,33 @@ function UserMessage({ message, onMessageUpdate }: UserMessageProps) {
                   </div>
                 )}
 
-                <div className="relative h-[22px] flex justify-end text-right">
-                  <div className="absolute w-40 font-mono right-0 text-xs text-text-secondary pt-1 transition-all duration-200 group-hover:-translate-y-4 group-hover:opacity-0">
-                    {timestamp}
-                  </div>
-                  <div className="absolute right-0 pt-1 flex items-center gap-2">
-                    {onMessageUpdate && (
-                      <button
-                        onClick={handleEditClick}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleEditClick();
-                          }
-                        }}
-                        className="flex items-center gap-1 text-xs text-text-secondary hover:cursor-pointer hover:text-text-primary transition-all duration-200 opacity-0 group-hover:opacity-100 -translate-y-4 group-hover:translate-y-0 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 rounded"
-                        aria-label={intl.formatMessage(i18n.editMessageAriaLabel, {
-                          preview: `${textContent.substring(0, 50)}${textContent.length > 50 ? '...' : ''}`,
-                        })}
-                        aria-expanded={isEditing}
-                        title={intl.formatMessage(i18n.editMessageTitle)}
-                      >
-                        <Edit className="h-3 w-3" />
-                        <span>{intl.formatMessage(i18n.editButton)}</span>
-                      </button>
-                    )}
+                <div className="h-6 flex items-center justify-end gap-2 text-right pt-1">
+                  {onMessageUpdate && (
+                    <button
+                      onClick={handleEditClick}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleEditClick();
+                        }
+                      }}
+                      className="opacity-0 group-hover:opacity-100 flex items-center gap-1 text-xs text-text-secondary hover:cursor-pointer hover:text-text-primary transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 rounded"
+                      aria-label={intl.formatMessage(i18n.editMessageAriaLabel, {
+                        preview: `${textContent.substring(0, 50)}${textContent.length > 50 ? '...' : ''}`,
+                      })}
+                      aria-expanded={isEditing}
+                      title={intl.formatMessage(i18n.editMessageTitle)}
+                    >
+                      <Edit className="h-3 w-3" />
+                      <span>{intl.formatMessage(i18n.editButton)}</span>
+                    </button>
+                  )}
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                     <MessageCopyLink text={textContent} contentRef={contentRef} />
                   </div>
+                  <span className="font-mono text-[11px] text-text-secondary select-none">
+                    {timestamp}
+                  </span>
                 </div>
               </div>
             </div>
