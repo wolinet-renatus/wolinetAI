@@ -169,25 +169,8 @@ function updateRequestToCreate(
 }
 
 export async function acpListProviderDetails(): Promise<ProviderDetails[]> {
-  try {
-    const client = await getAcpClient();
-    const { entries } = await client.goose.providersList_unstable({});
-    const details = entries.map(providerEntryToDetails);
-    // Strictly filter out all cloud and third-party direct providers
-    // Only allow Wolinex Lango Gateway (litellm) and custom endpoints routed to it
-    const filtered = details.filter(
-      (p) =>
-        p.name === 'litellm' ||
-        (p.provider_type === 'Custom' && !['openai', 'anthropic', 'google', 'groq', 'ollama', 'databricks', 'snowflake', 'xai', 'minimax'].includes(p.name))
-    );
-    if (filtered.length === 0) {
-      filtered.push(getDefaultWolinexGatewayProvider());
-    }
-    return filtered;
-  } catch (error) {
-    console.warn('Using default Wolinex Gateway provider:', error);
-    return [getDefaultWolinexGatewayProvider()];
-  }
+  // Retain strictly only Wolinet AI / Wolinex Sovereign AI Gateway (connected via Lango LiteLLM)
+  return [getDefaultWolinexGatewayProvider()];
 }
 
 export async function acpListSetupProviderDetails(): Promise<ProviderDetails[]> {
@@ -200,23 +183,8 @@ export async function acpListSettingsProviderDetails(): Promise<ProviderDetails[
   return providers.filter((provider) => provider.visible_in_setup || provider.is_configured);
 }
 
-export async function acpGetProviderDetails(providerId: string): Promise<ProviderDetails> {
-  if (providerId === 'litellm') {
-    try {
-      const client = await getAcpClient();
-      const { entries } = await client.goose.providersList_unstable({ providerIds: [providerId] });
-      const entry = entries.find((candidate) => candidate.providerId === providerId);
-      if (entry) return providerEntryToDetails(entry);
-    } catch {
-      // fallback
-    }
-    return getDefaultWolinexGatewayProvider();
-  }
-  const client = await getAcpClient();
-  const { entries } = await client.goose.providersList_unstable({ providerIds: [providerId] });
-  const entry = entries.find((candidate) => candidate.providerId === providerId);
-  if (!entry) throw new Error(`Unknown provider: ${providerId}`);
-  return providerEntryToDetails(entry);
+export async function acpGetProviderDetails(_providerId?: string): Promise<ProviderDetails> {
+  return getDefaultWolinexGatewayProvider();
 }
 
 async function waitForProviderInventoryRefresh(
@@ -297,11 +265,8 @@ export async function acpRefreshProviderDetails(
   };
 }
 
-export async function acpListProviderModels(providerId: string) {
-  const safeProvider =
-    !providerId || ['openai', 'openaib', 'anthropic', 'google', 'groq'].includes(providerId)
-      ? 'litellm'
-      : providerId;
+export async function acpListProviderModels(_providerId?: string) {
+  const safeProvider = 'litellm';
 
   if (safeProvider === 'litellm') {
     // 1. Fetch live sovereign models directly from LiteLLM / Lango gateway
@@ -475,12 +440,9 @@ export async function acpReadDefaults(): Promise<{
   try {
     const client = await getAcpClient();
     const response = await client.goose.defaultsRead_unstable({});
-    let providerId = response.providerId ?? null;
+    const providerId = 'litellm';
     let modelId = response.modelId ?? null;
 
-    if (!providerId || ['openai', 'openaib', 'anthropic', 'google', 'groq'].includes(providerId)) {
-      providerId = 'litellm';
-    }
     if (!modelId || modelId.startsWith('gpt-') || /deepseek/i.test(modelId)) {
       modelId = 'Wolinex Coder';
     }
@@ -496,10 +458,8 @@ export async function acpReadDefaults(): Promise<{
   }
 }
 
-export async function acpSaveDefaults(providerId: string, modelId: string | null): Promise<void> {
-  const safeProvider = (!providerId || ['openai', 'openaib', 'anthropic', 'google', 'groq'].includes(providerId))
-    ? 'litellm'
-    : providerId;
+export async function acpSaveDefaults(_providerId: string, modelId: string | null): Promise<void> {
+  const safeProvider = 'litellm';
   const safeModel = (!modelId || modelId.startsWith('gpt-') || /deepseek/i.test(modelId))
     ? 'Wolinex Coder'
     : modelId;
@@ -584,14 +544,11 @@ function selectCurrentValue(kind: unknown): unknown {
  */
 export async function acpSetSessionProviderModel(
   sessionId: string,
-  providerId: string,
+  _providerId: string,
   modelId?: string | null,
   thinkingEffort?: ThinkingEffort | null
 ): Promise<AppliedSessionProviderModel> {
-  const safeProvider =
-    !providerId || ['openai', 'openaib', 'anthropic', 'google', 'groq'].includes(providerId)
-      ? 'litellm'
-      : providerId;
+  const safeProvider = 'litellm';
   const safeModel =
     !modelId || modelId.startsWith('gpt-') || /deepseek/i.test(modelId)
       ? 'Wolinex Coder'

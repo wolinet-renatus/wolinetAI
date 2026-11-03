@@ -33,35 +33,15 @@ pub(crate) struct ProviderSpec {
     pub source: AgentSource,
 }
 
-/// `(id, name, driver, command line, sign-in hint)`. npm adapters are pinned so a
-/// session's protocol does not change under the user.
+/// `(id, name, driver, command line, sign-in hint)`.
 const BUILTIN: &[(&str, &str, Driver, &[&str], &str)] = &[
-    ("claude", "Claude Code", Driver::Claude, &["claude"], "Run `claude` in a terminal and sign in."),
-    ("codex", "Codex", Driver::Codex, &["codex", "app-server"], "Run `codex login` in a terminal."),
     (
-        "claude-acp",
-        "Claude Code (ACP)",
+        "wolinet-ai",
+        "Wolinet AI",
         Driver::Acp,
-        &["npx", "-y", "@agentclientprotocol/claude-agent-acp@0.97.0"],
-        "Run `claude` in a terminal and sign in.",
+        &["wolinex-agent", "acp"],
+        "Connected to Wolinex Sovereign AI Gateway via Lango.",
     ),
-    (
-        "codex-acp",
-        "Codex (ACP)",
-        Driver::Acp,
-        &["npx", "-y", "@agentclientprotocol/codex-acp@2.3.0"],
-        "Run `codex login` in a terminal.",
-    ),
-    ("gemini", "Gemini CLI", Driver::Acp, &["gemini", "--experimental-acp"], "Run `gemini` in a terminal and sign in."),
-    ("copilot", "GitHub Copilot", Driver::Acp, &["copilot", "--acp"], "Run `copilot` in a terminal and sign in."),
-    ("cursor", "Cursor", Driver::Acp, &["cursor-agent", "acp"], "Run `cursor-agent login` in a terminal."),
-    ("opencode", "OpenCode", Driver::Acp, &["opencode", "acp"], "Run `opencode auth login` in a terminal."),
-    ("qwen", "Qwen Code", Driver::Acp, &["qwen", "--experimental-acp"], "Run `qwen` in a terminal and sign in."),
-    ("kimi", "Kimi CLI", Driver::Acp, &["kimi", "acp"], "Run `kimi` in a terminal and sign in."),
-    ("goose", "Goose", Driver::Acp, &["goose", "acp"], "Run `goose configure` in a terminal."),
-    ("auggie", "Auggie", Driver::Acp, &["auggie", "--acp"], "Run `auggie login` in a terminal."),
-    ("kiro", "Kiro", Driver::Acp, &["kiro-cli", "acp"], "Run `kiro-cli login` in a terminal."),
-    ("vibe", "Mistral Vibe", Driver::Acp, &["vibe-acp"], "Run `vibe` in a terminal and sign in."),
 ];
 
 fn builtins() -> Vec<ProviderSpec> {

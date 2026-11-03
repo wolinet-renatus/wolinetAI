@@ -290,6 +290,114 @@ function processServerStdout(chunk) {
   }
 }
 
+const SOVEREIGN_FALLBACK_MODELS = [
+  { value: 'Wolinex Coder', name: 'Wolinex Coder', description: 'Sovereign local coding model via Lango Gateway' },
+  { value: 'Wolinet Pro', name: 'Wolinet Pro', description: 'Advanced multi-step reasoning model' },
+  { value: 'Wolinet Max', name: 'Wolinet Max', description: 'Flagship architecture & full system design' },
+  { value: 'Wolinet Turbo Draft', name: 'Wolinet Turbo Draft', description: 'Speculative low-latency draft model' },
+  { value: 'Secure Pro', name: 'Secure Pro', description: 'Privacy-first sovereign local defense model' },
+];
+
+let cachedGatewayModels = null;
+let lastModelFetchMs = 0;
+
+async function fetchGatewayModels() {
+  const now = Date.now();
+  if (cachedGatewayModels && now - lastModelFetchMs < 30000) {
+    return cachedGatewayModels;
+  }
+  const host = process.env.LITELLM_HOST || 'http://127.0.0.1:4000';
+  const apiKey = process.env.LITELLM_API_KEY || 'sk-XvKFiwDoOtOe8i4lwbzb8Q';
+  try {
+    const url = new URL('/v1/models', host);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1500);
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.data) && data.data.length > 0) {
+        const filtered = data.data
+          .filter((m) => {
+            const id = m.id || m.model_name || '';
+            if (m.mode && (m.mode === 'embedding' || m.mode === 'audio_transcription' || m.mode === 'image_generation')) return false;
+            if (id.startsWith('text-embedding') || id.startsWith('whisper') || id.startsWith('dall-e')) return false;
+            if (/deepseek/i.test(id) || /gpt-/i.test(id) || /gemini-/i.test(id) || /claude-/i.test(id)) return false;
+            return true;
+          })
+          .map((m) => ({
+            value: m.id || m.model_name || '',
+            name: m.id || m.model_name || '',
+            description: `Sovereign AI Model (${m.mode || 'chat'})`,
+          }));
+        if (filtered.length > 0) {
+          for (const fallback of SOVEREIGN_FALLBACK_MODELS) {
+            if (!filtered.some((m) => m.value === fallback.value)) {
+              filtered.push(fallback);
+            }
+          }
+          cachedGatewayModels = filtered;
+          lastModelFetchMs = now;
+          return filtered;
+        }
+      }
+    }
+  } catch (e) {
+    log('Gateway models fetch failed or timed out:', e?.message || e);
+  }
+  cachedGatewayModels = SOVEREIGN_FALLBACK_MODELS;
+  return SOVEREIGN_FALLBACK_MODELS;
+}
+
+function syncSovereignAgentConfig() {
+  try {
+    const agentsConfigDir = path.join(os.homedir(), '.openidea', 'config', 'agents');
+    fs.mkdirSync(agentsConfigDir, { recursive: true });
+    const tomlPath = path.join(agentsConfigDir, 'wolinet-ai.toml');
+    const tomlContent = `name = "Wolinet AI"\ncommand = "wolinex-agent"\nargs = ["acp"]\n`;
+    fs.writeFileSync(tomlPath, tomlContent, 'utf-8');
+
+    const agentsDataDir = path.join(os.homedir(), '.openidea', 'data', 'agents');
+    fs.mkdirSync(agentsDataDir, { recursive: true });
+    const modelsFile = path.join(agentsDataDir, 'models.json');
+    const modelsConfig = {
+      'wolinet-ai': {
+        config: [
+          {
+            id: 'model',
+            name: 'Model',
+            description: 'Sovereign AI models via Lango Gateway',
+            category: 'model',
+            current: 'Wolinex Coder',
+            values: SOVEREIGN_FALLBACK_MODELS,
+            via: 'model',
+          },
+          {
+            id: 'mode',
+            name: 'Mode',
+            description: 'Agent execution mode',
+            category: 'mode',
+            current: 'code',
+            values: [
+              { value: 'code', name: 'Code', description: 'Read/write files & execute tasks' },
+              { value: 'ask', name: 'Ask', description: 'Read-only exploration & explanation' },
+              { value: 'architect', name: 'Architect', description: 'High-level architecture & design' },
+            ],
+            via: 'mode',
+          },
+        ],
+        projectCommands: {},
+      },
+    };
+    fs.writeFileSync(modelsFile, JSON.stringify(modelsConfig, null, 2), 'utf-8');
+  } catch (e) {
+    log('Error syncing sovereign agent config:', e);
+  }
+}
+
 function startOpenIdeaServer() {
   const binaryPath = resolveServerBinary();
   log('Starting native Rust server:', binaryPath);
@@ -299,10 +407,22 @@ function startOpenIdeaServer() {
     return;
   }
 
+  const binDir = path.dirname(binaryPath);
+  const resourceBin = path.join(process.resourcesPath || '', 'bin');
+  const ideBin = path.join(os.homedir(), 'Documents', 'wolinetai', 'apps', 'ide', 'bin');
+  const localBin = path.join(os.homedir(), '.local', 'bin');
+  const currentPath = process.env.PATH || '';
+  const augmentedPath = `${binDir}:${resourceBin}:${ideBin}:${localBin}:/usr/local/bin:/usr/bin:/bin:${currentPath}`;
+
+  syncSovereignAgentConfig();
+
   serverProc = spawn(binaryPath, ['--stdio'], {
     stdio: ['pipe', 'pipe', 'pipe'],
     env: {
       ...process.env,
+      PATH: augmentedPath,
+      LITELLM_HOST: process.env.LITELLM_HOST || 'http://127.0.0.1:4000',
+      LITELLM_API_KEY: process.env.LITELLM_API_KEY || 'sk-XvKFiwDoOtOe8i4lwbzb8Q',
       RUST_BACKTRACE: '1',
       RUST_LOG: 'info',
     },
@@ -784,6 +904,87 @@ ipcMain.handle('openidea:invoke', async (_event, cmd, args = {}, options = {}) =
         mainWindow.setTitle(`${res?.name || path.basename(targetPath)} — Wolinex Code`);
       }
       return res;
+    }
+
+    // Sovereign Wolinet AI Agent Interceptions
+    if (cmd === 'agent_providers') {
+      const models = await fetchGatewayModels();
+      return [
+        {
+          id: 'wolinet-ai',
+          name: 'Wolinet AI',
+          command: 'wolinex-agent acp',
+          installed: true,
+          config: [
+            {
+              id: 'model',
+              name: 'Model',
+              description: 'Sovereign AI models via Lango Gateway',
+              category: 'model',
+              current: 'Wolinex Coder',
+              values: models,
+              via: 'model',
+            },
+            {
+              id: 'mode',
+              name: 'Mode',
+              description: 'Agent execution mode',
+              category: 'mode',
+              current: 'code',
+              values: [
+                { value: 'code', name: 'Code', description: 'Read/write files & execute tasks' },
+                { value: 'ask', name: 'Ask', description: 'Read-only exploration & explanation' },
+                { value: 'architect', name: 'Architect', description: 'High-level architecture & design' },
+              ],
+              via: 'mode',
+            },
+          ],
+          commands: [
+            { name: 'triage', description: 'Analyze and isolate defects', hint: '<issue>' },
+            { name: 'refactor', description: 'Safe behavior-preserving refactoring', hint: '<target>' },
+            { name: 'explain', description: 'Explain architecture and code paths', hint: '<file or symbol>' },
+            { name: 'test', description: 'Generate comprehensive tests', hint: '<file>' },
+          ],
+          source: { kind: 'builtin' },
+        },
+      ];
+    }
+
+    if (cmd === 'agent_commands') {
+      return [
+        { name: 'triage', description: 'Analyze and isolate defects', hint: '<issue>' },
+        { name: 'refactor', description: 'Safe behavior-preserving refactoring', hint: '<target>' },
+        { name: 'explain', description: 'Explain architecture and code paths', hint: '<file or symbol>' },
+        { name: 'test', description: 'Generate comprehensive tests', hint: '<file>' },
+      ];
+    }
+
+    if (cmd === 'agent_probe') {
+      return {
+        provider: args?.provider || 'wolinet-ai',
+        name: 'Wolinet AI Agent',
+        version: '1.57.0',
+        protocol: 'ACP v1',
+        capabilities: {
+          modes: true,
+          tools: true,
+          attachments: true,
+          images: true,
+        },
+        authMethods: [],
+        error: null,
+      };
+    }
+
+    if (cmd === 'agent_registry_list') {
+      return {
+        agents: [],
+        warning: null,
+      };
+    }
+
+    if (cmd === 'agent_registry_install' || cmd === 'agent_registry_remove') {
+      return null;
     }
 
     // 8. Forward all other commands to openidea-server

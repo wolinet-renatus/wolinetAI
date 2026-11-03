@@ -85,7 +85,7 @@ function save(key: string, value: unknown) {
   }
 }
 
-const fallbackDraft: Draft = { provider: "claude", config: {}, isolation: "worktree", base: null };
+const fallbackDraft: Draft = { provider: "wolinet-ai", config: {}, isolation: "worktree", base: null };
 
 export const useAgents = create<AgentsState>(() => ({
   loaded: false,

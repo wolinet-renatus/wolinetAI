@@ -93,11 +93,18 @@ if [ -n "${CALCULATED_HASH}" ]; then
   /usr/libexec/PlistBuddy -c "Add :ElectronAsarIntegrity:Resources/app.asar:hash string '${CALCULATED_HASH}'" "${PLIST}"
 fi
 
-# Copy openidea-server binary
+# Copy openidea-server and wolinex-agent binaries
+mkdir -p "${TARGET_APP}/Contents/Resources/bin"
 if [ -f "${IDE_DIR}/bin/openidea-server" ]; then
-  mkdir -p "${TARGET_APP}/Contents/Resources/bin"
   cp "${IDE_DIR}/bin/openidea-server" "${TARGET_APP}/Contents/Resources/bin/openidea-server"
   chmod +x "${TARGET_APP}/Contents/Resources/bin/openidea-server"
+fi
+if [ -f "${IDE_DIR}/bin/wolinex-agent" ]; then
+  cp "${IDE_DIR}/bin/wolinex-agent" "${TARGET_APP}/Contents/Resources/bin/wolinex-agent"
+  chmod +x "${TARGET_APP}/Contents/Resources/bin/wolinex-agent"
+elif [ -f "${ROOT_DIR}/apps/WolinexIde/ui/desktop/src/bin/goose" ]; then
+  cp "${ROOT_DIR}/apps/WolinexIde/ui/desktop/src/bin/goose" "${TARGET_APP}/Contents/Resources/bin/wolinex-agent"
+  chmod +x "${TARGET_APP}/Contents/Resources/bin/wolinex-agent"
 fi
 
 # Copy icon

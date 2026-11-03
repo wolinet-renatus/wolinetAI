@@ -1,6 +1,5 @@
 import React, { memo, useMemo, useCallback, useState } from 'react';
 import { ProviderCard } from './subcomponents/ProviderCard';
-import CardContainer from './subcomponents/CardContainer';
 import ProviderConfigurationModal from './modal/ProviderConfigurationModal';
 import type { CustomProviderConfigDto } from '@aaif/goose-acp-client';
 import type { ProviderDetails, UpdateCustomProviderRequest } from '../../../types/providers';
@@ -10,7 +9,7 @@ import {
   acpDeleteCustomProvider,
   acpUpdateCustomProviderFromRequest,
 } from '../../../acp/providers';
-import { Plus, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Input } from '../../ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import CustomProviderForm from './modal/subcomponents/forms/CustomProviderForm';
@@ -65,30 +64,6 @@ const GridLayout = memo(function GridLayout({ children }: { children: React.Reac
     >
       {children}
     </div>
-  );
-});
-
-const CustomProviderCard = memo(function CustomProviderCard({ onClick }: { onClick: () => void }) {
-  const intl = useIntl();
-  return (
-    <CardContainer
-      testId="add-custom-provider-card"
-      onClick={onClick}
-      header={null}
-      body={
-        <div className="flex flex-col items-center justify-center min-h-[200px]">
-          <Plus className="w-8 h-8 text-gray-400 mb-2" />
-          <div className="text-sm text-gray-600 dark:text-gray-400 text-center">
-            <div className="font-medium">{intl.formatMessage(i18n.addProvider)}</div>
-            <div className="text-xs text-gray-500 mt-1">
-              {intl.formatMessage(i18n.fromTemplateOrManual)}
-            </div>
-          </div>
-        </div>
-      }
-      grayedOut={false}
-      borderStyle="dashed"
-    />
   );
 });
 
@@ -254,10 +229,6 @@ function ProviderCards({
         isOnboarding={isOnboarding}
       />
     ));
-
-    cards.push(
-      <CustomProviderCard key="add-custom" onClick={() => setShowCustomProviderModal(true)} />
-    );
 
     return cards;
   }, [

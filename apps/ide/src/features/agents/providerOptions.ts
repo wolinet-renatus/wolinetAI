@@ -23,6 +23,5 @@ export function providerOptions(
     ...installed.map((p) => ({ value: p.id, label: p.name, icon: icon(p.id), detail: version(p) })),
     ...(missing.length ? [{ value: "__missing__", label: tx("Not installed"), section: true }] : []),
     ...missing.map((p) => ({ value: p.id, label: p.name, icon: icon(p.id), detail: p.command })),
-    { value: ADD_AGENT, label: tx("More agents…") },
   ];
 }

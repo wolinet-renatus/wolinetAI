@@ -40,23 +40,13 @@ export function subagentStatusLabel(s: AgentSubagentStatus): string {
 }
 
 const PROVIDER_ICONS = new Set([
-  "claude",
-  "codex",
-  "gemini",
-  "copilot",
-  "cursor",
-  "opencode",
-  "qwen",
-  "kimi",
-  "goose",
-  "auggie",
-  "kiro",
-  "vibe",
+  "wolinet-ai",
+  "wolinex",
 ]);
 
 /** The agent's logo; custom agents get the generic agents icon. */
 export const providerIcon = (provider: string) =>
-  PROVIDER_ICONS.has(provider) ? `agent-${provider}` : "toolwindow-agents";
+  PROVIDER_ICONS.has(provider) ? "toolwindow-agents" : "toolwindow-agents";
 
 export interface TaskGroup {
   status: "needsInput" | "failed" | "limited" | "running" | "ready" | "archived";
