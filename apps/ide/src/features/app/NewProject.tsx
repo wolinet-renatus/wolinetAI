@@ -34,7 +34,10 @@ export function joinPath(dir: string, name: string): string {
   return dir.endsWith("/") || dir.endsWith("\\") ? `${dir}${name.trim()}` : `${dir}${sep}${name.trim()}`;
 }
 
-function errorText(e: unknown) {
+function errorText(e: unknown): string {
+  if (e && typeof e === "object" && "message" in e && typeof (e as { message: unknown }).message === "string") {
+    return (e as { message: string }).message;
+  }
   return e instanceof Error ? e.message : String(e);
 }
 

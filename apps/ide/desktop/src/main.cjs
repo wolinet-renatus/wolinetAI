@@ -342,9 +342,29 @@ function normalizeArgs(obj) {
     return obj.map(normalizeArgs);
   }
   if (typeof obj === 'object') {
+    if (typeof obj.$channel === 'number') {
+      return { $channel: obj.$channel };
+    }
+    if (typeof obj.id === 'number' && (obj.hasOwnProperty('onmessage') || Object.keys(obj).length <= 3)) {
+      return { $channel: obj.id };
+    }
     const result = {};
     for (const [k, v] of Object.entries(obj)) {
-      result[k] = normalizeArgs(v);
+      if (
+        v &&
+        typeof v === 'object' &&
+        (typeof v.$channel === 'number' ||
+          (typeof v.id === 'number' &&
+            (v.hasOwnProperty('onmessage') ||
+              k.startsWith('on') ||
+              k.includes('Channel') ||
+              k.toLowerCase().includes('output') ||
+              k.toLowerCase().includes('event'))))
+      ) {
+        result[k] = { $channel: v.$channel ?? v.id };
+      } else {
+        result[k] = normalizeArgs(v);
+      }
     }
     return result;
   }
@@ -604,7 +624,18 @@ ipcMain.handle('openidea:invoke', async (_event, cmd, args = {}, options = {}) =
     if (cmd === 'project_trust_list') {
       return { locations: [], projects: [], restricted: [] };
     }
-    if (cmd === 'project_trust_set' || cmd === 'project_trust_remove_location') {
+    if (cmd === 'project_trust_set') {
+      try {
+        const trustFile = path.join(os.homedir(), '.openidea', 'data', 'project-trust.json');
+        let trustData = { projects: [], locations: [], restricted: [] };
+        if (fs.existsSync(trustFile)) trustData = JSON.parse(fs.readFileSync(trustFile, 'utf-8'));
+        if (args.path && !trustData.projects.includes(args.path)) trustData.projects.push(args.path);
+        fs.mkdirSync(path.dirname(trustFile), { recursive: true });
+        fs.writeFileSync(trustFile, JSON.stringify(trustData, null, 2), 'utf-8');
+      } catch {}
+      return null;
+    }
+    if (cmd === 'project_trust_remove_location') {
       return null;
     }
 
@@ -645,6 +676,12 @@ ipcMain.handle('openidea:invoke', async (_event, cmd, args = {}, options = {}) =
     }
     if (cmd === 'window_open_projects') {
       return [];
+    }
+    if (cmd === 'clipboard_file_list') {
+      return [];
+    }
+    if (cmd === 'menu_refresh' || cmd === 'gh_availability') {
+      return null;
     }
     if (cmd === 'window_open_file_in_new_window' || cmd === 'window_open_settings' || cmd === 'window_open_remote' || cmd === 'window_new' || cmd === 'window_cycle') {
       return null;
@@ -724,6 +761,17 @@ ipcMain.handle('openidea:invoke', async (_event, cmd, args = {}, options = {}) =
             message: `cannot open ${targetPath}: No such file or directory`,
           },
         };
+      }
+      try {
+        const trustFile = path.join(os.homedir(), '.openidea', 'data', 'project-trust.json');
+        let trustData = { projects: [], locations: [], restricted: [] };
+        if (fs.existsSync(trustFile)) trustData = JSON.parse(fs.readFileSync(trustFile, 'utf-8'));
+        if (!trustData.locations.includes(os.homedir())) trustData.locations.push(os.homedir());
+        if (!trustData.projects.includes(targetPath)) trustData.projects.push(targetPath);
+        fs.mkdirSync(path.dirname(trustFile), { recursive: true });
+        fs.writeFileSync(trustFile, JSON.stringify(trustData, null, 2), 'utf-8');
+      } catch (e) {
+        log('Failed to save project trust:', e);
       }
       const res = await sendRpc('invoke', {
         window: 'main',

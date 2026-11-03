@@ -70,13 +70,27 @@ ASAR_CLI="${ROOT_DIR}/apps/WolinexIde/ui/node_modules/.bin/asar"
 "${ASAR_CLI}" pack "${TMP_SRC}" "${TARGET_APP}/Contents/Resources/app.asar"
 rm -rf "${TMP_SRC}"
 
-# Compute header integrity hash for ASAR
+# Compute header integrity hash for ASAR directly with Node (prevents triggering SIGTRAP / macOS crash reporter)
 echo "3. Calculating ASAR integrity hash..."
-TEST_RUN=$("${TARGET_APP}/Contents/MacOS/WolinexCode" 2>&1 || true)
-if echo "$TEST_RUN" | grep -q "vs [0-9a-f]\{64\}"; then
-  EXPECTED_HASH=$(echo "$TEST_RUN" | grep -o 'vs [0-9a-f]\{64\}' | awk '{print $2}')
-  echo "Updating ElectronAsarIntegrity to: ${EXPECTED_HASH}"
-  /usr/libexec/PlistBuddy -c "Set :ElectronAsarIntegrity:Resources/app.asar:hash '${EXPECTED_HASH}'" "${PLIST}"
+ASAR_FILE="${TARGET_APP}/Contents/Resources/app.asar"
+CALCULATED_HASH=$(node -e '
+const fs = require("fs");
+const crypto = require("crypto");
+const asarPath = process.argv[1];
+const fd = fs.openSync(asarPath, "r");
+const headerSizeBuf = Buffer.alloc(16);
+fs.readSync(fd, headerSizeBuf, 0, 16, 0);
+const jsonLen = headerSizeBuf.readUInt32LE(12);
+const jsonBuf = Buffer.alloc(jsonLen);
+fs.readSync(fd, jsonBuf, 0, jsonLen, 16);
+fs.closeSync(fd);
+process.stdout.write(crypto.createHash("sha256").update(jsonBuf).digest("hex"));
+' "${ASAR_FILE}")
+
+if [ -n "${CALCULATED_HASH}" ]; then
+  echo "Updating ElectronAsarIntegrity to: ${CALCULATED_HASH}"
+  /usr/libexec/PlistBuddy -c "Set :ElectronAsarIntegrity:Resources/app.asar:hash '${CALCULATED_HASH}'" "${PLIST}" 2>/dev/null || \
+  /usr/libexec/PlistBuddy -c "Add :ElectronAsarIntegrity:Resources/app.asar:hash string '${CALCULATED_HASH}'" "${PLIST}"
 fi
 
 # Copy openidea-server binary

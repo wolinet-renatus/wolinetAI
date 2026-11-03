@@ -28,8 +28,11 @@ import { showWorkspaceDialog } from "./WorkspaceDialog";
 
 export const LAUNCH_EVENT = "openidea://launch";
 
-function errorText(e: unknown) {
+function errorText(e: unknown): string {
   if (e instanceof IpcError) return e.message;
+  if (e && typeof e === "object" && "message" in e && typeof (e as { message: unknown }).message === "string") {
+    return (e as { message: string }).message;
+  }
   return e instanceof Error ? e.message : String(e);
 }
 

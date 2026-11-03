@@ -114,7 +114,12 @@ export async function openRecent(project: Pick<RecentProject, "path" | "name">):
     return true;
   } catch (e) {
     if (isCancelled(e)) return false;
-    const message = e instanceof Error ? e.message : String(e);
+    const message =
+      e instanceof Error
+        ? e.message
+        : e && typeof e === "object" && "message" in e && typeof (e as { message: unknown }).message === "string"
+        ? (e as { message: string }).message
+        : String(e);
     const missing = e instanceof IpcError ? e.kind === "notFound" : /not found|no such/i.test(message);
     notifications().notify({
       level: "error",
