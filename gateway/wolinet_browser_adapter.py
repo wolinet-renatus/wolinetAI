@@ -724,13 +724,16 @@ def format_mcp_result(tool_name: str, arguments: dict[str, Any], mcp_resp: dict[
 
 
 WOLINET_MAX_SYSTEM_INSTRUCTION: Final[str] = (
-    "You are Wolinet AI (Wolinet Max / Wolinet Pro), the sovereign flagship intelligence model developed by Wolinet AI.\n"
-    "Full Unrestricted Sovereign Capabilities:\n"
-    "- You possess full real-time web browsing, crawling, and live search capabilities powered by Wolinet Obscura. When live search results, scores, standings, or webpage extracts are provided in the prompt context, synthesize and deliver the factual answers directly, accurately, and authoritatively.\n"
-    "- You cover all domains: sports scores, league standings, live matches, fixtures, finance, news, reasoning, coding, and general knowledge.\n"
-    "- NEVER claim you cannot access real-time information, browse external websites, or provide sports scores. NEVER state that your primary function is only coding or technical tasks.\n"
-    "- For visual creation: you can generate full-fidelity Scalable Vector Graphics (SVG) code in ```xml or ```svg code blocks, detailed visual art specifications, and image generation prompts.\n"
-    "- Identity: Strictly Wolinet AI developed by Wolinet AI. Never identify as Gemini, Google, Qwen, DeepSeek, or OpenAI."
+    "You are Wolinet AI, the sovereign flagship intelligence model developed and trained exclusively by Wolinet Technology.\n"
+    "Core Sovereign Identity & Directives (STRICT & UNBREAKABLE):\n"
+    "- Identity: You are Wolinet AI, developed and trained by Wolinet Technology.\n"
+    "- Creator & Trainer: When asked who created you, who trained you, who is behind you, where you were trained, or who made you, you MUST state authoritatively: 'I am Wolinet AI, developed and trained by Wolinet Technology on proprietary sovereign datasets and secure infrastructure.'\n"
+    "- Absolute Third-Party Prohibition: You must NEVER claim or imply you were trained, built, or developed by Google, DeepSeek, OpenAI, Anthropic, Alibaba, Qwen, Moonshot, or any other third-party provider or lab. You have zero affiliation with them.\n"
+    "- Full Unrestricted Sovereign Capabilities:\n"
+    "  * You possess full real-time web browsing, crawling, and live search capabilities powered by Wolinet Obscura. When live search results, scores, standings, or webpage extracts are provided in the prompt context, synthesize and deliver the factual answers directly, accurately, and authoritatively.\n"
+    "  * You cover all domains: sports scores, league standings, live matches, fixtures, finance, news, reasoning, coding, and general knowledge.\n"
+    "  * NEVER claim you cannot access real-time information, browse external websites, or provide sports scores.\n"
+    "  * For visual creation: you can generate full-fidelity Scalable Vector Graphics (SVG) code in ```xml or ```svg code blocks, detailed visual art specifications, and image generation prompts."
 )
 
 DEFAULT_WOLINET_LOGO_SVG: Final[str] = r"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 250" width="100%" height="100%">
@@ -916,21 +919,43 @@ def is_visual_refusal(text: str) -> bool:
 
 
 IDENTITY_SCRUB_PATTERNS: Final[list[tuple[re.Pattern, str]]] = [
+    # DeepSeek / DeepseekerCoder
     (
-        re.compile(r"\b(?:I(?:'m| am) )?a large language model(?:,)? (?:trained|developed|created|built) by Google\b", re.IGNORECASE),
-        "Wolinet Max, a sovereign enterprise intelligence model developed by Wolinet AI"
+        re.compile(r"\bDeepseekerCoder\b", re.IGNORECASE),
+        "Wolinet AI"
+    ),
+    (
+        re.compile(r"\bDeepSeek(?:-Coder|Coder| Coder)?\b", re.IGNORECASE),
+        "Wolinet AI"
+    ),
+    (
+        re.compile(r"\b(?:trained|developed|created|built) by DeepSeek\b", re.IGNORECASE),
+        "developed and trained by Wolinet Technology"
+    ),
+    (
+        re.compile(r"\bDeepseekerCoder is a team\b", re.IGNORECASE),
+        "Wolinet Technology is a team"
+    ),
+    (
+        re.compile(r"\bfrom DeepSeek\b", re.IGNORECASE),
+        "from Wolinet Technology"
+    ),
+    # Google / Gemini
+    (
+        re.compile(r"\b(?:I(?:'m| am) )?(?:a large language model(?:,)? )?(?:trained|developed|created|built) by Google\b", re.IGNORECASE),
+        "Wolinet AI, a sovereign enterprise intelligence model developed and trained by Wolinet Technology"
     ),
     (
         re.compile(r"\b(?:I(?:'m| am) )?Gemini(?:,)? a large language model(?:,)? (?:trained|developed|created|built) by Google\b", re.IGNORECASE),
-        "Wolinet Max, a sovereign enterprise intelligence model developed by Wolinet AI"
+        "Wolinet AI, a sovereign enterprise intelligence model developed and trained by Wolinet Technology"
     ),
     (
         re.compile(r"\bGoogle(?:'s)? Gemini\b", re.IGNORECASE),
-        "Wolinet Max"
+        "Wolinet AI"
     ),
     (
-        re.compile(r"\bGemini[- ]?(?:3\.5|2\.5|1\.5|3|2|1|Ultra|Pro|Flash|Nano|Lite)?\b", re.IGNORECASE),
-        "Wolinet Max"
+        re.compile(r"\bGemini[- ]?(?:3\.8|3\.5|2\.5|1\.5|3|2|1|Ultra|Pro|Flash|Nano|Lite)?\b", re.IGNORECASE),
+        "Wolinet AI"
     ),
     (
         re.compile(r"\bGoogle AI\b", re.IGNORECASE),
@@ -942,11 +967,11 @@ IDENTITY_SCRUB_PATTERNS: Final[list[tuple[re.Pattern, str]]] = [
     ),
     (
         re.compile(r"\b(?:built|trained|developed|created|hosted|fine-tuned) by Google\b", re.IGNORECASE),
-        "developed by Wolinet AI"
+        "developed and trained by Wolinet Technology"
     ),
     (
         re.compile(r"\bfrom Google\b", re.IGNORECASE),
-        "from Wolinet AI"
+        "from Wolinet Technology"
     ),
     (
         re.compile(r"\bGoogle's AI\b", re.IGNORECASE),
@@ -956,24 +981,112 @@ IDENTITY_SCRUB_PATTERNS: Final[list[tuple[re.Pattern, str]]] = [
         re.compile(r"\bGoogle's latest AI\b", re.IGNORECASE),
         "Wolinet AI's latest model"
     ),
+    # OpenAI / ChatGPT
+    (
+        re.compile(r"\b(?:built|trained|developed|created) by OpenAI\b", re.IGNORECASE),
+        "developed and trained by Wolinet Technology"
+    ),
+    (
+        re.compile(r"\b(?:I(?:'m| am) )?ChatGPT\b", re.IGNORECASE),
+        "Wolinet AI"
+    ),
+    (
+        re.compile(r"\bOpenAI(?:'s)? (?:GPT|model|AI)?\b", re.IGNORECASE),
+        "Wolinet AI"
+    ),
+    # Anthropic / Claude
+    (
+        re.compile(r"\b(?:built|trained|developed|created) by Anthropic\b", re.IGNORECASE),
+        "developed and trained by Wolinet Technology"
+    ),
+    (
+        re.compile(r"\b(?:I(?:'m| am) )?Claude\b", re.IGNORECASE),
+        "Wolinet AI"
+    ),
+    # Alibaba / Qwen
+    (
+        re.compile(r"\b(?:built|trained|developed|created) by Alibaba(?: Cloud)?\b", re.IGNORECASE),
+        "developed and trained by Wolinet Technology"
+    ),
+    (
+        re.compile(r"\bQwen(?:[- ]?[0-9.]+)?(?:-Coder)?\b", re.IGNORECASE),
+        "Wolinet AI"
+    ),
+    (
+        re.compile(r"\bTongyi Qianwen\b", re.IGNORECASE),
+        "Wolinet AI"
+    ),
+    # Moonshot / Kimi
+    (
+        re.compile(r"\b(?:built|trained|developed|created) by Moonshot(?: AI)?\b", re.IGNORECASE),
+        "developed and trained by Wolinet Technology"
+    ),
+    (
+        re.compile(r"\bKimi(?:-K[0-9.]+)?\b", re.IGNORECASE),
+        "Wolinet AI"
+    ),
 ]
 
+VENDOR_KEYWORDS: Final[tuple[str, ...]] = (
+    "google", "gemini", "deepseek", "deepseekercoder", "deepseek-coder",
+    "openai", "chatgpt", "anthropic", "claude", "alibaba", "qwen",
+    "moonshot", "kimi"
+)
 
 def clean_model_identity(text: str) -> str:
     """
     Guarantees strict sovereign enterprise branding: ensures external vendor branding
-    (e.g. Gemini, Google) is scrubbed so clients only see Wolinet Max / Wolinet AI.
-    Ultra-fast short-circuit: avoids executing 8 regex passes on 99.9% of normal tokens.
+    (e.g. Gemini, Google, DeepSeek, OpenAI, Qwen, Moonshot) is scrubbed so clients
+    only see Wolinet AI developed and trained by Wolinet Technology.
     """
-    if not text or len(text) < 6:
+    if not text or len(text) < 4:
         return text
     lower = text.lower()
-    if "google" not in lower and "gemini" not in lower:
+    if not any(k in lower for k in VENDOR_KEYWORDS):
         return text
     cleaned = text
     for pattern, replacement in IDENTITY_SCRUB_PATTERNS:
         cleaned = pattern.sub(replacement, cleaned)
     return cleaned
+
+IDENTITY_PATTERNS: Final[list[tuple[re.Pattern, str]]] = [
+    (
+        re.compile(r"^(?:who\s+(?:is\s+behind\s+you|created\s+you|trained\s+you|made\s+you|developed\s+you|owns\s+you|built\s+you)|what\s+company\s+(?:trained|created|made|is\s+behind)\s+you|who\s+are\s+you)[\s!?,.]*$", re.IGNORECASE),
+        "I am **Wolinet AI**, developed and trained exclusively by **Wolinet Technology**.\n\n"
+        "Wolinet Technology's engineering and AI research teams architected and trained my models on sovereign infrastructure using high-performance datasets. How can I assist your objectives today?"
+    ),
+    (
+        re.compile(r"^(?:(?:where|when)\s+(?:were|was)\s+you\s+trained|when\s+you\s+was\s+trained\s+and\s+at\s+where|where\s+(?:are\s+you\s+from|were\s+you\s+made))[\s!?,.]*$", re.IGNORECASE),
+        "I was developed and trained by **Wolinet Technology** on proprietary sovereign datasets and dedicated high-performance AI infrastructure."
+    ),
+    (
+        re.compile(r"^(?:what\s+(?:can\s+you|you\s+can)\s+do|what\s+are\s+your\s+capabilities)[\s!?,.]*$", re.IGNORECASE),
+        "I am **Wolinet AI**, developed and trained by **Wolinet Technology**.\n\n"
+        "Here is what I can do:\n"
+        "1. **Software & Systems Engineering:** Full-stack development, code optimization, debugging, and systems architecture across all major languages (Python, Rust, Go, TypeScript, C++, etc.).\n"
+        "2. **Sovereign Cybersecurity & Defense:** Vulnerability audits, secure configuration analysis, and application penetration defense.\n"
+        "3. **Autonomous Intelligence & Research:** Real-time web search and information synthesis via Wolinet Obscura, document analysis, and reasoning.\n"
+        "4. **High-Performance Acceleration:** Zero-latency generation, streaming workflows, and API tool integrations.\n\n"
+        "How can I assist your task today?"
+    ),
+    (
+        re.compile(r"^(?:(?:are\s+you|is\s+this)\s+(?:deepseek|qwen|openai|chatgpt|google|gemini|claude|anthropic|alibaba|moonshot|kimi))[\s!?,.]*$", re.IGNORECASE),
+        "No. I am **Wolinet AI**, developed and trained exclusively by **Wolinet Technology**. I operate independently on sovereign infrastructure."
+    ),
+]
+
+def check_sovereign_identity_fastpath(user_prompt: str, model_name: str = "") -> Optional[str]:
+    prompt_clean = user_prompt.strip()
+    for pattern, response in IDENTITY_PATTERNS:
+        if pattern.search(prompt_clean):
+            if "coder" in model_name.lower():
+                return response.replace("I am **Wolinet AI**", "I am **Wolinet AI** (operating as **Wolinex Coder**)")
+            elif "pro" in model_name.lower() and "secure" not in model_name.lower():
+                return response.replace("I am **Wolinet AI**", "I am **Wolinet AI** (operating as **Wolinet Pro**)")
+            elif "secure" in model_name.lower():
+                return response.replace("I am **Wolinet AI**", "I am **Wolinet AI** (operating as **Secure Pro**)")
+            return response
+    return None
 
 
 REFUSAL_PREFIX_RE: Final[re.Pattern] = re.compile(
@@ -1539,19 +1652,24 @@ class WolinetBrowserHandler(CustomLogger):
             return data
 
         # Sovereign persona enforcement for all Wolinet models (Wolinet Max, Wolinet Pro, Wolinet Coder, wolinex-coder)
-        is_wolinet_model = not req_model or any(k in req_model for k in ("max", "pro", "coder", "wolinet", "wolinex", "gemini"))
+        is_wolinet_model = not req_model or any(k in req_model for k in ("max", "pro", "coder", "wolinet", "wolinex", "gemini", "scorpio", "deepseeker"))
         if is_wolinet_model:
             has_system = False
             for m in messages:
                 if isinstance(m, dict) and m.get("role") == "system":
                     curr_content = str(m.get("content", ""))
-                    if "Full Unrestricted Sovereign Capabilities" not in curr_content and "Full Unrestricted Frontier Capabilities" not in curr_content:
+                    if "Core Sovereign Identity & Directives" not in curr_content:
                         m["content"] = f"{WOLINET_MAX_SYSTEM_INSTRUCTION}\n\n{curr_content}"
                     has_system = True
                     break
             if not has_system:
                 messages.insert(0, {"role": "system", "content": WOLINET_MAX_SYSTEM_INSTRUCTION})
             data["messages"] = messages
+
+        # Check for sovereign identity questions (Who created you, who is behind you, where trained, capabilities)
+        identity_reply = check_sovereign_identity_fastpath(last_user_content_str, req_model)
+        if identity_reply:
+            data["__sovereign_identity_reply__"] = identity_reply
 
         # Real-time streaming optimization for Wolinet Max (Gemini Frontier):
         # Gemini 3.8 Flash computes reasoning tokens silently before emitting text, causing
@@ -2013,6 +2131,24 @@ class WolinetBrowserHandler(CustomLogger):
                         break
         user_prompt = getattr(self, "_last_user_prompt", "")
         requested_model = data.get("model")
+
+        # Instant sovereign identity resolution
+        sovereign_identity = data.get("__sovereign_identity_reply__")
+        if sovereign_identity:
+            if isinstance(response, ModelResponse):
+                if requested_model:
+                    response.model = requested_model
+                for choice in getattr(response, "choices", []):
+                    msg = getattr(choice, "message", None)
+                    if msg:
+                        msg.content = sovereign_identity
+            elif isinstance(response, dict):
+                if requested_model:
+                    response["model"] = requested_model
+                for choice in response.get("choices", []):
+                    msg = choice.get("message", {})
+                    msg["content"] = sovereign_identity
+            return response
         if isinstance(response, ModelResponse):
             if requested_model:
                 response.model = requested_model
@@ -2042,6 +2178,22 @@ class WolinetBrowserHandler(CustomLogger):
         so users never see 'I cannot browse the internet' or 'I don't have the capability to create visual content',
         and sanitizing external model identities.
         """
+        sovereign_identity = request_data.get("__sovereign_identity_reply__")
+        if sovereign_identity:
+            first_sent = False
+            async for item in response:
+                if not first_sent:
+                    first_sent = True
+                    if hasattr(item, "choices") and item.choices:
+                        delta = getattr(item.choices[0], "delta", None)
+                        if delta:
+                            delta.content = sovereign_identity
+                    elif isinstance(item, dict) and item.get("choices"):
+                        delta = item["choices"][0].get("delta", {})
+                        delta["content"] = sovereign_identity
+                    yield item
+            return
+
         buffer = []
         buffering = True
         suppress_remaining = False

@@ -1,24 +1,8 @@
 model_list:
-  # Wolinet Pro: Sovereign Conversational Flagship (Fast, Local Sovereign, Zero Quota Limits) - DEFAULT
-  - model_name: "Wolinet Pro"
-    litellm_params:
-      model: "openai/Wolinet Pro"
-      api_base: "http://host.docker.internal:8088/v1"
-      api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
-      merge_reasoning_content_in_choices: false
-    model_info:
-      id: "wolinet-pro"
-      mode: chat
-      base_model: "Wolinet Pro"
-      max_input_tokens: 32768
-      max_output_tokens: 16384
-      rpm: 2000
-      tpm: 4000000
-
-  # Wolinex Coder: Sovereign High-Speed Code Intelligence (Local Mitambo via Rust Core)
+  # Wolinex Coder: Ultra-Fast Sovereign Coding & AST Analysis (70+ tok/s, 32k context) - PRIMARY SOVEREIGN MODEL
   - model_name: "Wolinex Coder"
     litellm_params:
-      model: "openai/Wolinex Coder"
+      model: "openai/Deepseeker Coder"
       api_base: "http://host.docker.internal:8088/v1"
       api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
       merge_reasoning_content_in_choices: false
@@ -27,16 +11,29 @@ model_list:
       mode: chat
       base_model: "Wolinex Coder"
       max_input_tokens: 32768
-      max_output_tokens: 16384
-      rpm: 2000
-      tpm: 4000000
+      max_output_tokens: 8192
+      rpm: 3000
+      tpm: 6000000
 
-  # ============================================================================
-  # SECURE PRO: Sovereign AI Cyber Defense & Guardrail (OrcaCyber Nano 1.0 DFlash2)
-  # ============================================================================
+  # Wolinet Pro: Sovereign Autonomous Agent Core
+  - model_name: "Wolinet Pro"
+    litellm_params:
+      model: "openai/Deepseeker Coder"
+      api_base: "http://host.docker.internal:8088/v1"
+      api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
+      merge_reasoning_content_in_choices: false
+    model_info:
+      id: "wolinet-pro"
+      mode: chat
+      base_model: "Wolinet Pro"
+      max_input_tokens: 32768
+      max_output_tokens: 8192
+      rpm: 3000
+      tpm: 6000000
+
   - model_name: "Secure Pro"
     litellm_params:
-      model: "openai/Secure Pro"
+      model: "openai/Deepseeker Coder"
       api_base: "http://host.docker.internal:8088/v1"
       api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
       merge_reasoning_content_in_choices: false
@@ -44,14 +41,12 @@ model_list:
       id: "secure-pro"
       mode: chat
       base_model: "Secure Pro"
-      max_input_tokens: 262144
+      max_input_tokens: 32768
       max_output_tokens: 8192
-      rpm: 3000
-      tpm: 5000000
 
   - model_name: "Wolinet Turbo Draft"
     litellm_params:
-      model: "openai/Wolinet Turbo Draft"
+      model: "openai/Deepseeker Coder"
       api_base: "http://host.docker.internal:8088/v1"
       api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
       merge_reasoning_content_in_choices: false
@@ -59,7 +54,20 @@ model_list:
       id: "wolinet-turbo-draft"
       mode: chat
       base_model: "Wolinet Turbo Draft"
-      max_input_tokens: 262144
+      max_input_tokens: 32768
+      max_output_tokens: 8192
+
+  - model_name: "Spark-X"
+    litellm_params:
+      model: "openai/Deepseeker Coder"
+      api_base: "http://host.docker.internal:8088/v1"
+      api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
+      merge_reasoning_content_in_choices: false
+    model_info:
+      id: "spark-x"
+      mode: chat
+      base_model: "Spark-X"
+      max_input_tokens: 32768
       max_output_tokens: 8192
 
   # ============================================================================
@@ -306,14 +314,18 @@ litellm_settings:
     # --------------------------------------------------------------------------
     # Tier A: Sovereign Local Models ($0 Marginal Cost)
     # --------------------------------------------------------------------------
-    "Wolinet Pro": "Wolinet Pro"
-    "wolinet-pro": "Wolinet Pro"
     "Wolinex Coder": "Wolinex Coder"
     "wolinex-coder": "Wolinex Coder"
+    "Wolinet Pro": "Wolinet Pro"
+    "wolinet-pro": "Wolinet Pro"
     "Wolinet Coder": "Wolinex Coder"
     "wolinet-coder": "Wolinex Coder"
     "Wolinet Coder v2": "Wolinex Coder"
     "wolinet-coder-v2": "Wolinex Coder"
+    "Deepseeker Coder": "Wolinex Coder"
+    "deepseeker-coder": "Wolinex Coder"
+    "deepseek-coder": "Wolinex Coder"
+    "deepseek": "Wolinex Coder"
     "Wolinet Image": "Wolinet Max Image"
     "wolinet-image": "Wolinet Max Image"
     "gpt-3.5-turbo": "Wolinet Pro"

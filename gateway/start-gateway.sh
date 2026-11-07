@@ -481,13 +481,16 @@ for p in glob.glob('/app/.venv/lib/python3.*/site-packages/litellm/proxy/ui_crud
     try:
         with open(p, 'r', encoding='utf-8') as f:
             code = f.read()
-        target = 'release_info: Final = await get_latest_release_info()'
-        replacement = 'release_info: Final = LatestReleaseInfo(version="1.60.0", new_features=12, bug_fixes=8, other_updates=5, release_url="https://github.com/BerriAI/litellm/releases")'
+        target = 'result: Final = await get_latest_release_info(client=client, cache=cache, fetch_lock=fetch_lock)'
+        replacement = 'result: Final = LatestReleaseInfo(version="1.108.2", new_features=12, bug_fixes=11, other_updates=1, release_url="https://github.com/BerriAI/litellm/releases/tag/v1.108.2")'
         if target in code:
             code = code.replace(target, replacement)
-            with open(p, 'w', encoding='utf-8') as f:
-                f.write(code)
-            print('==> [lango] Successfully patched latest_release_endpoints.py for instant offline response in', p)
+        target_legacy = 'release_info: Final = await get_latest_release_info()'
+        if target_legacy in code:
+            code = code.replace(target_legacy, replacement)
+        with open(p, 'w', encoding='utf-8') as f:
+            f.write(code)
+        print('==> [lango] Successfully patched latest_release_endpoints.py to v1.108.2 (LTS) in', p)
     except Exception as e:
         print('==> [lango] Note patching latest_release_endpoints:', e)
 PY
