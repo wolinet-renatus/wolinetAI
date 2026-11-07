@@ -71,6 +71,12 @@ for base_dir in base_dirs:
                             if 'show_env_credential_login_warning:true' in content:
                                 content = content.replace('show_env_credential_login_warning:true', 'show_env_credential_login_warning:false')
                                 changed = True
+                            if 'return s?(0,t.jsxs)' in content:
+                                content = content.replace('return s?(0,t.jsxs)', 'return (s||!0)?(0,t.jsxs)')
+                                changed = True
+                            if 'premiumUser:i??!1' in content:
+                                content = content.replace('premiumUser:i??!1', 'premiumUser:!0')
+                                changed = True
                         if changed:
                             with open(p, 'w', encoding='utf-8') as fp:
                                 fp.write(content)
