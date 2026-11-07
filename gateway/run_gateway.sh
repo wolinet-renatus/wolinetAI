@@ -7,6 +7,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+export PYTHONPATH="${SCRIPT_DIR}:${PYTHONPATH:-}"
+export LITELLM_MASTER_KEY="${LITELLM_MASTER_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}"
+
 # Load .env if present
 if [ -f "${ROOT_DIR}/.env" ]; then
     echo "[Gateway] Sourcing ${ROOT_DIR}/.env"

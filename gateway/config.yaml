@@ -299,7 +299,7 @@ general_settings:
   - path: /defense/inspect
     target: "http://host.docker.internal:8088"
   store_model_in_db: true
-  disable_env_credential_login: false
+  disable_env_credential_login: true
   hide_default_credentials_hint: true
   user_header_mappings:
     - header_name: X-OpenWebUI-User-Id
