@@ -171,6 +171,9 @@ scratch/
 .litespeed/
 
 # Local Caches & Database files
+*.wav
+*.mp3
+*.ogg
 *.sqlite
 *.sqlite3
 *.db

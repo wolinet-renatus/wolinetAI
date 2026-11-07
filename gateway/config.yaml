@@ -219,6 +219,39 @@ model_list:
       id: "wolinet-max-audio"
       mode: audio_transcription
 
+  # Sovereign High-Speed English Text-to-Speech (ConwayResearch/Underdog-Woof 40MB)
+  - model_name: "underdog-woof"
+    litellm_params:
+      model: "openai/underdog-woof"
+      api_base: "http://127.0.0.1:8089/v1"
+      api_key: "EMPTY"
+    model_info:
+      id: "underdog-woof"
+      mode: audio_speech
+      base_model: "ConwayResearch/Underdog-Woof"
+
+  # Sovereign High-Fidelity Swahili Commercial Voice (msingiai/sauti-tts-sm 24kHz)
+  - model_name: "swahili-voice-ad"
+    litellm_params:
+      model: "openai/swahili-voice-ad"
+      api_base: "http://127.0.0.1:8089/v1"
+      api_key: "EMPTY"
+    model_info:
+      id: "swahili-voice-ad"
+      mode: audio_speech
+      base_model: "msingiai/sauti-tts-sm"
+
+  # Standard OpenAI tts-1 Alias
+  - model_name: "tts-1"
+    litellm_params:
+      model: "openai/underdog-woof"
+      api_base: "http://127.0.0.1:8089/v1"
+      api_key: "EMPTY"
+    model_info:
+      id: "tts-1"
+      mode: audio_speech
+      base_model: "ConwayResearch/Underdog-Woof"
+
   # Native Image Generation Models (Gemini & OpenAI DALL-E Compatible)
   - model_name: "dall-e-3"
     litellm_params:

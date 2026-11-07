@@ -40,7 +40,11 @@ echo "=================================================================="
 # ---------------------------------------------------------------------------
 # 0. Auto-register all models from models/registrations/ into xinference home
 # ---------------------------------------------------------------------------
-REGISTRATIONS_DIR="${ROOT_DIR}/models/registrations"
+if [ -d "${ROOT_DIR}/inference/models/registrations" ]; then
+    REGISTRATIONS_DIR="${ROOT_DIR}/inference/models/registrations"
+else
+    REGISTRATIONS_DIR="${ROOT_DIR}/models/registrations"
+fi
 XINFERENCE_V2_DIR="${HOME}/.xinference/model/v2"
 
 if [ -d "${REGISTRATIONS_DIR}" ]; then
@@ -97,17 +101,24 @@ else
     done
 fi
 
-# 2. Models are selected and launched explicitly through Xinference.
-# The deployment model-sync sidecar publishes only running chat/generation
-# models to LiteLLM; startup never launches or terminates models implicitly.
-echo "[Engine] Preserving the current Xinference model state. Launch models through Xinference to publish them to the gateway."
+# 2. Launch all sovereign models
+echo "[Engine] Ensuring all 3 sovereign models are active in Mitambo..."
+"${ROOT_DIR}/inference/.venv/bin/python" "${ROOT_DIR}/scripts/launch_models.py" || true
 
 # 3. Start OrcaCyber AI Defense Engine (:8088)
 if curl -sf "http://127.0.0.1:8088/health" >/dev/null 2>&1; then
     echo "[Defense] OrcaCyber Nano AI Defense is already running on port 8088."
 else
-    echo "[Defense] Starting OrcaCyber Nano AI Defense on port 8088..."
-    ORCACYBER_PORT=8088 nohup "${ROOT_DIR}/inference/.venv/bin/python" "${ROOT_DIR}/services/defense/orcacyber_defense.py" > "${ROOT_DIR}/services/defense/orcacyber.log" 2>&1 &
+    echo "[Defense] Starting OrcaCyber Nano AI Defense (Rust Core) on port 8088..."
+    WORKSPACE_ROOT="${ROOT_DIR}" WEIGHT_BUFFER_RAM_GB=6.0 nohup "${ROOT_DIR}/services/defense-rs/target/release/orcacyber-defense-rs" > "${ROOT_DIR}/services/defense-rs/defense-rs.log" 2>&1 &
+fi
+
+# 3.5 Start Sovereign Voice Microservice (:8089)
+if curl -sf "http://127.0.0.1:8089/health" >/dev/null 2>&1; then
+    echo "[Voice] Sovereign Voice Engine is already running on port 8089."
+else
+    echo "[Voice] Starting Sovereign Voice Engine (Underdog-Woof & Sauti-TTS) on port 8089..."
+    nohup "${ROOT_DIR}/.venv/bin/python" "${ROOT_DIR}/scripts/swahili_tts_service.py" > "${ROOT_DIR}/voice_service.log" 2>&1 &
 fi
 
 # 4. Start AI Gateway (LiteLLM)
