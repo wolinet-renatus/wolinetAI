@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "model_family": "wolinet-voice",
+  "model_name": "wolinet-voice",
+  "model_id": "wolinet-voice",
+  "model_uri": "/Users/apple/Documents/wolinetai/inference/models/checkpoints/wolinet-voice",
+  "multilingual": true,
+  "model_lang": [
+    "sw",
+    "en"
+  ],
+  "model_ability": [
+    "text2audio"
+  ],
+  "model_description": "Wolinet AI Sovereign Voice Engine (24kHz Studio Broadcast & Natural East African Cadence) — Developed and trained by Wolinet Technology.",
+  "engine": "voice-rs / PyTorch Core",
+  "model_format": "safetensors",
+  "sample_rate_hz": 24000,
+  "voices": [
+    "Renatus (Male)",
+    "Witness (Female)"
+  ],
+  "owner": "Wolinet AI Technologies",
+  "license": "Wolinet AI Enterprise Sovereign Model License 2026"
+}

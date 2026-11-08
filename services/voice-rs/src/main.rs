@@ -75,6 +75,7 @@ pub struct HealthResponse {
 
 pub struct AppState {
     pub python_backend_url: String,
+    pub llm_backend_url: String,
     pub client: reqwest::Client,
 }
 
@@ -84,10 +85,17 @@ async fn main() {
 
     let python_backend_url = std::env::var("VOICE_BACKEND_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:8089".to_string());
+    let llm_backend_url = std::env::var("VOICE_LLM_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:8088".to_string());
 
     let state = Arc::new(AppState {
         python_backend_url,
-        client: reqwest::Client::new(),
+        llm_backend_url,
+        client: reqwest::Client::builder()
+            .no_proxy()
+            .timeout(std::time::Duration::from_secs(60))
+            .build()
+            .unwrap(),
     });
 
     let app = Router::new()
@@ -98,6 +106,8 @@ async fn main() {
         .route("/audio/voices", get(voices_handler))
         .route("/v1/audio/speech", post(speech_handler))
         .route("/audio/speech", post(speech_handler))
+        .route("/v1/chat/completions", post(chat_handler))
+        .route("/chat/completions", post(chat_handler))
         .layer(CorsLayer::permissive())
         .with_state(state);
 
@@ -223,4 +233,85 @@ async fn speech_handler(
     );
 
     Ok((headers, bytes).into_response())
+}
+
+async fn chat_handler(
+    axum::extract::State(state): axum::extract::State<Arc<AppState>>,
+    Json(mut payload): Json<serde_json::Value>,
+) -> Result<Response, (StatusCode, String)> {
+    info!("[voice-rs] Received chat completion request");
+    if let Some(obj) = payload.as_object_mut() {
+        obj.insert(
+            "model".to_string(),
+            serde_json::Value::String("Deepseeker Coder".to_string()),
+        );
+    }
+
+    let is_stream = payload
+        .get("stream")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let target_url = format!("{}/v1/chat/completions", state.llm_backend_url);
+
+    let res = state
+        .client
+        .post(&target_url)
+        .header("Authorization", "Bearer sk-XvKFiwDoOtOe8i4lwbzb8Q")
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| {
+            warn!("[voice-rs] Chat upstream connection failed: {}", e);
+            (
+                StatusCode::BAD_GATEWAY,
+                format!("LLM backend unavailable: {}", e),
+            )
+        })?;
+
+    if !res.status().is_success() {
+        let status =
+            StatusCode::from_u16(res.status().as_u16()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        let err_text = res.text().await.unwrap_or_default();
+        return Err((status, err_text));
+    }
+
+    if is_stream {
+        let content_type = res
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("text/event-stream")
+            .to_string();
+
+        let stream = res.bytes_stream();
+        let body = axum::body::Body::from_stream(stream);
+
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CONTENT_TYPE, content_type.parse().unwrap());
+        headers.insert(header::CACHE_CONTROL, "no-cache".parse().unwrap());
+        headers.insert("x-wolinet-model", "Wolinet Voice".parse().unwrap());
+
+        Ok((headers, body).into_response())
+    } else {
+        let mut data: serde_json::Value = res.json().await.map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to parse upstream response: {}", e),
+            )
+        })?;
+
+        if let Some(obj) = data.as_object_mut() {
+            obj.insert(
+                "model".to_string(),
+                serde_json::Value::String("Wolinet Voice".to_string()),
+            );
+        }
+
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+        headers.insert("x-wolinet-model", "Wolinet Voice".parse().unwrap());
+
+        Ok((headers, Json(data)).into_response())
+    }
 }

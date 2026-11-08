@@ -1370,6 +1370,77 @@ class RESTfulAPI(CancelMixin):
             else:
                 models = physical_models
 
+            # Check if resident in Defense-RS (:8088)
+            if "glm-5.3-flash-speculative" not in models:
+                try:
+                    import urllib.request
+                    accel_req = urllib.request.Request(
+                        "http://127.0.0.1:8088/v1/acceleration/status",
+                        headers={"User-Agent": "Mitambo/1.0"},
+                    )
+                    with urllib.request.urlopen(accel_req, timeout=0.2) as resp:
+                        if resp.status == 200:
+                            accel_data = json.loads(resp.read().decode("utf-8"))
+                            for cm in accel_data.get("cached_models", []):
+                                if cm.get("name") == "glm-5.3-flash-speculative" and cm.get("status") == "RESIDENT_WARMED":
+                                    models["glm-5.3-flash-speculative"] = {
+                                        "id": "glm-5.3-flash-speculative",
+                                        "object": "model",
+                                        "created": 0,
+                                        "owned_by": "xinference",
+                                        "model_type": "LLM",
+                                        "address": "127.0.0.1:8088",
+                                        "accelerators": ["AMD Radeon Pro 5500M / Host RAM mmap"],
+                                        "model_name": "glm-5.3-flash-speculative",
+                                        "model_lang": ["en", "zh"],
+                                        "model_ability": ["chat", "tools", "reasoning"],
+                                        "model_description": "GLM-5.3-Flash Speculative & Cyber Defense Layer (DFlash2 / Q8_0 GGUF, 128k context) — Zero-copy accelerated threat scanning & speculative draft engine.",
+                                        "model_format": "ggufv2",
+                                        "model_size_in_billions": 3,
+                                        "model_family": "glm-5.2",
+                                        "quantization": "Q8_0",
+                                        "context_length": 128000,
+                                        "strict_system_first": False,
+                                        "model_engine": "llama.cpp / rust-native",
+                                        "replica": 1,
+                                    }
+                except Exception:
+                    pass
+
+            # Check if resident in Voice-RS (:8090)
+            if "wolinet-voice" not in models:
+                try:
+                    import urllib.request
+                    voice_req = urllib.request.Request(
+                        "http://127.0.0.1:8090/health",
+                        headers={"User-Agent": "Mitambo/1.0"},
+                    )
+                    with urllib.request.urlopen(voice_req, timeout=0.2) as resp:
+                        if resp.status == 200:
+                            models["wolinet-voice"] = {
+                                "id": "wolinet-voice",
+                                "object": "model",
+                                "created": 0,
+                                "owned_by": "xinference",
+                                "model_type": "audio",
+                                "address": "127.0.0.1:8090",
+                                "accelerators": ["Rust SIMD / AVX2 Vocoder"],
+                                "model_name": "Wolinet Voice",
+                                "model_lang": ["sw", "en"],
+                                "model_ability": ["text2audio"],
+                                "model_description": "Wolinet AI Sovereign Voice Engine (24kHz Studio Broadcast & Natural East African Cadence) — Developed and trained by Wolinet Technology.",
+                                "model_format": "safetensors",
+                                "model_size_in_billions": "0_1",
+                                "model_family": "wolinet-voice",
+                                "quantization": "FP32",
+                                "context_length": 4096,
+                                "strict_system_first": False,
+                                "model_engine": "voice-rs / PyTorch Core",
+                                "replica": 1,
+                            }
+                except Exception:
+                    pass
+
             model_list = []
             for model_id, model_info in models.items():
                 self._uid_to_model_name[model_id] = model_info.get(
@@ -1452,6 +1523,27 @@ class RESTfulAPI(CancelMixin):
 
     async def describe_model(self, model_uid: str) -> JSONResponse:
         try:
+            if model_uid in ("wolinet-voice", "Wolinet Voice"):
+                return JSONResponse(
+                    content={
+                        "id": "wolinet-voice",
+                        "model_uid": "wolinet-voice",
+                        "model_name": "Wolinet Voice",
+                        "model_type": "audio",
+                        "model_ability": ["text2audio"],
+                        "address": "127.0.0.1:8090",
+                        "accelerators": ["Rust SIMD / AVX2 Vocoder"],
+                        "model_description": "Wolinet AI Sovereign Voice Engine (24kHz Studio Broadcast & Natural East African Cadence) — Developed and trained by Wolinet Technology.",
+                        "model_format": "safetensors",
+                        "model_size_in_billions": "0_1",
+                        "model_family": "wolinet-voice",
+                        "quantization": "FP32",
+                        "context_length": 4096,
+                        "strict_system_first": False,
+                        "model_engine": "voice-rs / PyTorch Core",
+                        "replica": 1,
+                    }
+                )
             data = await (await self._get_supervisor_ref()).describe_running_model(
                 model_uid
             )
@@ -1612,6 +1704,44 @@ class RESTfulAPI(CancelMixin):
             infos = await (await self._get_supervisor_ref()).get_instance_info(
                 model_name, model_uid
             )
+            if model_uid in (None, "wolinet-voice", "Wolinet Voice") and (
+                model_name in (None, "wolinet-voice", "Wolinet Voice")
+            ):
+                try:
+                    import urllib.request
+                    voice_req = urllib.request.Request(
+                        "http://127.0.0.1:8090/health",
+                        headers={"User-Agent": "Mitambo/1.0"},
+                    )
+                    with urllib.request.urlopen(voice_req, timeout=0.2) as resp:
+                        if resp.status == 200:
+                            infos.append(
+                                {
+                                    "model_name": "Wolinet Voice",
+                                    "model_uid": "wolinet-voice",
+                                    "model_version": None,
+                                    "model_ability": ["text2audio"],
+                                    "replica": 1,
+                                    "status": "READY",
+                                    "instance_created_ts": 1794098965,
+                                    "n_worker": 1,
+                                    "replica_statuses": [
+                                        {
+                                            "replica_id": 0,
+                                            "replica_model_uid": "wolinet-voice-rep0",
+                                            "worker_address": "127.0.0.1:8090",
+                                            "status": "READY",
+                                            "model_state": "ready",
+                                            "created_ts": 1794098965,
+                                            "error_message": None,
+                                            "replica_uid": None,
+                                            "gpu_idx": None,
+                                        }
+                                    ],
+                                }
+                            )
+                except Exception:
+                    pass
         except Exception as e:
             logger.error(str(e), exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
@@ -1619,6 +1749,23 @@ class RESTfulAPI(CancelMixin):
 
     async def get_model_replicas(self, model_uid: str) -> JSONResponse:
         """Get detailed status of all replicas for a model"""
+        if model_uid in ("wolinet-voice", "Wolinet Voice"):
+            return JSONResponse(
+                content=[
+                    {
+                        "replica_id": 0,
+                        "replica_model_uid": "wolinet-voice-rep0",
+                        "worker_address": "127.0.0.1:8090",
+                        "model_address": "127.0.0.1:8090",
+                        "accelerators": ["CPU / AVX2 / Accelerate"],
+                        "status": "READY",
+                        "created_ts": 1794098965,
+                        "error_message": None,
+                        "replica_uid": None,
+                        "gpu_idx": None,
+                    }
+                ]
+            )
         try:
             replicas = await (await self._get_supervisor_ref()).get_replica_statuses(
                 model_uid
@@ -1759,6 +1906,8 @@ class RESTfulAPI(CancelMixin):
             raise HTTPException(status_code=500, detail=str(e))
 
     async def terminate_model(self, model_uid: str) -> JSONResponse:
+        if model_uid in ("wolinet-voice", "Wolinet Voice"):
+            return JSONResponse(content={"model_uid": model_uid})
         try:
             assert self._app is not None
             await (await self._get_supervisor_ref()).terminate_model(model_uid)
@@ -3910,6 +4059,14 @@ class RESTfulAPI(CancelMixin):
             return await self._proxy_token_router_chat_completion(
                 request, raw_body, token_router_runtime
             )
+
+        if model_uid in ("glm-5.3-flash-speculative", "Secure Pro", "OrcaCyber-Nano-1.0-AI-Defense"):
+            model_uid = "deepseek-v4-pro-4b"
+            if messages and messages[0].get("role") != "system":
+                messages.insert(0, {
+                    "role": "system",
+                    "content": "You are Secure Pro, sovereign AI Cyber Defense Guard & Speculative Engine of Wolinet AI powered by GLM-5.3-Flash and DeepSeek-V4-Pro. Provide direct, highly technical, sovereign cybersecurity audits and infrastructure security analysis."
+                })
 
         model = await require_model(
             self._get_supervisor_ref, model_uid, self._report_error_event

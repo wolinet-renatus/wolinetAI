@@ -217,6 +217,36 @@ model_list:
       mode: audio_speech
       base_model: "Wolinet Voice"
 
+  - model_name: "Wolinet Voice"
+    litellm_params:
+      model: "openai/Wolinet Voice"
+      api_base: "http://127.0.0.1:8090/v1"
+      api_key: "EMPTY"
+    model_info:
+      id: "wolinet-voice-chat"
+      mode: chat
+      base_model: "Wolinet Voice"
+
+  - model_name: "Wolinet"
+    litellm_params:
+      model: "openai/Wolinet Voice"
+      api_base: "http://127.0.0.1:8090/v1"
+      api_key: "EMPTY"
+    model_info:
+      id: "wolinet-alias"
+      mode: audio_speech
+      base_model: "Wolinet Voice"
+
+  - model_name: "Wolinet"
+    litellm_params:
+      model: "openai/Wolinet Voice"
+      api_base: "http://127.0.0.1:8090/v1"
+      api_key: "EMPTY"
+    model_info:
+      id: "wolinet-alias-chat"
+      mode: chat
+      base_model: "Wolinet Voice"
+
   # Native Image Generation Models (Gemini & OpenAI DALL-E Compatible)
   - model_name: "dall-e-3"
     litellm_params:
@@ -406,6 +436,8 @@ litellm_settings:
     # --------------------------------------------------------------------------
     # Sovereign Voice Engine (Wolinet Voice)
     # --------------------------------------------------------------------------
+    "Wolinet": "Wolinet Voice"
+    "wolinet": "Wolinet Voice"
     "Wolinet Voice": "Wolinet Voice"
     "wolinet-voice": "Wolinet Voice"
     "wolinet-voice-v1": "Wolinet Voice"
@@ -481,6 +513,10 @@ router_settings:
     - "wolinet-coder": ["Wolinex Coder", "Wolinet Pro", "Wolinet Max"]
     - "Wolinet Pro": ["Wolinex Coder", "Wolinet Max"]
     - "wolinet-pro": ["Wolinex Coder", "Wolinet Max"]
+    - "Wolinet Voice": ["Wolinet Pro", "Wolinet Max"]
+    - "wolinet-voice": ["Wolinet Pro", "Wolinet Max"]
+    - "Wolinet": ["Wolinet Pro", "Wolinet Max"]
+    - "wolinet": ["Wolinet Pro", "Wolinet Max"]
     - "gemini-cloud-preview": ["Wolinet Max Pro", "Wolinet Pro"]
     - "gemini-3.8-flash": ["Wolinet Max Pro", "Wolinet Pro"]
     - "gemini-3.5-flash": ["Wolinet Max Pro", "Wolinet Pro"]
