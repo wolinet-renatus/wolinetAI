@@ -24,7 +24,6 @@
 	}
 
 	// State
-	let selectedEngine = 'sauti'; // 'sauti' | 'underdog'
 	let selectedVoice = 'Renatus'; // 'Renatus' | 'Witness'
 	let inputText =
 		'Mimi ni Renatus Bernardo, mwanzilishi wa Wolinet AI, nawakaribisha wote kuja na kutumia mifumo yetu ya bei nafuu, tuliyoijenga kwa ajili yenu na kwa lugha adhimu yetu ya Kiswahili.';
@@ -46,26 +45,22 @@
 	const presets = [
 		{
 			title: 'Founder Welcome (Swahili)',
-			engine: 'sauti',
 			voice: 'Renatus',
 			text: 'Mimi ni Renatus Bernardo, mwanzilishi wa Wolinet AI, nawakaribisha wote kuja na kutumia mifumo yetu ya bei nafuu, tuliyoijenga kwa ajili yenu na kwa lugha adhimu yetu ya Kiswahili.'
 		},
 		{
 			title: 'Wolinet Sovereign AI (Swahili)',
-			engine: 'sauti',
 			voice: 'Witness',
 			text: 'Wolinet AI inaleta mageuzi ya kiteknolojia barani Afrika kwa kutoa miundombinu huru ya akili mnemba inayozungumza na kuelewa Kiswahili fasaha.'
 		},
 		{
 			title: 'Enterprise Platform (English)',
-			engine: 'underdog',
 			voice: 'Renatus',
 			text: 'Welcome to Wolinet AI, Africa’s sovereign intelligence platform offering frontier AI infrastructure, low latency, and native language understanding.'
 		}
 	];
 
 	function applyPreset(p: (typeof presets)[0]) {
-		selectedEngine = p.engine;
 		selectedVoice = p.voice;
 		inputText = p.text;
 	}
@@ -91,8 +86,8 @@
 			generationTimeSeconds += 1;
 		}, 1000);
 
-		const modelName = selectedEngine === 'underdog' ? 'underdog-woof' : 'Wolinet Voice';
-		const engineLabel = selectedEngine === 'underdog' ? 'Underdog-Woof (English)' : 'Sauti-TTS (Kiswahili)';
+		const modelName = 'Wolinet Voice';
+		const engineLabel = 'Wolinet Voice (24kHz Sovereign Neural Speech)';
 
 		try {
 			const token = localStorage.token || '';
@@ -274,57 +269,25 @@
 
 		<!-- Configuration Grid -->
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-			<!-- Sovereign Engine Selector -->
-			<div class="p-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-850 space-y-3">
+			<!-- Sovereign Engine Card -->
+			<div class="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/10 space-y-3">
 				<div class="flex items-center justify-between">
 					<div class="text-sm font-medium text-gray-900 dark:text-gray-100">
-						Language & Engine
+						Sovereign Voice Model
 					</div>
-					<span class="text-xs text-gray-500 dark:text-gray-400">Backend Sovereign Models</span>
+					<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+						Active
+					</span>
 				</div>
 
-				<div class="grid grid-cols-2 gap-2">
-					<button
-						type="button"
-						class="flex flex-col p-3 rounded-xl border text-left transition cursor-pointer {selectedEngine ===
-						'sauti'
-							? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 ring-1 ring-emerald-500'
-							: 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'}"
-						on:click={() => {
-							selectedEngine = 'sauti';
-						}}
-					>
-						<div class="flex items-center justify-between">
-							<span class="text-sm font-semibold text-gray-900 dark:text-gray-100">Kiswahili</span>
-							{#if selectedEngine === 'sauti'}
-								<span class="size-2 rounded-full bg-emerald-500"></span>
-							{/if}
-						</div>
-						<span class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-							Sauti-TTS (24kHz DiT Neural Engine)
-						</span>
-					</button>
-
-					<button
-						type="button"
-						class="flex flex-col p-3 rounded-xl border text-left transition cursor-pointer {selectedEngine ===
-						'underdog'
-							? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 ring-1 ring-emerald-500'
-							: 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'}"
-						on:click={() => {
-							selectedEngine = 'underdog';
-						}}
-					>
-						<div class="flex items-center justify-between">
-							<span class="text-sm font-semibold text-gray-900 dark:text-gray-100">English</span>
-							{#if selectedEngine === 'underdog'}
-								<span class="size-2 rounded-full bg-emerald-500"></span>
-							{/if}
-						</div>
-						<span class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-							Underdog-Woof (Fast INT8 Vocoder)
-						</span>
-					</button>
+				<div class="p-3 rounded-xl border border-emerald-500/50 bg-white dark:bg-gray-850 shadow-xs">
+					<div class="flex items-center justify-between">
+						<span class="text-sm font-semibold text-gray-900 dark:text-gray-100">Wolinet Voice</span>
+						<span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+					</div>
+					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+						Unified Sovereign Neural Speech • 24kHz Studio Broadcast & Natural East African Cadence
+					</p>
 				</div>
 			</div>
 
@@ -334,7 +297,7 @@
 					<div class="text-sm font-medium text-gray-900 dark:text-gray-100">
 						Voice Persona
 					</div>
-					<span class="text-xs text-gray-500 dark:text-gray-400">Gender & Persona</span>
+					<span class="text-xs text-gray-500 dark:text-gray-400">Renatus (Male) • Witness / Angela (Female)</span>
 				</div>
 
 				<div class="grid grid-cols-2 gap-2">
@@ -568,3 +531,4 @@
 		{/if}
 	</div>
 </div>
+

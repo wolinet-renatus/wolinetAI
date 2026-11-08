@@ -121,11 +121,13 @@ models/**/*.bin
 models/**/*.safetensors
 models/**/*.pt
 models/**/*.onnx
+models/**/*.wav
 models/*.gguf
 models/*.bin
 models/*.safetensors
 models/*.pt
 models/*.onnx
+models/*.wav
 !models/registrations/
 !models/configs/
 !models/checkpoints/**/README.md
@@ -135,11 +137,13 @@ inference/models/**/*.bin
 inference/models/**/*.safetensors
 inference/models/**/*.pt
 inference/models/**/*.onnx
+inference/models/**/*.wav
 inference/models/*.gguf
 inference/models/*.bin
 inference/models/*.safetensors
 inference/models/*.pt
 inference/models/*.onnx
+inference/models/*.wav
 !inference/models/registrations/
 !inference/models/configs/
 !inference/models/checkpoints/**/README.md

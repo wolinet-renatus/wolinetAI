@@ -1407,40 +1407,6 @@ class RESTfulAPI(CancelMixin):
                 except Exception:
                     pass
 
-            # Check if resident in Voice-RS (:8090)
-            if "wolinet-voice" not in models:
-                try:
-                    import urllib.request
-                    voice_req = urllib.request.Request(
-                        "http://127.0.0.1:8090/health",
-                        headers={"User-Agent": "Mitambo/1.0"},
-                    )
-                    with urllib.request.urlopen(voice_req, timeout=0.2) as resp:
-                        if resp.status == 200:
-                            models["wolinet-voice"] = {
-                                "id": "wolinet-voice",
-                                "object": "model",
-                                "created": 0,
-                                "owned_by": "xinference",
-                                "model_type": "audio",
-                                "address": "127.0.0.1:8090",
-                                "accelerators": ["Rust SIMD / AVX2 Vocoder"],
-                                "model_name": "Wolinet Voice",
-                                "model_lang": ["sw", "en"],
-                                "model_ability": ["text2audio"],
-                                "model_description": "Wolinet AI Sovereign Voice Engine (24kHz Studio Broadcast & Natural East African Cadence) — Developed and trained by Wolinet Technology.",
-                                "model_format": "safetensors",
-                                "model_size_in_billions": "0_1",
-                                "model_family": "wolinet-voice",
-                                "quantization": "FP32",
-                                "context_length": 4096,
-                                "strict_system_first": False,
-                                "model_engine": "voice-rs / PyTorch Core",
-                                "replica": 1,
-                            }
-                except Exception:
-                    pass
-
             model_list = []
             for model_id, model_info in models.items():
                 self._uid_to_model_name[model_id] = model_info.get(
@@ -1523,27 +1489,6 @@ class RESTfulAPI(CancelMixin):
 
     async def describe_model(self, model_uid: str) -> JSONResponse:
         try:
-            if model_uid in ("wolinet-voice", "Wolinet Voice"):
-                return JSONResponse(
-                    content={
-                        "id": "wolinet-voice",
-                        "model_uid": "wolinet-voice",
-                        "model_name": "Wolinet Voice",
-                        "model_type": "audio",
-                        "model_ability": ["text2audio"],
-                        "address": "127.0.0.1:8090",
-                        "accelerators": ["Rust SIMD / AVX2 Vocoder"],
-                        "model_description": "Wolinet AI Sovereign Voice Engine (24kHz Studio Broadcast & Natural East African Cadence) — Developed and trained by Wolinet Technology.",
-                        "model_format": "safetensors",
-                        "model_size_in_billions": "0_1",
-                        "model_family": "wolinet-voice",
-                        "quantization": "FP32",
-                        "context_length": 4096,
-                        "strict_system_first": False,
-                        "model_engine": "voice-rs / PyTorch Core",
-                        "replica": 1,
-                    }
-                )
             data = await (await self._get_supervisor_ref()).describe_running_model(
                 model_uid
             )
@@ -1704,44 +1649,6 @@ class RESTfulAPI(CancelMixin):
             infos = await (await self._get_supervisor_ref()).get_instance_info(
                 model_name, model_uid
             )
-            if model_uid in (None, "wolinet-voice", "Wolinet Voice") and (
-                model_name in (None, "wolinet-voice", "Wolinet Voice")
-            ):
-                try:
-                    import urllib.request
-                    voice_req = urllib.request.Request(
-                        "http://127.0.0.1:8090/health",
-                        headers={"User-Agent": "Mitambo/1.0"},
-                    )
-                    with urllib.request.urlopen(voice_req, timeout=0.2) as resp:
-                        if resp.status == 200:
-                            infos.append(
-                                {
-                                    "model_name": "Wolinet Voice",
-                                    "model_uid": "wolinet-voice",
-                                    "model_version": None,
-                                    "model_ability": ["text2audio"],
-                                    "replica": 1,
-                                    "status": "READY",
-                                    "instance_created_ts": 1794098965,
-                                    "n_worker": 1,
-                                    "replica_statuses": [
-                                        {
-                                            "replica_id": 0,
-                                            "replica_model_uid": "wolinet-voice-rep0",
-                                            "worker_address": "127.0.0.1:8090",
-                                            "status": "READY",
-                                            "model_state": "ready",
-                                            "created_ts": 1794098965,
-                                            "error_message": None,
-                                            "replica_uid": None,
-                                            "gpu_idx": None,
-                                        }
-                                    ],
-                                }
-                            )
-                except Exception:
-                    pass
         except Exception as e:
             logger.error(str(e), exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
@@ -1749,23 +1656,6 @@ class RESTfulAPI(CancelMixin):
 
     async def get_model_replicas(self, model_uid: str) -> JSONResponse:
         """Get detailed status of all replicas for a model"""
-        if model_uid in ("wolinet-voice", "Wolinet Voice"):
-            return JSONResponse(
-                content=[
-                    {
-                        "replica_id": 0,
-                        "replica_model_uid": "wolinet-voice-rep0",
-                        "worker_address": "127.0.0.1:8090",
-                        "model_address": "127.0.0.1:8090",
-                        "accelerators": ["CPU / AVX2 / Accelerate"],
-                        "status": "READY",
-                        "created_ts": 1794098965,
-                        "error_message": None,
-                        "replica_uid": None,
-                        "gpu_idx": None,
-                    }
-                ]
-            )
         try:
             replicas = await (await self._get_supervisor_ref()).get_replica_statuses(
                 model_uid
@@ -1906,8 +1796,6 @@ class RESTfulAPI(CancelMixin):
             raise HTTPException(status_code=500, detail=str(e))
 
     async def terminate_model(self, model_uid: str) -> JSONResponse:
-        if model_uid in ("wolinet-voice", "Wolinet Voice"):
-            return JSONResponse(content={"model_uid": model_uid})
         try:
             assert self._app is not None
             await (await self._get_supervisor_ref()).terminate_model(model_uid)
@@ -2866,30 +2754,6 @@ class RESTfulAPI(CancelMixin):
         self._set_trace_model_type("audio")
         self._check_model_access(request, model_uid, "audio")
 
-        if model_uid in ("wolinet-voice", "Wolinet Voice"):
-            try:
-                voice_url = "http://127.0.0.1:8090/v1/audio/speech"
-                async with httpx.AsyncClient(timeout=60.0) as client:
-                    resp = await client.post(
-                        voice_url,
-                        json={
-                            "model": "Wolinet Voice",
-                            "input": body.input,
-                            "voice": body.voice or "Renatus",
-                            "response_format": body.response_format or "wav",
-                            "speed": body.speed or 1.0,
-                        },
-                    )
-                if resp.status_code == 200:
-                    media_type = resp.headers.get("content-type", _audio_response_media_type(body.response_format))
-                    return Response(media_type=media_type, content=resp.content)
-                raise HTTPException(status_code=resp.status_code, detail=resp.text)
-            except HTTPException:
-                raise
-            except Exception as e:
-                logger.error("Failed to proxy speech request for %s: %s", model_uid, e)
-                raise HTTPException(status_code=500, detail=str(e))
-
         model = await require_model(
             self._get_supervisor_ref, model_uid, self._report_error_event
         )
@@ -2943,6 +2807,26 @@ class RESTfulAPI(CancelMixin):
             await self._report_error_event(model_uid, str(e))
             self.handle_request_limit_error(e)
             raise HTTPException(status_code=500, detail=str(e))
+
+    async def list_audio_voices(self, request: Request) -> JSONResponse:
+        return JSONResponse(
+            content={
+                "voices": [
+                    {
+                        "id": "Renatus",
+                        "name": "Renatus (Male Native)",
+                        "gender": "male",
+                        "language": "sw",
+                    },
+                    {
+                        "id": "Witness",
+                        "name": "Witness (Female Native)",
+                        "gender": "female",
+                        "language": "sw",
+                    },
+                ]
+            }
+        )
 
     async def create_images(self, request: Request) -> Response:
         body = TextToImageRequest.parse_obj(await request.json())
@@ -4407,12 +4291,6 @@ class RESTfulAPI(CancelMixin):
 
     async def get_model_events(self, model_uid: str) -> JSONResponse:
         try:
-            if model_uid in ("wolinet-voice", "Wolinet Voice"):
-                return JSONResponse(content=[{
-                    "event_type": "INFO",
-                    "event_ts": int(time.time()),
-                    "event_content": "Wolinet Sovereign Voice Engine active on 127.0.0.1:8090 (24kHz Metal GPU / Native Vocoder)"
-                }])
             event_collector_ref = await self._get_event_collector_ref()
             events = await event_collector_ref.get_model_events(model_uid)
             return JSONResponse(content=events)

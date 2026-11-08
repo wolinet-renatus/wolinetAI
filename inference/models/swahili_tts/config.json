@@ -1,0 +1,17 @@
+{
+  "model_type": "f5_tts_dit",
+  "architecture": "DiT",
+  "model_cfg": {
+    "dim": 1024,
+    "depth": 22,
+    "heads": 16,
+    "ff_mult": 2,
+    "text_dim": 512,
+    "conv_layers": 4
+  },
+  "mel_spec_type": "vocos",
+  "target_sample_rate": 24000,
+  "inference_weight_file": "model.safetensors",
+  "use_ema": true,
+  "notes": "model.safetensors contains cleaned EMA inference weights (ema_model. prefix stripped, mel buffer keys dropped), matching F5-TTS load_checkpoint(use_ema=True)."
+}

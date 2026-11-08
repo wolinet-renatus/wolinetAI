@@ -210,31 +210,11 @@ model_list:
   - model_name: "Wolinet Voice"
     litellm_params:
       model: "openai/Wolinet Voice"
-      api_base: "http://127.0.0.1:8090/v1"
-      api_key: "EMPTY"
+      api_base: "http://127.0.0.1:9997/v1"
+      api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
     model_info:
       id: "wolinet-voice"
       mode: audio_speech
-      base_model: "Wolinet Voice"
-
-  - model_name: "underdog-woof"
-    litellm_params:
-      model: "openai/underdog-woof"
-      api_base: "http://127.0.0.1:8090/v1"
-      api_key: "EMPTY"
-    model_info:
-      id: "underdog-woof"
-      mode: audio_speech
-      base_model: "underdog-woof"
-
-  - model_name: "Wolinet Voice"
-    litellm_params:
-      model: "openai/Wolinet Voice"
-      api_base: "http://127.0.0.1:8090/v1"
-      api_key: "EMPTY"
-    model_info:
-      id: "wolinet-voice-chat"
-      mode: chat
       base_model: "Wolinet Voice"
 
   # Native Image Generation Models (Gemini & OpenAI DALL-E Compatible)
@@ -317,9 +297,9 @@ general_settings:
   - path: /defense/inspect
     target: "http://host.docker.internal:8088"
   - path: /v1/audio/voices
-    target: "http://127.0.0.1:8090/v1/audio/voices"
+    target: "http://127.0.0.1:9997/v1/audio/voices"
   - path: /audio/voices
-    target: "http://127.0.0.1:8090/audio/voices"
+    target: "http://127.0.0.1:9997/audio/voices"
   store_model_in_db: true
   disable_env_credential_login: true
   hide_default_credentials_hint: true

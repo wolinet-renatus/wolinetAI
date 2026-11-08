@@ -8,8 +8,21 @@ from importlib.resources import files
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
-import jieba
-from pypinyin import lazy_pinyin, Style
+try:
+    import jieba
+except ImportError:
+    try:
+        import rjieba as jieba
+    except ImportError:
+        jieba = None
+
+try:
+    from pypinyin import lazy_pinyin, Style
+except ImportError:
+    lazy_pinyin = None
+
+    class Style:
+        TONE3 = None
 
 
 # seed everything

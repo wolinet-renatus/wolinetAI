@@ -39,3 +39,15 @@ def register_routes(api: "RESTfulAPI") -> None:
         methods=["POST"],
         dependencies=([Security(auth, scopes=["models:read"])] if is_auth else None),
     )
+    router.add_api_route(
+        "/v1/audio/voices",
+        api.list_audio_voices,
+        methods=["GET"],
+        dependencies=([Security(auth, scopes=["models:read"])] if is_auth else None),
+    )
+    router.add_api_route(
+        "/audio/voices",
+        api.list_audio_voices,
+        methods=["GET"],
+        dependencies=([Security(auth, scopes=["models:read"])] if is_auth else None),
+    )

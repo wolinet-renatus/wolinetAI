@@ -1,0 +1,29 @@
+[
+  {
+    "version": 2,
+    "model_name": "Wolinet-Voice",
+    "model_family": "F5-TTS",
+    "engine": "PyTorch",
+    "model_format": "safetensors",
+    "model_ability": [
+      "text2audio",
+      "text2audio_zero_shot",
+      "text2audio_voice_cloning"
+    ],
+    "multilingual": true,
+    "model_lang": [
+      "sw",
+      "en"
+    ],
+    "model_src": {
+      "huggingface": {
+        "model_id": "msingiai/sauti-tts-sm",
+        "model_revision": "main"
+      }
+    },
+    "default_model_config": {
+      "vocoder_name": "vocos"
+    },
+    "model_description": "Wolinet AI Sovereign Voice Engine (24kHz Studio Broadcast & Natural East African Cadence) — Developed and trained by Wolinet Technology."
+  }
+]
