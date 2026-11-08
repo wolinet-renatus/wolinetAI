@@ -428,8 +428,6 @@ litellm_settings:
     "deepseek-v4-flash": "Scorpio"
     "deepseek-v4-flash-vision-exp": "Scorpio"
     "deepseek-chat": "Scorpio"
-    "deepseek-coder": "Scorpio"
-    "deepseek": "Scorpio"
     "deepseek-v4-pro": "Scorpio Pro"
     "deepseek-pro": "Scorpio Pro"
     "deepseek-reasoner": "Scorpio Pro"

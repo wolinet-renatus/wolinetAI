@@ -223,7 +223,13 @@ class XllamaCppModel(LLM, ChatModelMixin):
                 "upgrade to xllamacpp>=2026.6.9713"
             )
 
-        params.speculative.types = [mtp]
+        spec_type = mtp
+        if "dflash" in draft_model_path.lower():
+            spec_type = getattr(common_speculative_type, "COMMON_SPECULATIVE_TYPE_DRAFT_DFLASH", mtp)
+        elif not getattr(self.model_family, "model_name", "").startswith("gemma"):
+            spec_type = getattr(common_speculative_type, "COMMON_SPECULATIVE_TYPE_DRAFT_SIMPLE", mtp)
+
+        params.speculative.types = [spec_type]
         params.speculative.draft.mparams.path = draft_model_path
         from ..core import parse_num_speculative_tokens
 
@@ -379,6 +385,22 @@ class XllamaCppModel(LLM, ChatModelMixin):
                 if k in self.DRAFT_OPTION_KEYS:
                     continue
                 try:
+                    # High-throughput parameter coercion
+                    if k in ("cache_type_k", "cache_type_v"):
+                        if isinstance(v, str):
+                            v_lower = v.lower().strip()
+                            type_map = {
+                                "f32": 0, "f16": 1, "q4_0": 2, "q4_1": 3,
+                                "q5_0": 6, "q5_1": 7, "q8_0": 8, "q8_1": 9,
+                            }
+                            v = type_map.get(v_lower, 8 if "q8" in v_lower else (2 if "q4" in v_lower else 1))
+                    elif k == "flash_attn_type":
+                        if isinstance(v, str):
+                            v_lower = v.lower().strip()
+                            v = 1 if v_lower in ("1", "true", "enabled", "on") else (0 if v_lower in ("0", "false", "disabled", "off") else -1)
+                        elif isinstance(v, bool):
+                            v = 1 if v else 0
+
                     if "." in k:
                         parts = k.split(".")
                         sub_param = params
@@ -391,6 +413,12 @@ class XllamaCppModel(LLM, ChatModelMixin):
                         logger.debug("Skipping unsupported param %s = %s", k, v)
                 except Exception as e:
                     logger.error("Failed to set the param %s = %s, error: %s", k, v, e)
+
+            # Apply speculative drafter if supplied in options
+            try:
+                self._apply_draft_model(params, *draft_options)
+            except Exception as e:
+                logger.warning("Could not apply draft model %s: %s", draft_options, e)
             physical_cores = os.cpu_count() or 1
             try:
                 import psutil
@@ -444,12 +472,35 @@ class XllamaCppModel(LLM, ChatModelMixin):
             self._executor = concurrent.futures.ThreadPoolExecutor(
                 max_workers=max(10, n_threads)
             )
-        except AssertionError:
-            raise RuntimeError(f"Load model {self.model_family.model_name} failed")
+        except AssertionError as ae:
+            self._llm = None
+            if self._executor is not None:
+                self._executor.shutdown(wait=False)
+                self._executor = None
+            raise RuntimeError(f"Load model {self.model_family.model_name} failed: {ae}")
+        except Exception as e:
+            self._llm = None
+            if self._executor is not None:
+                self._executor.shutdown(wait=False)
+                self._executor = None
+            logger.exception("Failed to initialize llama.cpp Server for %s: %s", self.model_uid, e)
+            raise
+
+    def _check_is_ready(self) -> None:
+        if self._llm is None:
+            raise RuntimeError(
+                f"Model '{self.model_uid}' llama.cpp engine is not loaded or has been terminated. "
+                "The internal Server instance is None."
+            )
+        if self._executor is None:
+            raise RuntimeError(
+                f"Model '{self.model_uid}' thread pool executor is not initialized."
+            )
 
     def generate(
         self, prompt: str, generate_config: Optional[dict] = None
     ) -> Union[Completion, Iterator[CompletionChunk]]:
+        self._check_is_ready()
         generate_config = generate_config or {}
         _normalize_max_tokens(generate_config)
         _apply_response_format(generate_config)
@@ -470,6 +521,10 @@ class XllamaCppModel(LLM, ChatModelMixin):
                 }
             )
             try:
+                if self._llm is None:
+                    raise RuntimeError(
+                        f"Model '{self.model_uid}' llama.cpp Server instance is None during execution."
+                    )
 
                 def _callback(res):
                     if type(res) is list:
@@ -486,7 +541,8 @@ class XllamaCppModel(LLM, ChatModelMixin):
                 q.put(_Error(str(ex)))
             q.put(_Done)
 
-        assert self._executor
+        if self._executor is None:
+            raise RuntimeError(f"Model '{self.model_uid}' executor is None.")
         self._executor.submit(_handle_completion)
 
         if stream:
@@ -565,6 +621,7 @@ class XllamaCppModel(LLM, ChatModelMixin):
         messages: List[dict],
         generate_config: Optional[dict] = None,
     ) -> Union[ChatCompletion, Iterator[ChatCompletionChunk]]:
+        self._check_is_ready()
         generate_config = generate_config or {}
         _normalize_max_tokens(generate_config)
         _apply_response_format(generate_config)
@@ -599,6 +656,10 @@ class XllamaCppModel(LLM, ChatModelMixin):
                 data["chat_template_kwargs"] = chat_template_kwargs
 
             try:
+                if self._llm is None:
+                    raise RuntimeError(
+                        f"Model '{self.model_uid}' llama.cpp Server instance is None during execution."
+                    )
 
                 def _callback(res):
                     if type(res) is list:
@@ -615,7 +676,8 @@ class XllamaCppModel(LLM, ChatModelMixin):
                 q.put(_Error(str(ex)))
             q.put(_Done)
 
-        assert self._executor
+        if self._executor is None:
+            raise RuntimeError(f"Model '{self.model_uid}' executor is None.")
         self._executor.submit(_handle_chat_completion)
 
         if stream:
@@ -651,3 +713,18 @@ class XllamaCppModel(LLM, ChatModelMixin):
                 raise Exception(_error_message(r.msg))
             r = self._normalize_disabled_thinking_reasoning_content(r, tools)
             return self._to_chat_completion(r, self.reasoning_parser)
+
+    def stop(self) -> None:
+        """Gracefully shut down the executor and release the llama.cpp engine."""
+        if self._executor is not None:
+            try:
+                self._executor.shutdown(wait=False, cancel_futures=True)
+            except Exception as e:
+                logger.warning("Error shutting down executor for %s: %s", self.model_uid, e)
+            self._executor = None
+        self._llm = None
+        logger.info("XllamaCppModel %s stopped successfully", self.model_uid)
+
+    def close(self) -> None:
+        self.stop()
+
