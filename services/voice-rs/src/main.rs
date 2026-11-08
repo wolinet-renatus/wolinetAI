@@ -170,8 +170,10 @@ async fn speech_handler(
 ) -> Result<Response, (StatusCode, String)> {
     let voice_lower = req.voice.to_lowercase();
 
-    // Unified sovereign voice model
-    req.model = "Wolinet Voice".to_string();
+    // Unified sovereign voice model default
+    if req.model.trim().is_empty() {
+        req.model = "Wolinet Voice".to_string();
+    }
     if req.response_format.is_empty() {
         req.response_format = "mp3".to_string();
     }

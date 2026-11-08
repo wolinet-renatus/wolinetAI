@@ -217,6 +217,16 @@ model_list:
       mode: audio_speech
       base_model: "Wolinet Voice"
 
+  - model_name: "underdog-woof"
+    litellm_params:
+      model: "openai/underdog-woof"
+      api_base: "http://127.0.0.1:8090/v1"
+      api_key: "EMPTY"
+    model_info:
+      id: "underdog-woof"
+      mode: audio_speech
+      base_model: "underdog-woof"
+
   - model_name: "Wolinet Voice"
     litellm_params:
       model: "openai/Wolinet Voice"
@@ -420,7 +430,6 @@ litellm_settings:
     "wolinet-voice": "Wolinet Voice"
     "wolinet-voice-v1": "Wolinet Voice"
     "swahili-voice-ad": "Wolinet Voice"
-    "underdog-woof": "Wolinet Voice"
     "tts-1": "Wolinet Voice"
     "tts-1-hd": "Wolinet Voice"
   extra_spend_tag_headers:
