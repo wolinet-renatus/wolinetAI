@@ -1,6 +1,9 @@
 import { EndpointType } from "@/components/chat_ui/mode_endpoint_mapping";
 
 export const OPEN_AI_VOICES = {
+  RENATUS: "Renatus",
+  WITNESS: "Witness",
+  ANGELA: "angela",
   ALLOY: "alloy",
   ASH: "ash",
   BALAD: "ballad",
@@ -16,6 +19,9 @@ export const OPEN_AI_VOICES = {
 export type OpenAIVoice = (typeof OPEN_AI_VOICES)[keyof typeof OPEN_AI_VOICES];
 
 export const OPEN_AI_VOICE_LABELS = {
+  RENATUS: "Renatus - Male (Sovereign Swahili Studio Voice)",
+  WITNESS: "Witness - Female (Sovereign Swahili Natural Voice)",
+  ANGELA: "Angela - Female (Sovereign Swahili Broadcast Voice)",
   ALLOY: "Alloy - Professional and confident",
   ASH: "Ash - Casual and relaxed",
   BALAD: "Ballad - Smooth and melodic",

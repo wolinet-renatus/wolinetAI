@@ -52,7 +52,7 @@ import { makeOpenAIImageGenerationRequest } from "../../llm_calls/image_generati
 import { makeOpenAIResponsesRequest } from "@/components/llm_calls/responses_api";
 import { makeInteractionsRequest } from "../../llm_calls/interactions_api";
 import AdditionalModelSettings from "./AdditionalModelSettings";
-import { OPEN_AI_VOICE_SELECT_OPTIONS, OpenAIVoice } from "./chatConstants";
+import { OPEN_AI_VOICES, OPEN_AI_VOICE_SELECT_OPTIONS, OpenAIVoice } from "./chatConstants";
 import ChatComposer, { CodeInterpreterToggle } from "./ChatComposer";
 import ChatImageUpload from "./ChatImageUpload";
 import { createChatDisplayMessage, createChatMultimodalMessage } from "./ChatImageUtils";
@@ -230,7 +230,7 @@ const ChatUI: React.FC<ChatUIProps> = ({
   const customHeaders = useMemo(() => customHeadersFromPairs(customHeaderPairs), [customHeaderPairs]);
   const [selectedVoice, setSelectedVoice] = useState<OpenAIVoice>(() => {
     const saved = sessionStorage.getItem("selectedVoice");
-    if (!saved) return "alloy";
+    if (!saved) return OPEN_AI_VOICES.RENATUS;
     try {
       return JSON.parse(saved) as OpenAIVoice;
     } catch {

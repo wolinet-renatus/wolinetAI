@@ -227,26 +227,6 @@ model_list:
       mode: chat
       base_model: "Wolinet Voice"
 
-  - model_name: "Wolinet"
-    litellm_params:
-      model: "openai/Wolinet Voice"
-      api_base: "http://127.0.0.1:8090/v1"
-      api_key: "EMPTY"
-    model_info:
-      id: "wolinet-alias"
-      mode: audio_speech
-      base_model: "Wolinet Voice"
-
-  - model_name: "Wolinet"
-    litellm_params:
-      model: "openai/Wolinet Voice"
-      api_base: "http://127.0.0.1:8090/v1"
-      api_key: "EMPTY"
-    model_info:
-      id: "wolinet-alias-chat"
-      mode: chat
-      base_model: "Wolinet Voice"
-
   # Native Image Generation Models (Gemini & OpenAI DALL-E Compatible)
   - model_name: "dall-e-3"
     litellm_params:

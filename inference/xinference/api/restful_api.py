@@ -2865,6 +2865,31 @@ class RESTfulAPI(CancelMixin):
         self._set_trace_model(model_uid)
         self._set_trace_model_type("audio")
         self._check_model_access(request, model_uid, "audio")
+
+        if model_uid in ("wolinet-voice", "Wolinet Voice"):
+            try:
+                voice_url = "http://127.0.0.1:8090/v1/audio/speech"
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    resp = await client.post(
+                        voice_url,
+                        json={
+                            "model": "Wolinet Voice",
+                            "input": body.input,
+                            "voice": body.voice or "Renatus",
+                            "response_format": body.response_format or "wav",
+                            "speed": body.speed or 1.0,
+                        },
+                    )
+                if resp.status_code == 200:
+                    media_type = resp.headers.get("content-type", _audio_response_media_type(body.response_format))
+                    return Response(media_type=media_type, content=resp.content)
+                raise HTTPException(status_code=resp.status_code, detail=resp.text)
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error("Failed to proxy speech request for %s: %s", model_uid, e)
+                raise HTTPException(status_code=500, detail=str(e))
+
         model = await require_model(
             self._get_supervisor_ref, model_uid, self._report_error_event
         )
@@ -4382,6 +4407,12 @@ class RESTfulAPI(CancelMixin):
 
     async def get_model_events(self, model_uid: str) -> JSONResponse:
         try:
+            if model_uid in ("wolinet-voice", "Wolinet Voice"):
+                return JSONResponse(content=[{
+                    "event_type": "INFO",
+                    "event_ts": int(time.time()),
+                    "event_content": "Wolinet Sovereign Voice Engine active on 127.0.0.1:8090 (24kHz Metal GPU / Native Vocoder)"
+                }])
             event_collector_ref = await self._get_event_collector_ref()
             events = await event_collector_ref.get_model_events(model_uid)
             return JSONResponse(content=events)
