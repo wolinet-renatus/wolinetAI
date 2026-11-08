@@ -32,7 +32,7 @@ fn default_voice() -> String {
     "Renatus".to_string()
 }
 fn default_format() -> String {
-    "wav".to_string()
+    "mp3".to_string()
 }
 fn default_speed() -> f32 {
     1.0
@@ -172,6 +172,9 @@ async fn speech_handler(
 
     // Unified sovereign voice model
     req.model = "Wolinet Voice".to_string();
+    if req.response_format.is_empty() {
+        req.response_format = "mp3".to_string();
+    }
 
     // Clean dual-voice mapping:
     // Female voice: Witness (with Angela alias)

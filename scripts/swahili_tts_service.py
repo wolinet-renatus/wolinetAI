@@ -36,20 +36,20 @@ class SpeechRequest(BaseModel):
     model: Optional[str] = "Wolinet Voice"
     input: str
     voice: Optional[str] = "Renatus"
-    response_format: Optional[str] = "wav"
+    response_format: Optional[str] = "mp3"
     speed: Optional[float] = 1.0
     nfe_step: Optional[int] = None
 
 
-def format_audio_response(audio_data: np.ndarray, sample_rate: int, fmt: Optional[str] = "wav") -> Response:
-    format_key = (fmt or "wav").lower()
+def format_audio_response(audio_data: np.ndarray, sample_rate: int, fmt: Optional[str] = "mp3") -> Response:
+    format_key = (fmt or "mp3").lower()
     media_map = {
-        "wav": ("WAV", "audio/wav"),
         "mp3": ("MP3", "audio/mpeg"),
+        "wav": ("WAV", "audio/wav"),
         "flac": ("FLAC", "audio/flac"),
         "ogg": ("OGG", "audio/ogg"),
     }
-    sf_fmt, media_type = media_map.get(format_key, ("WAV", "audio/wav"))
+    sf_fmt, media_type = media_map.get(format_key, ("MP3", "audio/mpeg"))
     buffer = io.BytesIO()
     sf.write(buffer, audio_data, sample_rate, format=sf_fmt)
     buffer.seek(0)
