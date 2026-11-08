@@ -93,7 +93,7 @@ async fn main() {
         llm_backend_url,
         client: reqwest::Client::builder()
             .no_proxy()
-            .timeout(std::time::Duration::from_secs(60))
+            .timeout(std::time::Duration::from_secs(600))
             .build()
             .unwrap(),
     });

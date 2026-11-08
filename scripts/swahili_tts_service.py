@@ -155,6 +155,14 @@ def is_swahili_text(text: str) -> bool:
 def generate_speech(req: SpeechRequest):
     voice_key = (req.voice or "Renatus").lower()
 
+    # Underdog-Woof fast-path
+    if voice_key in ("juno", "mira") and voice_key in woof_voices:
+        try:
+            audio = woof_voices[voice_key](req.input)
+            return format_audio_response(audio, 24000, req.response_format)
+        except Exception as e:
+            print(f"[Woof fallback notice] {e}")
+
     if not sauti_model or not vocoder:
         raise HTTPException(status_code=503, detail="Wolinet Voice model is still initializing")
 
@@ -167,7 +175,7 @@ def generate_speech(req: SpeechRequest):
     if not speaker_profile:
         raise HTTPException(status_code=400, detail=f"Unknown voice: {req.voice}")
 
-    steps = req.nfe_step if req.nfe_step and req.nfe_step > 0 else int(os.environ.get("F5_NFE_STEPS", "16"))
+    steps = req.nfe_step if req.nfe_step and req.nfe_step > 0 else int(os.environ.get("F5_NFE_STEPS", "8"))
 
     try:
         audio, sample_rate, _ = infer_process(
