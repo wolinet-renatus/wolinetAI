@@ -121,6 +121,14 @@ else
     nohup "${ROOT_DIR}/.venv/bin/python" "${ROOT_DIR}/scripts/swahili_tts_service.py" > "${ROOT_DIR}/voice_service.log" 2>&1 &
 fi
 
+# 3.6 Start Sovereign Rust Voice Router (:8090)
+if curl -sf "http://127.0.0.1:8090/health" >/dev/null 2>&1; then
+    echo "[Voice-RS] Sovereign Rust Voice Engine is already running on port 8090."
+else
+    echo "[Voice-RS] Starting Sovereign Rust Voice Engine (Axum + Tokio) on port 8090..."
+    VOICE_RS_PORT=8090 nohup "${ROOT_DIR}/services/voice-rs/target/release/voice-rs" > "${ROOT_DIR}/services/voice-rs/voice-rs.log" 2>&1 &
+fi
+
 # 4. Start AI Gateway (LiteLLM)
 echo "[Gateway] Starting LiteLLM Gateway on port ${GATEWAY_PORT}..."
 exec "${ROOT_DIR}/gateway/run_gateway.sh"

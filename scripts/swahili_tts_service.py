@@ -41,6 +41,21 @@ class SpeechRequest(BaseModel):
     voice: Optional[str] = "juno"
     response_format: Optional[str] = "wav"
     speed: Optional[float] = 1.0
+    nfe_step: Optional[int] = None
+
+def format_audio_response(audio_data: np.ndarray, sample_rate: int, fmt: Optional[str] = "wav") -> Response:
+    format_key = (fmt or "wav").lower()
+    media_map = {
+        "wav": ("WAV", "audio/wav"),
+        "mp3": ("MP3", "audio/mpeg"),
+        "flac": ("FLAC", "audio/flac"),
+        "ogg": ("OGG", "audio/ogg"),
+    }
+    sf_fmt, media_type = media_map.get(format_key, ("WAV", "audio/wav"))
+    buffer = io.BytesIO()
+    sf.write(buffer, audio_data, sample_rate, format=sf_fmt)
+    buffer.seek(0)
+    return Response(content=buffer.read(), media_type=media_type)
 
 @app.on_event("startup")
 def startup_event():
@@ -117,10 +132,7 @@ def generate_speech(req: SpeechRequest):
             raise HTTPException(status_code=503, detail="Underdog-Woof model not loaded")
         try:
             audio = tts(req.input, seed=0)
-            buffer = io.BytesIO()
-            write_wav(buffer, audio)
-            buffer.seek(0)
-            return Response(content=buffer.read(), media_type="audio/wav")
+            return format_audio_response(audio, 24000, req.response_format)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Underdog-Woof synthesis failed: {str(e)}")
 
@@ -132,6 +144,8 @@ def generate_speech(req: SpeechRequest):
     if not speaker_profile:
         raise HTTPException(status_code=400, detail=f"Unknown voice: {req.voice}")
 
+    steps = req.nfe_step if req.nfe_step and req.nfe_step > 0 else int(os.environ.get("F5_NFE_STEPS", "16"))
+
     try:
         audio, sample_rate, _ = infer_process(
             ref_audio=speaker_profile["ref_audio"],
@@ -141,13 +155,10 @@ def generate_speech(req: SpeechRequest):
             vocoder=vocoder,
             mel_spec_type="vocos",
             speed=req.speed or 1.0,
-            nfe_step=32,
+            nfe_step=steps,
         )
 
-        buffer = io.BytesIO()
-        sf.write(buffer, audio, sample_rate, format="WAV")
-        buffer.seek(0)
-        return Response(content=buffer.read(), media_type="audio/wav")
+        return format_audio_response(audio, sample_rate, req.response_format)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Sauti-TTS synthesis failed: {str(e)}")
 
