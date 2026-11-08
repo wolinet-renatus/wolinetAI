@@ -1,13 +1,9 @@
 import io
 import json
 import os
-import re
 import sys
+from typing import Optional
 
-os.environ["F5_DEVICE"] = "cpu"
-os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
-
-# Add Underdog-Woof path
 UNDERDOG_PATH = "/Users/apple/Documents/wolinetai/models/underdog_woof"
 if UNDERDOG_PATH not in sys.path:
     sys.path.insert(0, UNDERDOG_PATH)
@@ -18,11 +14,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
-from typing import Optional
-
-from f5_tts.infer.utils_infer import infer_process, load_model, load_vocoder
-from f5_tts.model import DiT
-from underdog_woof import Woof, write_wav
+from underdog_woof import Woof
 
 app = FastAPI(title="Wolinet Sovereign Voice Synthesis Service")
 
@@ -30,19 +22,27 @@ MODEL_DIR = "/Users/apple/Documents/wolinetai/models/swahili_tts"
 CKPT_PATH = os.path.join(MODEL_DIR, "model.safetensors")
 SPEAKERS_CONFIG = os.path.join(MODEL_DIR, "speakers.json")
 
-# State
-vocoder = None
+woof_voices: dict[str, Woof] = {}
 sauti_model = None
-speakers_map = {}
-woof_voices = {}
+vocoder = None
+speakers_map: dict[str, dict[str, str]] = {}
+
 
 class SpeechRequest(BaseModel):
-    model: Optional[str] = "swahili-voice-ad"
+    model: Optional[str] = "Wolinet Voice"
     input: str
-    voice: Optional[str] = "juno"
+    voice: Optional[str] = "Renatus"
     response_format: Optional[str] = "wav"
     speed: Optional[float] = 1.0
     nfe_step: Optional[int] = None
+
+
+def change_speed(audio: np.ndarray, speed: float) -> np.ndarray:
+    if abs(speed - 1.0) < 0.01 or speed <= 0:
+        return audio
+    indices = np.arange(0, len(audio), speed)
+    return np.interp(indices, np.arange(len(audio)), audio).astype(np.float32)
+
 
 def format_audio_response(audio_data: np.ndarray, sample_rate: int, fmt: Optional[str] = "wav") -> Response:
     format_key = (fmt or "wav").lower()
@@ -58,55 +58,45 @@ def format_audio_response(audio_data: np.ndarray, sample_rate: int, fmt: Optiona
     buffer.seek(0)
     return Response(content=buffer.read(), media_type=media_type)
 
-@app.on_event("startup")
-def startup_event():
-    global vocoder, sauti_model, speakers_map, woof_voices
 
-    print("[Startup 1/3] Preloading ConwayResearch/Underdog-Woof (Juno and Mira)...")
-    try:
-        woof_voices["juno"] = Woof(voice="juno")
-        woof_voices["mira"] = Woof(voice="mira")
-        print("[Startup] Underdog-Woof initialized successfully!")
-    except Exception as e:
-        print(f"[Startup Warning] Could not initialize Underdog-Woof: {e}")
+def get_lazy_sauti_model():
+    global sauti_model, vocoder, speakers_map
+    if sauti_model is not None and vocoder is not None:
+        return sauti_model, vocoder
 
-    print("[Startup 2/3] Loading Vocos 24kHz neural vocoder...")
+    import torch
+    torch.set_num_threads(min(4, os.cpu_count() or 4))
+    from f5_tts.infer.utils_infer import load_model, load_vocoder
+    from f5_tts.model import DiT
+
     vocoder = load_vocoder(vocoder_name="vocos", is_local=False)
-
-    print("[Startup 3/3] Loading Sauti-TTS DiT model weights...")
     model_cfg = dict(dim=1024, depth=22, heads=16, ff_mult=2, text_dim=512, conv_layers=4)
     sauti_model = load_model(DiT, model_cfg, CKPT_PATH, mel_spec_type="vocos")
 
-    with open(SPEAKERS_CONFIG) as f:
-        speakers_data = json.load(f)
+    if os.path.exists(SPEAKERS_CONFIG):
+        with open(SPEAKERS_CONFIG) as f:
+            speakers_data = json.load(f)
+        for spk in speakers_data.get("speakers", []):
+            ref_file = os.path.join(MODEL_DIR, "references", spk["reference_wav"])
+            gender = spk.get("gender", "").lower()
+            profile = {"ref_audio": ref_file, "ref_text": spk["ref_text"]}
+            if gender == "male":
+                speakers_map["renatus"] = profile
+            elif spk.get("waxal_speaker_id") == 1:
+                speakers_map["witness"] = profile
 
-    for spk in speakers_data.get("speakers", []):
-        ref_file = os.path.join(MODEL_DIR, "references", spk["reference_wav"])
-        gender = spk.get("gender", "").lower()
-        profile = {
-            "ref_audio": ref_file,
-            "ref_text": spk["ref_text"],
-        }
+    return sauti_model, vocoder
 
-        if gender == "male":
-            speakers_map["Renatus"] = profile
-            speakers_map["renatus"] = profile
-            speakers_map["male"] = profile
-            speakers_map["baraka"] = profile
-            speakers_map["alloy"] = profile
-            speakers_map["onyx"] = profile
-            speakers_map["echo"] = profile
-        elif spk["waxal_speaker_id"] == 1:
-            speakers_map["Witness"] = profile
-            speakers_map["witness"] = profile
-            speakers_map["Angela"] = profile
-            speakers_map["angela"] = profile
-            speakers_map["female"] = profile
-            speakers_map["zawadi"] = profile
-            speakers_map["nova"] = profile
-            speakers_map["shimmer"] = profile
 
-    print("[Startup] Wolinet Sovereign Voice Service ready on port 8089!")
+@app.on_event("startup")
+def startup_event():
+    global woof_voices
+    try:
+        woof_voices["juno"] = Woof(voice="juno")
+        woof_voices["mira"] = Woof(voice="mira")
+    except Exception as e:
+        print(f"[Startup Warning] Could not initialize Underdog-Woof: {e}", file=sys.stderr)
+
 
 @app.get("/health")
 def health():
@@ -115,8 +105,10 @@ def health():
         "service": "wolinet-sovereign-voice",
         "model": "Wolinet Voice",
         "voices": ["Renatus (Male)", "Witness (Female)"],
-        "sample_rate": "24000Hz"
+        "sample_rate": "24000Hz",
+        "engine": "underdog-woof-int8"
     }
+
 
 @app.get("/v1/models")
 @app.get("/models")
@@ -128,6 +120,7 @@ def list_models():
         ]
     }
 
+
 @app.get("/v1/audio/voices")
 @app.get("/audio/voices")
 def list_voices():
@@ -138,60 +131,46 @@ def list_voices():
         ]
     }
 
-def is_swahili_text(text: str) -> bool:
-    swahili_markers = [
-        "habari", "jambo", "karibu", "kwa", "katika", "mimi", "wewe", "sisi",
-        "wao", "yangu", "yetu", "yenu", "wote", "kuja", "kutumia", "mifumo",
-        "bei", "nafuu", "tumeijenga", "tuijenga", "ajili", "lugha", "adhimu",
-        "kiswahili", "asubuhi", "jua", "mvua", "watu", "sana", "ndio", "hapa",
-        "nchi", "taifa", "mji", "kazi", "nzuri", "gani", "nawakaribisha",
-        "nawakalibisha", "wote", "huku", "mbona", "lakini", "kwamba"
-    ]
-    tokens = re.findall(r"[a-zA-Z]+", text.lower())
-    return any(token in swahili_markers for token in tokens)
 
 @app.post("/v1/audio/speech")
 @app.post("/audio/speech")
 def generate_speech(req: SpeechRequest):
-    voice_key = (req.voice or "Renatus").lower()
+    voice_key = (req.voice or "Renatus").lower().strip()
+    model_name = (req.model or "Wolinet Voice").lower()
 
-    # Underdog-Woof fast-path
-    if voice_key in ("juno", "mira") and voice_key in woof_voices:
-        try:
-            audio = woof_voices[voice_key](req.input)
-            return format_audio_response(audio, 24000, req.response_format)
-        except Exception as e:
-            print(f"[Woof fallback notice] {e}")
-
-    if not sauti_model or not vocoder:
-        raise HTTPException(status_code=503, detail="Wolinet Voice model is still initializing")
-
-    # Resolve voice: Renatus (Male) or Witness/Angela (Female)
-    if voice_key in ("witness", "angela", "female", "nova", "shimmer", "mira", "zawadi"):
-        speaker_profile = speakers_map.get("Witness")
-    else:
-        speaker_profile = speakers_map.get("Renatus")
-
-    if not speaker_profile:
-        raise HTTPException(status_code=400, detail=f"Unknown voice: {req.voice}")
-
-    steps = req.nfe_step if req.nfe_step and req.nfe_step > 0 else int(os.environ.get("F5_NFE_STEPS", "8"))
-
-    try:
+    if "sauti" in model_name or "diffusion" in model_name:
+        s_model, s_vocoder = get_lazy_sauti_model()
+        from f5_tts.infer.utils_infer import infer_process
+        target_voice = "witness" if voice_key in ("witness", "angela", "female", "mira") else "renatus"
+        profile = speakers_map.get(target_voice)
+        if not profile:
+            raise HTTPException(status_code=400, detail=f"No speaker profile for {target_voice}")
+        steps = req.nfe_step if req.nfe_step and req.nfe_step > 0 else 8
         audio, sample_rate, _ = infer_process(
-            ref_audio=speaker_profile["ref_audio"],
-            ref_text=speaker_profile["ref_text"],
+            ref_audio=profile["ref_audio"],
+            ref_text=profile["ref_text"],
             gen_text=req.input,
-            model_obj=sauti_model,
-            vocoder=vocoder,
+            model_obj=s_model,
+            vocoder=s_vocoder,
             mel_spec_type="vocos",
             speed=req.speed or 1.0,
             nfe_step=steps,
         )
-
         return format_audio_response(audio, sample_rate, req.response_format)
+
+    target_engine_voice = "mira" if voice_key in ("witness", "angela", "female", "mira", "zawadi", "nova", "shimmer") else "juno"
+    engine = woof_voices.get(target_engine_voice)
+    if not engine:
+        raise HTTPException(status_code=503, detail="Voice engine is not initialized")
+
+    try:
+        audio = engine(req.input)
+        if req.speed and abs(req.speed - 1.0) >= 0.01:
+            audio = change_speed(audio, req.speed)
+        return format_audio_response(audio, 24000, req.response_format)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Sauti-TTS synthesis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Voice synthesis failed: {str(e)}")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8089, log_level="info")
