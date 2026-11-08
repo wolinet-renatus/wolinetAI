@@ -83,42 +83,39 @@ def startup_event():
     for spk in speakers_data.get("speakers", []):
         ref_file = os.path.join(MODEL_DIR, "references", spk["reference_wav"])
         gender = spk.get("gender", "").lower()
-        key = "male" if gender == "male" else ("female_1" if spk["waxal_speaker_id"] == 1 else "female_2")
         profile = {
             "ref_audio": ref_file,
             "ref_text": spk["ref_text"],
         }
-        speakers_map[key] = profile
 
         if gender == "male":
-            speakers_map["baraka"] = profile
+            speakers_map["Renatus"] = profile
+            speakers_map["renatus"] = profile
             speakers_map["male"] = profile
+            speakers_map["baraka"] = profile
             speakers_map["alloy"] = profile
             speakers_map["onyx"] = profile
             speakers_map["echo"] = profile
         elif spk["waxal_speaker_id"] == 1:
-            speakers_map["zawadi"] = profile
+            speakers_map["Witness"] = profile
+            speakers_map["witness"] = profile
+            speakers_map["Angela"] = profile
+            speakers_map["angela"] = profile
             speakers_map["female"] = profile
-            speakers_map["female_1"] = profile
+            speakers_map["zawadi"] = profile
             speakers_map["nova"] = profile
             speakers_map["shimmer"] = profile
-        elif spk["waxal_speaker_id"] == 6:
-            speakers_map["amina"] = profile
-            speakers_map["female_2"] = profile
-            speakers_map["neema"] = profile
-            speakers_map["fable"] = profile
 
-    print("[Startup] Sovereign Voice Service ready on port 8089!")
+    print("[Startup] Wolinet Sovereign Voice Service ready on port 8089!")
 
 @app.get("/health")
 def health():
     return {
         "status": "ok",
         "service": "wolinet-sovereign-voice",
-        "models": {
-            "underdog_woof": {"voices": ["juno", "mira"], "size": "40.6MB", "speed": "13.8x realtime"},
-            "swahili_sauti_tts": {"voices": list(speakers_map.keys()), "resolution": "24kHz broadcast"},
-        },
+        "model": "Wolinet Voice",
+        "voices": ["Renatus (Male)", "Witness (Female)"],
+        "sample_rate": "24000Hz"
     }
 
 @app.get("/v1/models")
@@ -127,9 +124,17 @@ def list_models():
     return {
         "object": "list",
         "data": [
-            {"id": "underdog-woof", "object": "model", "owned_by": "wolinet"},
-            {"id": "swahili-voice-ad", "object": "model", "owned_by": "wolinet"},
-            {"id": "tts-1", "object": "model", "owned_by": "wolinet"}
+            {"id": "Wolinet Voice", "object": "model", "owned_by": "wolinet"}
+        ]
+    }
+
+@app.get("/v1/audio/voices")
+@app.get("/audio/voices")
+def list_voices():
+    return {
+        "voices": [
+            {"id": "Renatus", "name": "Renatus (Male)"},
+            {"id": "Witness", "name": "Witness (Female)"}
         ]
     }
 
@@ -148,38 +153,17 @@ def is_swahili_text(text: str) -> bool:
 @app.post("/v1/audio/speech")
 @app.post("/audio/speech")
 def generate_speech(req: SpeechRequest):
-    model_name = (req.model or "swahili-voice-ad").lower()
-    voice_key = (req.voice or "baraka").lower()
-    is_swahili = is_swahili_text(req.input)
+    voice_key = (req.voice or "Renatus").lower()
 
-    # Route 1: Underdog-Woof (Ultra-fast English edge synthesis)
-    # Strictly for English requests. Never route Swahili to Underdog-Woof.
-    if not is_swahili and ("woof" in model_name or "underdog" in model_name):
-        tts = woof_voices.get(voice_key) or woof_voices.get("juno")
-        if not tts:
-            raise HTTPException(status_code=503, detail="Underdog-Woof model not loaded")
-        try:
-            audio = tts(req.input, seed=0)
-            return format_audio_response(audio, 24000, req.response_format)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Underdog-Woof synthesis failed: {str(e)}")
-
-    # Route 2: Sauti-TTS Swahili (High-fidelity native commercial speech)
     if not sauti_model or not vocoder:
-        raise HTTPException(status_code=503, detail="Sauti-TTS model is still initializing")
+        raise HTTPException(status_code=503, detail="Wolinet Voice model is still initializing")
 
-    # Intelligent voice resolution for Swahili:
-    # Juno -> Baraka (Male Broadcast), Mira -> Zawadi (Female Commercial)
-    if voice_key in ("juno", "male", "alloy", "onyx", "echo", "baraka"):
-        resolved_voice = "male"
-    elif voice_key in ("mira", "zawadi", "female", "female_1", "nova", "shimmer"):
-        resolved_voice = "female_1"
-    elif voice_key in ("amina", "female_2", "neema", "fable"):
-        resolved_voice = "female_2"
+    # Resolve voice: Renatus (Male) or Witness/Angela (Female)
+    if voice_key in ("witness", "angela", "female", "nova", "shimmer", "mira", "zawadi"):
+        speaker_profile = speakers_map.get("Witness")
     else:
-        resolved_voice = "male"
+        speaker_profile = speakers_map.get("Renatus")
 
-    speaker_profile = speakers_map.get(resolved_voice)
     if not speaker_profile:
         raise HTTPException(status_code=400, detail=f"Unknown voice: {req.voice}")
 

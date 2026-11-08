@@ -106,6 +106,10 @@ class WolinetSystemController:
             except Exception:
                 pass
 
+        # 3.5 Voice Engine
+        voice_ok, _, voice_body = self.check_http("http://localhost:8090/health")
+        voice_status = "ONLINE" if voice_ok else "OFFLINE"
+
         # 4. Storage & Memory
         litellm_mem_ok, _, _ = self.check_http("http://localhost:8000/")
         ai_mem_ok = self.check_tcp("127.0.0.1", 49374)
@@ -137,6 +141,12 @@ class WolinetSystemController:
                 "port": 9997,
                 "engine": "Xinference / llama.cpp (Metal MPS)",
                 "loaded_models": mitambo_models
+            },
+            "voice": {
+                "status": voice_status,
+                "port": 8090,
+                "model": "Wolinet Voice",
+                "personas": ["Renatus (Male)", "Witness (Female)"]
             },
             "memory_storage": {
                 "postgresql_16": {"status": "ONLINE" if pg_ok else "OFFLINE", "port": PG_PORT},
@@ -186,6 +196,13 @@ class WolinetSystemController:
         print(f"   • Engine Backend:        {G}[{m['status']}]{X} http://localhost:{m['port']} ({m['engine']})")
         print(f"   • Active Checkpoints:    {G}[LOADED]{X} {', '.join(m['loaded_models'])}")
         print(f"   • Self-Trained V2:       {G}[READY]{X} Wolinet Coder v2 registered & synced")
+        print()
+
+        # 3.5 SOVEREIGN VOICE ENGINE
+        print(f"{B}3.5 SOVEREIGN VOICE SYNTHESIS ENGINE (Rust + PyTorch Core){X}")
+        v = topo["voice"]
+        print(f"   • Voice Router (Rust):   {G}[{v['status']}]{X} http://localhost:{v['port']} (Model: {v['model']})")
+        print(f"   • Voice Personas:        {G}[READY]{X} {', '.join(v['personas'])}")
         print()
 
         # 4. STORAGE & MEMORY FABRIC

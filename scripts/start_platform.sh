@@ -118,7 +118,7 @@ fi
 if curl -sf "http://127.0.0.1:8089/health" >/dev/null 2>&1; then
     echo "[Voice] Sovereign Voice Engine is already running on port 8089."
 else
-    echo "[Voice] Starting Sovereign Voice Engine (Underdog-Woof & Sauti-TTS) on port 8089..."
+    echo "[Voice] Starting Sovereign Voice Engine (Wolinet Voice) on port 8089..."
     nohup "${ROOT_DIR}/.venv/bin/python" "${ROOT_DIR}/scripts/swahili_tts_service.py" > "${ROOT_DIR}/voice_service.log" 2>&1 &
 fi
 

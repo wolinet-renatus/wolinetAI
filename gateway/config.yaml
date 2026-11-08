@@ -57,19 +57,6 @@ model_list:
       max_input_tokens: 32768
       max_output_tokens: 8192
 
-  - model_name: "Spark-X"
-    litellm_params:
-      model: "openai/Deepseeker Coder"
-      api_base: "http://host.docker.internal:8088/v1"
-      api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
-      merge_reasoning_content_in_choices: false
-    model_info:
-      id: "spark-x"
-      mode: chat
-      base_model: "Spark-X"
-      max_input_tokens: 32768
-      max_output_tokens: 8192
-
   # ============================================================================
   # TIER C: WOLINET MAX (Google Gemini Cloud Enterprise Platform - Multimodal MoE)
   # ============================================================================
@@ -219,49 +206,16 @@ model_list:
       id: "wolinet-max-audio"
       mode: audio_transcription
 
-  # Wolinet AI Sovereign Bilingual Voice Engine (24kHz Studio Broadcast & Edge Neural Vocoder)
-  - model_name: "wolinet-voice-v1"
+  # Wolinet AI Sovereign Voice Engine (24kHz Studio Broadcast & Natural East African Cadence)
+  - model_name: "Wolinet Voice"
     litellm_params:
-      model: "openai/wolinet-voice-v1"
+      model: "openai/Wolinet Voice"
       api_base: "http://127.0.0.1:8090/v1"
       api_key: "EMPTY"
     model_info:
-      id: "wolinet-voice-v1"
+      id: "wolinet-voice"
       mode: audio_speech
-      base_model: "wolinet-voice-v1"
-
-  # Sovereign High-Speed English Text-to-Speech (ConwayResearch/Underdog-Woof 40MB)
-  - model_name: "underdog-woof"
-    litellm_params:
-      model: "openai/underdog-woof"
-      api_base: "http://127.0.0.1:8090/v1"
-      api_key: "EMPTY"
-    model_info:
-      id: "underdog-woof"
-      mode: audio_speech
-      base_model: "ConwayResearch/Underdog-Woof"
-
-  # Sovereign High-Fidelity Swahili Commercial Voice (msingiai/sauti-tts-sm 24kHz)
-  - model_name: "swahili-voice-ad"
-    litellm_params:
-      model: "openai/swahili-voice-ad"
-      api_base: "http://127.0.0.1:8090/v1"
-      api_key: "EMPTY"
-    model_info:
-      id: "swahili-voice-ad"
-      mode: audio_speech
-      base_model: "msingiai/sauti-tts-sm"
-
-  # Standard OpenAI tts-1 Alias
-  - model_name: "tts-1"
-    litellm_params:
-      model: "openai/wolinet-voice-v1"
-      api_base: "http://127.0.0.1:8090/v1"
-      api_key: "EMPTY"
-    model_info:
-      id: "tts-1"
-      mode: audio_speech
-      base_model: "wolinet-voice-v1"
+      base_model: "Wolinet Voice"
 
   # Native Image Generation Models (Gemini & OpenAI DALL-E Compatible)
   - model_name: "dall-e-3"
@@ -342,6 +296,10 @@ general_settings:
     target: "http://host.docker.internal:8088"
   - path: /defense/inspect
     target: "http://host.docker.internal:8088"
+  - path: /v1/audio/voices
+    target: "http://127.0.0.1:8090/v1/audio/voices"
+  - path: /audio/voices
+    target: "http://127.0.0.1:8090/audio/voices"
   store_model_in_db: true
   disable_env_credential_login: true
   hide_default_credentials_hint: true
@@ -445,6 +403,16 @@ litellm_settings:
     "deepseek-v4-pro": "Scorpio Pro"
     "deepseek-pro": "Scorpio Pro"
     "deepseek-reasoner": "Scorpio Pro"
+    # --------------------------------------------------------------------------
+    # Sovereign Voice Engine (Wolinet Voice)
+    # --------------------------------------------------------------------------
+    "Wolinet Voice": "Wolinet Voice"
+    "wolinet-voice": "Wolinet Voice"
+    "wolinet-voice-v1": "Wolinet Voice"
+    "swahili-voice-ad": "Wolinet Voice"
+    "underdog-woof": "Wolinet Voice"
+    "tts-1": "Wolinet Voice"
+    "tts-1-hd": "Wolinet Voice"
   extra_spend_tag_headers:
     - "X-OpenWebUI-User-Id"
     - "X-OpenWebUI-User-Email"
