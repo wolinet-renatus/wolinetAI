@@ -146,37 +146,22 @@ async fn models_handler() -> Json<ModelListResponse> {
     })
 }
 
-// Swahili prosody enhancer in Rust:
-// Automatically detects Swahili phonotactics and applies penultimate syllable stress
-fn enhance_swahili_prosody(input: &str) -> String {
-    let vowels = ['a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U'];
-    let words: Vec<&str> = input.split_whitespace().collect();
-    let mut enhanced_words = Vec::new();
-
-    for word in words {
-        // Collect vowel positions in word
-        let vowel_indices: Vec<(usize, char)> = word
-            .char_indices()
-            .filter(|(_, c)| vowels.contains(c))
-            .collect();
-
-        if vowel_indices.len() >= 2 {
-            // Penultimate syllable stress: elongate second-to-last vowel
-            let (penult_idx, penult_char) = vowel_indices[vowel_indices.len() - 2];
-            let mut new_word = String::with_capacity(word.len() + 1);
-            for (i, c) in word.char_indices() {
-                new_word.push(c);
-                if i == penult_idx {
-                    new_word.push(penult_char); // Elongate for natural stress
-                }
-            }
-            enhanced_words.push(new_word);
-        } else {
-            enhanced_words.push(word.to_string());
-        }
-    }
-
-    enhanced_words.join(" ")
+// Swahili language detector: checks for common Swahili grammatical markers and vocabulary
+fn is_swahili(input: &str) -> bool {
+    let swahili_markers = [
+        "habari", "jambo", "karibu", "kwa", "katika", "mimi", "wewe", "sisi",
+        "wao", "yangu", "yetu", "yenu", "wote", "kuja", "kutumia", "mifumo",
+        "bei", "nafuu", "tumeijenga", "tuijenga", "ajili", "lugha", "adhimu",
+        "kiswahili", "asubuhi", "jua", "mvua", "watu", "sana", "ndio", "hapa",
+        "nchi", "taifa", "mji", "kazi", "nzuri", "gani", "nawakaribisha",
+        "nawakalibisha", "wote", "huku", "mbona", "lakini", "kwamba"
+    ];
+    let lower = input.to_lowercase();
+    let words: Vec<&str> = lower
+        .split(|c: char| !c.is_alphabetic())
+        .filter(|s| !s.is_empty())
+        .collect();
+    words.iter().any(|w| swahili_markers.contains(w))
 }
 
 async fn speech_handler(
@@ -185,24 +170,38 @@ async fn speech_handler(
 ) -> Result<Response, (StatusCode, String)> {
     let model_lower = req.model.to_lowercase();
     let voice_lower = req.voice.to_lowercase();
+    let swahili_detected = is_swahili(&req.input);
 
-    // Map wolinet-voice-v1 personas to internal engines
-    if model_lower == "wolinet-voice-v1" {
-        if voice_lower == "juno" || voice_lower == "mira" {
-            req.model = "underdog-woof".to_string();
+    // If text is Swahili or model targets Swahili/sovereign voice, route to native East African audio
+    if swahili_detected || model_lower == "swahili-voice-ad" || model_lower == "wolinet-voice-v1" {
+        req.model = "swahili-voice-ad".to_string();
+
+        // Voice 1 (Male Native East African): baraka, alloy, onyx, echo, male, juno
+        // Voice 2 (Female Native East African): zawadi, nova, shimmer, female, female_1, mira
+        // Voice 3 (Female 2 Native East African): amina, neema, fable, female_2
+        if voice_lower == "zawadi"
+            || voice_lower == "mira"
+            || voice_lower == "nova"
+            || voice_lower == "shimmer"
+            || voice_lower == "female"
+            || voice_lower == "female_1"
+        {
+            req.voice = "female_1".to_string();
+        } else if voice_lower == "amina"
+            || voice_lower == "neema"
+            || voice_lower == "fable"
+            || voice_lower == "female_2"
+        {
+            req.voice = "female_2".to_string();
         } else {
-            req.model = "swahili-voice-ad".to_string();
-            if voice_lower == "baraka" {
-                req.voice = "male".to_string();
-            } else if voice_lower == "zawadi" {
-                req.voice = "female_1".to_string();
-            }
+            req.voice = "male".to_string();
         }
-    }
-
-    // Apply Swahili prosody enhancement if Swahili model or Swahili voice is requested
-    if req.model == "swahili-voice-ad" || req.voice == "baraka" || req.voice == "zawadi" {
-        req.input = enhance_swahili_prosody(&req.input);
+    } else if model_lower == "underdog-woof" {
+        // English-only Underdog-Woof fast edge synthesis
+        req.model = "underdog-woof".to_string();
+        if voice_lower != "mira" {
+            req.voice = "juno".to_string();
+        }
     }
 
     let target_url = format!("{}/v1/audio/speech", state.python_backend_url);

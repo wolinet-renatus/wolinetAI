@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import re
 import sys
 
 os.environ["F5_DEVICE"] = "cpu"
@@ -83,16 +84,29 @@ def startup_event():
         ref_file = os.path.join(MODEL_DIR, "references", spk["reference_wav"])
         gender = spk.get("gender", "").lower()
         key = "male" if gender == "male" else ("female_1" if spk["waxal_speaker_id"] == 1 else "female_2")
-        speakers_map[key] = {
+        profile = {
             "ref_audio": ref_file,
             "ref_text": spk["ref_text"],
         }
+        speakers_map[key] = profile
+
         if gender == "male":
-            speakers_map["alloy"] = speakers_map[key]
-            speakers_map["onyx"] = speakers_map[key]
+            speakers_map["baraka"] = profile
+            speakers_map["male"] = profile
+            speakers_map["alloy"] = profile
+            speakers_map["onyx"] = profile
+            speakers_map["echo"] = profile
         elif spk["waxal_speaker_id"] == 1:
-            speakers_map["nova"] = speakers_map[key]
-            speakers_map["shimmer"] = speakers_map[key]
+            speakers_map["zawadi"] = profile
+            speakers_map["female"] = profile
+            speakers_map["female_1"] = profile
+            speakers_map["nova"] = profile
+            speakers_map["shimmer"] = profile
+        elif spk["waxal_speaker_id"] == 6:
+            speakers_map["amina"] = profile
+            speakers_map["female_2"] = profile
+            speakers_map["neema"] = profile
+            speakers_map["fable"] = profile
 
     print("[Startup] Sovereign Voice Service ready on port 8089!")
 
@@ -119,14 +133,28 @@ def list_models():
         ]
     }
 
+def is_swahili_text(text: str) -> bool:
+    swahili_markers = [
+        "habari", "jambo", "karibu", "kwa", "katika", "mimi", "wewe", "sisi",
+        "wao", "yangu", "yetu", "yenu", "wote", "kuja", "kutumia", "mifumo",
+        "bei", "nafuu", "tumeijenga", "tuijenga", "ajili", "lugha", "adhimu",
+        "kiswahili", "asubuhi", "jua", "mvua", "watu", "sana", "ndio", "hapa",
+        "nchi", "taifa", "mji", "kazi", "nzuri", "gani", "nawakaribisha",
+        "nawakalibisha", "wote", "huku", "mbona", "lakini", "kwamba"
+    ]
+    tokens = re.findall(r"[a-zA-Z]+", text.lower())
+    return any(token in swahili_markers for token in tokens)
+
 @app.post("/v1/audio/speech")
 @app.post("/audio/speech")
 def generate_speech(req: SpeechRequest):
     model_name = (req.model or "swahili-voice-ad").lower()
-    voice_key = (req.voice or "juno").lower()
+    voice_key = (req.voice or "baraka").lower()
+    is_swahili = is_swahili_text(req.input)
 
     # Route 1: Underdog-Woof (Ultra-fast English edge synthesis)
-    if "woof" in model_name or "underdog" in model_name or voice_key in ("juno", "mira"):
+    # Strictly for English requests. Never route Swahili to Underdog-Woof.
+    if not is_swahili and ("woof" in model_name or "underdog" in model_name):
         tts = woof_voices.get(voice_key) or woof_voices.get("juno")
         if not tts:
             raise HTTPException(status_code=503, detail="Underdog-Woof model not loaded")
@@ -140,7 +168,18 @@ def generate_speech(req: SpeechRequest):
     if not sauti_model or not vocoder:
         raise HTTPException(status_code=503, detail="Sauti-TTS model is still initializing")
 
-    speaker_profile = speakers_map.get(voice_key) or speakers_map.get("male")
+    # Intelligent voice resolution for Swahili:
+    # Juno -> Baraka (Male Broadcast), Mira -> Zawadi (Female Commercial)
+    if voice_key in ("juno", "male", "alloy", "onyx", "echo", "baraka"):
+        resolved_voice = "male"
+    elif voice_key in ("mira", "zawadi", "female", "female_1", "nova", "shimmer"):
+        resolved_voice = "female_1"
+    elif voice_key in ("amina", "female_2", "neema", "fable"):
+        resolved_voice = "female_2"
+    else:
+        resolved_voice = "male"
+
+    speaker_profile = speakers_map.get(resolved_voice)
     if not speaker_profile:
         raise HTTPException(status_code=400, detail=f"Unknown voice: {req.voice}")
 
