@@ -150,7 +150,6 @@
 
 	const getMenuItemMeta = (id) => {
 		const items = {
-			voice: { label: 'Voice', href: '/voice', iconType: 'voice' },
 			notes: { label: 'Notes', href: '/notes', iconType: 'note' },
 			workspace: { label: 'Workspace', href: '/workspace', iconType: 'workspace' },
 			automations: { label: 'Automations', href: '/automations', iconType: 'automations' },

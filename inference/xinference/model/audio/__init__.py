@@ -140,13 +140,6 @@ def _install():
             model_spec.to_version_info() for model_spec in variants.values()
         ]
 
-    if "Wolinet-Voice" in BUILTIN_AUDIO_MODELS:
-        BUILTIN_AUDIO_MODELS["Wolinet Voice"] = BUILTIN_AUDIO_MODELS["Wolinet-Voice"]
-        BUILTIN_AUDIO_MODELS["wolinet-voice"] = BUILTIN_AUDIO_MODELS["Wolinet-Voice"]
-    if "Wolinet-Voice" in AUDIO_MODEL_DESCRIPTIONS:
-        AUDIO_MODEL_DESCRIPTIONS["Wolinet Voice"] = AUDIO_MODEL_DESCRIPTIONS["Wolinet-Voice"]
-        AUDIO_MODEL_DESCRIPTIONS["wolinet-voice"] = AUDIO_MODEL_DESCRIPTIONS["Wolinet-Voice"]
-
     register_builtin_audio_engines()
     for model_specs in BUILTIN_AUDIO_MODELS.values():
         for model_spec in model_specs:

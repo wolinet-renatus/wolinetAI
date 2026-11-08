@@ -206,17 +206,6 @@ model_list:
       id: "wolinet-max-audio"
       mode: audio_transcription
 
-  # Wolinet AI Sovereign Voice Engine (24kHz Studio Broadcast & Natural East African Cadence)
-  - model_name: "Wolinet Voice"
-    litellm_params:
-      model: "openai/Wolinet Voice"
-      api_base: "http://127.0.0.1:9997/v1"
-      api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
-    model_info:
-      id: "wolinet-voice"
-      mode: audio_speech
-      base_model: "Wolinet Voice"
-
   # Native Image Generation Models (Gemini & OpenAI DALL-E Compatible)
   - model_name: "dall-e-3"
     litellm_params:
@@ -296,10 +285,6 @@ general_settings:
     target: "http://host.docker.internal:8088"
   - path: /defense/inspect
     target: "http://host.docker.internal:8088"
-  - path: /v1/audio/voices
-    target: "http://127.0.0.1:9997/v1/audio/voices"
-  - path: /audio/voices
-    target: "http://127.0.0.1:9997/audio/voices"
   store_model_in_db: true
   disable_env_credential_login: true
   hide_default_credentials_hint: true

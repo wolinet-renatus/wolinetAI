@@ -403,7 +403,7 @@ def create_audio_model_instance(
         model = CosyVoiceModel(model_uid, model_path, model_spec, **kwargs)
     elif model_spec.model_family == "FishAudio":
         model = FishSpeechModel(model_uid, model_path, model_spec, **kwargs)
-    elif model_spec.model_family in ("F5-TTS", "wolinet-voice"):
+    elif model_spec.model_family == "F5-TTS":
         model = F5TTSModel(model_uid, model_path, model_spec, **kwargs)
     elif model_spec.model_family == "F5-TTS-MLX":
         model = F5TTSMLXModel(model_uid, model_path, model_spec, **kwargs)
