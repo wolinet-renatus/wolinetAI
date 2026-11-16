@@ -4,6 +4,7 @@ version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Sovereign pure-Rust AI Gateway data-plane binary for LiteLLM"
 
 [dependencies]
 axum.workspace = true
@@ -23,6 +24,21 @@ uuid.workspace = true
 
 [dev-dependencies]
 futures-util.workspace = true
+litellm-auth-types.workspace = true
 rstest.workspace = true
 tokio = { workspace = true, features = ["sync"] }
 tower = { version = "0.5", features = ["util"] }
+
+[package.metadata.deb]
+maintainer = "Wolinet AI <engineering@wolinet.com>"
+section = "net"
+priority = "optional"
+depends = "ca-certificates"
+extended-description = "High-performance pure Rust LiteLLM data-plane gateway with PostgreSQL and Redis support."
+maintainer-scripts = "../../deploy/debian"
+conf-files = ["/etc/litellm/env.example"]
+assets = [
+    ["target/release/litellm-gateway", "usr/bin/litellm-gateway", "755"],
+    ["../../deploy/litellm-gateway.service", "lib/systemd/system/litellm-gateway.service", "644"],
+    ["../../deploy/env.example", "etc/litellm/env.example", "640"],
+]

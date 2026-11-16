@@ -1,0 +1,35 @@
+#!/bin/sh
+set -e
+
+if ! getent group litellm >/dev/null 2>&1; then
+    if command -v groupadd >/dev/null 2>&1; then
+        groupadd --system litellm
+    else
+        addgroup --system litellm
+    fi
+fi
+
+if ! id -u litellm >/dev/null 2>&1; then
+    if command -v useradd >/dev/null 2>&1; then
+        useradd --system --gid litellm --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin litellm
+    else
+        adduser --system --ingroup litellm --no-create-home --home /nonexistent --shell /usr/sbin/nologin litellm
+    fi
+fi
+
+mkdir -p /etc/litellm
+chown root:litellm /etc/litellm
+chmod 0750 /etc/litellm
+
+if [ ! -f /etc/litellm/env ] && [ -f /etc/litellm/env.example ]; then
+    cp /etc/litellm/env.example /etc/litellm/env
+    chown root:litellm /etc/litellm/env
+    chmod 0640 /etc/litellm/env
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+
+#DEBHELPER#
+exit 0

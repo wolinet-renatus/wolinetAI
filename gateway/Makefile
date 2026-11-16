@@ -11,7 +11,7 @@
 	lint-test-quality lint-test-quality-budget-update \
 	install-dev install-proxy-dev install-test-deps install-hooks \
 	install-helm-unittest check-circular-imports check-import-safety check check-inner pre-commit \
-	lint-install lint-fetch-base bootstrap
+	lint-install lint-fetch-base bootstrap package-deb-linux
 
 # Default target
 help:
@@ -365,3 +365,18 @@ test-llm-translation-single: install-test-deps
 
 test-llm-translation-flush-vcr-cache:
 	$(UV_RUN) python tests/_flush_vcr_cache.py
+
+package-deb-linux:
+	mkdir -p dist
+	@CONTAINER_CLI=$$(command -v podman >/dev/null 2>&1 && echo podman || echo docker); \
+	if [ "$$CONTAINER_CLI" = "docker" ] && ! docker info >/dev/null 2>&1; then \
+		echo "Error: Docker/Podman daemon is not running" >&2; exit 1; \
+	fi; \
+	$$CONTAINER_CLI build --platform linux/amd64 \
+		--target builder \
+		-t litellm-gateway-deb-builder:local \
+		-f litellm-rust/Dockerfile.deb . && \
+	CID=$$($$CONTAINER_CLI create litellm-gateway-deb-builder:local /bin/true) && \
+	$$CONTAINER_CLI cp "$$CID:/out/litellm-gateway_amd64.deb" dist/litellm-gateway_amd64.deb && \
+	$$CONTAINER_CLI rm -f "$$CID" >/dev/null && \
+	ls -lh dist/litellm-gateway_amd64.deb

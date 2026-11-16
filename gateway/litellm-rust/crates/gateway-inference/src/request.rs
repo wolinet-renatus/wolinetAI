@@ -1,8 +1,6 @@
 use axum::{
     body::{Bytes, to_bytes},
     extract::{FromRequest, Multipart, Request},
-    http::Uri,
-    response::Response,
 };
 use serde_json::{Map, Value};
 
@@ -101,8 +99,4 @@ fn multipart_error(error: axum::extract::multipart::MultipartError) -> Error {
         return Error::BodyTooLarge;
     }
     Error::InvalidBody(error.to_string())
-}
-
-pub(crate) async fn unsupported(uri: Uri) -> Response {
-    Error::Unsupported(uri.path().to_owned()).openai_response()
 }

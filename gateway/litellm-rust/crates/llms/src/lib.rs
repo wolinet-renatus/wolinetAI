@@ -5,8 +5,10 @@ pub mod base_llm;
 pub mod bedrock;
 pub mod cohere;
 mod error;
+pub mod gemini;
 pub mod mistral;
 pub mod openai;
+pub mod openai_compat;
 pub mod reducto;
 pub mod vertex_ai;
 

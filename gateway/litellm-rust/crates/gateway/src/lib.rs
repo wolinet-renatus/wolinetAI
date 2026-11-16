@@ -1,24 +1,30 @@
 use std::{sync::Arc, time::Instant};
 
 use axum::{
-    Router,
+    Extension, Json, Router,
     body::{Body, Bytes},
     extract::Request,
-    middleware::Next,
+    middleware::{self, Next},
     response::Response,
+    routing::get,
 };
 use http_body_util::BodyExt;
 
 use litellm_config::Config;
 use litellm_core::resources::CoreResources;
-use litellm_gateway_auth::{Auth, RequireMasterKey};
-use litellm_gateway_inference::{Gateway, ModelList};
+use litellm_gateway_auth::{
+    Auth, AuthContext, GatewayAuth, RequireMasterKey, SpendEvent, authenticate_middleware,
+};
+use litellm_gateway_inference::{
+    AuthMetadata, Gateway, ModelList, PassThroughRoute, UsageRecord, UsageSink,
+};
 use litellm_http::{
     ClientVariant, HttpClientPool, HttpSettings, Resolution, media::PublicDnsResolver,
 };
 use litellm_llms::base_llm::ocr::settings::OcrSettings;
 use litellm_secrets::source::EnvironmentSecrets;
 use litellm_tracing::ByteChunk;
+use serde_json::json;
 use uuid::Uuid;
 
 pub fn build_inference(config: &Config) -> Result<Arc<Gateway>, litellm_http::Error> {
@@ -38,19 +44,131 @@ pub fn build_inference(config: &Config) -> Result<Arc<Gateway>, litellm_http::Er
         resources,
         http,
         secrets,
-        models: ModelList::from_model_list(&config.model_list),
+        models: ModelList::from_config(config),
         ocr,
     }))
 }
 
+fn map_pass_through(config: &Config) -> Vec<PassThroughRoute> {
+    config
+        .general_settings
+        .pass_through_endpoints
+        .iter()
+        .map(|ep| PassThroughRoute {
+            path: ep.path.clone(),
+            target: ep.target.clone(),
+            headers: ep.headers.clone(),
+            include_subpath: ep.include_subpath.unwrap_or(false),
+        })
+        .collect()
+}
+
 pub fn router(inference: Arc<Gateway>, config: &Config) -> Router {
     let auth = Auth::from_config(config, inference.secrets.clone());
-    litellm_gateway_inference::router(inference)
-        .route_layer(axum::middleware::from_extractor_with_state::<
-            RequireMasterKey,
-            _,
-        >(auth))
-        .layer(axum::middleware::from_fn(log_request))
+    let pass_through = map_pass_through(config);
+    let model_count = inference.models.model_names().len();
+    let inference_router =
+        litellm_gateway_inference::router_with_passthrough(inference, &pass_through)
+            .route_layer(middleware::from_extractor_with_state::<RequireMasterKey, _>(auth));
+
+    Router::new()
+        .route("/health/liveliness", get(|| async { Json("I'm alive!") }))
+        .route(
+            "/health",
+            get(move || async move {
+                Json(json!({
+                    "status": "healthy",
+                    "postgres": false,
+                    "redis": false,
+                    "models": model_count
+                }))
+            }),
+        )
+        .merge(inference_router)
+        .layer(middleware::from_fn(log_request))
+}
+
+pub async fn build_router(inference: Arc<Gateway>, config: &Config) -> Router {
+    let gateway_auth = GatewayAuth::connect(config, inference.secrets.clone()).await;
+    let db_configured = gateway_auth.is_db_configured();
+    let redis_configured = gateway_auth.is_redis_configured();
+    let model_count = inference.models.model_names().len();
+    let spend_logger = gateway_auth.spend_logger().clone();
+
+    let usage_sink: UsageSink = Arc::new(move |rec: UsageRecord| {
+        let auth = rec.auth.unwrap_or(AuthMetadata {
+            key_hash: None,
+            user_id: None,
+            team_id: None,
+            end_user: None,
+            organization_id: None,
+            tags: Vec::new(),
+        });
+        spend_logger.record(SpendEvent {
+            request_id: rec.request_id,
+            call_type: rec.call_type,
+            key_hash: auth.key_hash.unwrap_or_default(),
+            user_id: auth.user_id,
+            team_id: auth.team_id,
+            organization_id: auth.organization_id,
+            end_user: auth.end_user,
+            model_group: rec.model_group,
+            upstream_model: rec.upstream_model,
+            model_id: rec.model_id,
+            custom_llm_provider: rec.custom_llm_provider,
+            api_base: rec.api_base,
+            prompt_tokens: rec.prompt_tokens,
+            completion_tokens: rec.completion_tokens,
+            cached_tokens: rec.cached_tokens,
+            override_input_cost: rec.input_cost_per_token,
+            override_output_cost: rec.output_cost_per_token,
+            override_cache_read_cost: rec.cache_read_input_token_cost,
+            start_time_ms: rec.start_time_ms,
+            end_time_ms: rec.end_time_ms,
+            status: rec.status,
+            request_tags: auth.tags,
+        });
+    });
+
+    let pass_through = map_pass_through(config);
+    let inference_router =
+        litellm_gateway_inference::router_with_passthrough(inference, &pass_through)
+            .layer(Extension(usage_sink))
+            .route_layer(middleware::from_fn(bridge_auth_context))
+            .route_layer(middleware::from_fn_with_state(
+                gateway_auth,
+                authenticate_middleware,
+            ));
+
+    Router::new()
+        .route("/health/liveliness", get(|| async { Json("I'm alive!") }))
+        .route(
+            "/health",
+            get(move || async move {
+                Json(json!({
+                    "status": "healthy",
+                    "postgres": db_configured,
+                    "redis": redis_configured,
+                    "models": model_count
+                }))
+            }),
+        )
+        .merge(inference_router)
+        .layer(middleware::from_fn(log_request))
+}
+
+async fn bridge_auth_context(mut request: Request, next: Next) -> Response {
+    if let Some(ctx) = request.extensions().get::<AuthContext>().cloned() {
+        request.extensions_mut().insert(AuthMetadata {
+            key_hash: Some(ctx.key_hash),
+            user_id: ctx.user_id,
+            team_id: ctx.team_id,
+            end_user: ctx.end_user,
+            organization_id: ctx.organization_id,
+            tags: ctx.tags,
+        });
+    }
+    next.run(request).await
 }
 
 async fn log_request(request: Request, next: Next) -> Response {

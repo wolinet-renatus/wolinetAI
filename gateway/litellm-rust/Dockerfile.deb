@@ -1,0 +1,45 @@
+FROM ubuntu:24.04 AS builder
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG RUSTUP_VERSION=1.28.2
+ARG RUSTUP_SHA256=20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c
+ARG RUST_TOOLCHAIN=1.98.0
+ARG CARGO_DEB_VERSION=3.8.0
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    pkg-config \
+    curl \
+    ca-certificates \
+    dpkg-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:${PATH}
+
+RUN curl -fsSL -o /tmp/rustup-init \
+      "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/x86_64-unknown-linux-gnu/rustup-init" \
+    && echo "${RUSTUP_SHA256}  /tmp/rustup-init" | sha256sum -c - \
+    && chmod +x /tmp/rustup-init \
+    && /tmp/rustup-init -y --no-modify-path --profile minimal --default-toolchain "${RUST_TOOLCHAIN}" \
+    && rm -f /tmp/rustup-init \
+    && cargo install cargo-deb --version "${CARGO_DEB_VERSION}" --locked
+
+WORKDIR /workspace/litellm-rust
+
+COPY litellm-rust/Cargo.toml litellm-rust/Cargo.lock ./
+COPY litellm-rust/crates ./crates
+COPY config.yaml /workspace/config.yaml
+COPY model_prices_and_context_window.json /workspace/model_prices_and_context_window.json
+
+RUN mkdir -p /out \
+    && cargo build --release --locked -p litellm-gateway
+
+COPY litellm-rust/deploy ./deploy
+
+RUN cargo deb -p litellm-gateway --no-build --output /out/litellm-gateway_amd64.deb
+
+FROM scratch AS artifact
+COPY --from=builder /out/litellm-gateway_amd64.deb /litellm-gateway_amd64.deb

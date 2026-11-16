@@ -92,3 +92,59 @@ fn programmatic_deployments_preserve_overrides_and_last_entry_wins() {
     assert_eq!(selected.timeout, deployment.timeout);
     assert_eq!(selected.shaping, deployment.shaping);
 }
+
+#[rstest]
+fn config_router_resolves_aliases_fallbacks_and_cooldowns() {
+    let config = Config::from_yaml(
+        r#"
+model_list:
+  - model_name: "Wolinet Max Pro"
+    litellm_params:
+      model: moonshot/kimi-k3.1-pro-highspeed
+      api_base: https://api.moonshot.ai/v1
+    model_info:
+      id: "max-pro-1"
+      mode: chat
+  - model_name: "Wolinet Max Pro"
+    litellm_params:
+      model: moonshot/kimi-k3.1-pro
+      api_base: https://api.moonshot.ai/v1
+    model_info:
+      id: "max-pro-2"
+      mode: chat
+  - model_name: "Wolinet Max"
+    litellm_params:
+      model: gemini/gemini-3.8-flash
+    model_info:
+      id: "max-1"
+      mode: chat
+litellm_settings:
+  model_alias:
+    kimi: "Wolinet Max Pro"
+router_settings:
+  fallbacks:
+    - "Wolinet Max Pro": ["Wolinet Max"]
+  allowed_fails: 1
+  cooldown_time: 60
+  num_retries: 2
+"#,
+    )
+    .unwrap();
+
+    let router = Router::from_config(&config);
+    assert_eq!(router.resolve_model_name("kimi"), "Wolinet Max Pro");
+    assert_eq!(router.num_retries(), 2);
+
+    let candidates = router.candidates("kimi");
+    assert_eq!(candidates.len(), 3);
+    assert_eq!(candidates[2].id.as_deref(), Some("max-1"));
+
+    router.record_failure("max-pro-1");
+    assert!(router.is_in_cooldown("max-pro-1"));
+    let healthy = router.candidates("kimi");
+    assert_eq!(healthy.len(), 2);
+    assert!(healthy.iter().all(|c| c.deployment_id != "max-pro-1"));
+
+    router.record_success("max-pro-1");
+    assert!(!router.is_in_cooldown("max-pro-1"));
+}

@@ -141,3 +141,63 @@ async fn logs_request_outcome_without_credentials_or_query(inference: Arc<Gatewa
     assert!(!record.to_string().contains("header-secret"));
     assert!(!record.to_string().contains("query-secret"));
 }
+
+#[rstest]
+#[tokio::test]
+async fn build_router_serves_health_and_production_models_in_stateless_mode() {
+    let config_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../config.yaml");
+    let mut config = Config::load(config_path).unwrap();
+    config.general_settings.master_key = Some(litellm_auth_types::SecretValue::new("test-master"));
+    config.general_settings.database_url = None;
+    config.general_settings.redis_url = None;
+    config.router_settings.redis_host = None;
+
+    let inference = litellm_gateway::build_inference(&config).unwrap();
+    let app = litellm_gateway::build_router(inference, &config).await;
+
+    let health = app
+        .clone()
+        .oneshot(Request::get("/health").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(health.status().as_u16(), 200);
+    let health_bytes = axum::body::to_bytes(health.into_body(), 4096)
+        .await
+        .unwrap();
+    let health_json: Value = serde_json::from_slice(&health_bytes).unwrap();
+    assert_eq!(health_json["status"], "healthy");
+    assert!(health_json["models"].as_u64().unwrap() > 0);
+
+    let live = app
+        .clone()
+        .oneshot(
+            Request::get("/health/liveliness")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(live.status().as_u16(), 200);
+
+    let models = app
+        .oneshot(
+            Request::get("/v1/models")
+                .header("authorization", "Bearer test-master")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(models.status().as_u16(), 200);
+    let models_bytes = axum::body::to_bytes(models.into_body(), 65536)
+        .await
+        .unwrap();
+    let models_json: Value = serde_json::from_slice(&models_bytes).unwrap();
+    assert!(
+        models_json["data"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|m| m["id"] == "Wolinet Max")
+    );
+}

@@ -1,0 +1,77 @@
+name: Build LiteLLM Rust Gateway (.deb)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "gateway/litellm-rust/**"
+      - "gateway/.github/workflows/build-gateway-deb.yml"
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: gateway/litellm-rust
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          persist-credentials: false
+
+      - name: Install native build dependencies for aws-lc-sys
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake pkg-config
+
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.98.0 --profile minimal --no-self-update
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: gateway/litellm-rust
+          cache-on-failure: true
+
+      - uses: taiki-e/install-action@d438492cf8a250514fa2d34b30bc3c0dc37c65ff # v2.87.8
+        with:
+          tool: cargo-deb@3.8.0
+
+      - name: Run pure-Rust clippy gate
+        run: >
+          cargo clippy
+          -p litellm-gateway
+          -p litellm-gateway-auth
+          -p litellm-gateway-inference
+          -p litellm-config
+          -p litellm-core
+          -p litellm-llms
+          -p litellm-router
+          -p litellm-cost
+          --all-targets --locked -- -D warnings
+
+      - name: Run pure-Rust test suite
+        run: >
+          cargo test
+          -p litellm-gateway
+          -p litellm-gateway-auth
+          -p litellm-gateway-inference
+          -p litellm-config
+          -p litellm-llms
+          -p litellm-router
+          -p litellm-cost
+          -p litellm-model-catalog
+          --locked &&
+          cargo test -p litellm-core --locked -- --test-threads=1
+
+      - name: Build release binary and Ubuntu 24.04 x86_64 .deb package
+        run: |
+          cargo build --release --locked -p litellm-gateway
+          cargo deb -p litellm-gateway --no-build --output ../dist/litellm-gateway_amd64.deb
+
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: litellm-gateway-ubuntu-24.04-amd64-deb
+          path: gateway/dist/*.deb
+          if-no-files-found: error
