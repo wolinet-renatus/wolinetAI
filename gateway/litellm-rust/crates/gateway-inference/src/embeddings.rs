@@ -75,13 +75,12 @@ async fn handle(
     let start_time_ms = now_millis();
 
     if providers::is_gemini_provider(&provider, &upstream_model) {
-        let (gem_req, is_batch) = gemini::openai_embeddings_to_gemini(&upstream_model, &body)
-            .map_err(|e| Error::InvalidBody(e.to_string()))?;
-        let action = if is_batch {
-            "batchEmbedContents"
-        } else {
-            "embedContent"
-        };
+        let (gem_req, action) = gemini::openai_embeddings_to_gemini_for_base(
+            &upstream_model,
+            api_base.as_deref(),
+            &body,
+        )
+        .map_err(|e| Error::InvalidBody(e.to_string()))?;
         let url = gemini::endpoint_url(&upstream_model, api_base.as_deref(), action);
         let req_headers = api_key
             .as_deref()

@@ -12,6 +12,10 @@ pub fn strip_gemini_prefix(model: &str) -> &str {
         .unwrap_or(model)
 }
 
+pub fn is_vertex_api_base(api_base: Option<&str>) -> bool {
+    api_base.is_some_and(|base| base.contains("aiplatform.googleapis.com"))
+}
+
 pub fn endpoint_url(model: &str, api_base: Option<&str>, action: &str) -> String {
     let clean_model = strip_gemini_prefix(model);
     let base = api_base
@@ -529,6 +533,15 @@ pub fn openai_embeddings_to_gemini(
     upstream_model: &str,
     body: &Map<String, Value>,
 ) -> Result<(Value, bool), Error> {
+    let (payload, action) = openai_embeddings_to_gemini_for_base(upstream_model, None, body)?;
+    Ok((payload, action == "batchEmbedContents"))
+}
+
+pub fn openai_embeddings_to_gemini_for_base(
+    upstream_model: &str,
+    api_base: Option<&str>,
+    body: &Map<String, Value>,
+) -> Result<(Value, &'static str), Error> {
     let clean_model = strip_gemini_prefix(upstream_model);
     let dimensions = body.get("dimensions").and_then(Value::as_u64);
     let inputs: Vec<String> = match body.get("input") {
@@ -549,6 +562,22 @@ pub fn openai_embeddings_to_gemini(
         ));
     }
 
+    if is_vertex_api_base(api_base) {
+        let instances: Vec<Value> = inputs
+            .into_iter()
+            .map(|text| json!({ "content": text }))
+            .collect();
+        let mut req = Map::new();
+        req.insert("instances".to_owned(), Value::Array(instances));
+        if let Some(dim) = dimensions {
+            req.insert(
+                "parameters".to_owned(),
+                json!({ "outputDimensionality": dim }),
+            );
+        }
+        return Ok((Value::Object(req), "predict"));
+    }
+
     if inputs.len() == 1 {
         let mut req = Map::new();
         req.insert(
@@ -562,7 +591,7 @@ pub fn openai_embeddings_to_gemini(
         if let Some(dim) = dimensions {
             req.insert("outputDimensionality".to_owned(), json!(dim));
         }
-        return Ok((Value::Object(req), false));
+        return Ok((Value::Object(req), "embedContent"));
     }
 
     let requests: Vec<Value> = inputs
@@ -580,20 +609,36 @@ pub fn openai_embeddings_to_gemini(
             Value::Object(req)
         })
         .collect();
-    Ok((json!({ "requests": requests }), true))
+    Ok((json!({ "requests": requests }), "batchEmbedContents"))
 }
 
 pub fn gemini_embeddings_to_openai(gemini: &Value, requested_model: &str) -> Result<Value, Error> {
-    let vectors: Vec<&Value> = if let Some(arr) = gemini.get("embeddings").and_then(Value::as_array)
-    {
-        arr.iter().filter_map(|item| item.get("values")).collect()
-    } else if let Some(values) = gemini.get("embedding").and_then(|e| e.get("values")) {
-        vec![values]
-    } else {
-        return Err(Error::InvalidResponse(
-            "missing embedding values in Gemini response".into(),
-        ));
-    };
+    let mut prompt_tokens = 0_u64;
+    let vectors: Vec<&Value> =
+        if let Some(preds) = gemini.get("predictions").and_then(Value::as_array) {
+            preds
+                .iter()
+                .filter_map(|pred| {
+                    let emb = pred.get("embeddings")?;
+                    if let Some(tokens) = emb
+                        .get("statistics")
+                        .and_then(|s| s.get("token_count"))
+                        .and_then(Value::as_u64)
+                    {
+                        prompt_tokens += tokens;
+                    }
+                    emb.get("values")
+                })
+                .collect()
+        } else if let Some(arr) = gemini.get("embeddings").and_then(Value::as_array) {
+            arr.iter().filter_map(|item| item.get("values")).collect()
+        } else if let Some(values) = gemini.get("embedding").and_then(|e| e.get("values")) {
+            vec![values]
+        } else {
+            return Err(Error::InvalidResponse(
+                "missing embedding values in Gemini response".into(),
+            ));
+        };
 
     let data: Vec<Value> = vectors
         .into_iter()
@@ -612,8 +657,8 @@ pub fn gemini_embeddings_to_openai(gemini: &Value, requested_model: &str) -> Res
         "data": data,
         "model": requested_model,
         "usage": {
-            "prompt_tokens": 0,
-            "total_tokens": 0
+            "prompt_tokens": prompt_tokens,
+            "total_tokens": prompt_tokens
         }
     }))
 }
@@ -870,5 +915,32 @@ mod tests {
         });
         let openai_img = gemini_image_to_openai(&img_resp, false, 100).unwrap();
         assert_eq!(openai_img["data"][0]["b64_json"], "QUJD");
+
+        let vertex = "https://aiplatform.googleapis.com/v1/projects/194835052236/locations/global/publishers/google";
+        let emb_req = serde_json::from_value::<Map<String, Value>>(json!({
+            "model": "Wolinet Embeddings",
+            "input": ["hello", "world"],
+            "dimensions": 256
+        }))
+        .unwrap();
+        let (gem_emb, action) = openai_embeddings_to_gemini_for_base(
+            "gemini/text-embedding-004",
+            Some(vertex),
+            &emb_req,
+        )
+        .unwrap();
+        assert_eq!(action, "predict");
+        assert_eq!(gem_emb["instances"][0]["content"], "hello");
+        assert_eq!(gem_emb["parameters"]["outputDimensionality"], 256);
+
+        let pred_resp = json!({
+            "predictions": [
+                { "embeddings": { "statistics": { "token_count": 2 }, "values": [0.1, 0.2] } },
+                { "embeddings": { "statistics": { "token_count": 3 }, "values": [0.3, 0.4] } }
+            ]
+        });
+        let openai_emb = gemini_embeddings_to_openai(&pred_resp, "Wolinet Embeddings").unwrap();
+        assert_eq!(openai_emb["data"][1]["embedding"], json!([0.3, 0.4]));
+        assert_eq!(openai_emb["usage"]["prompt_tokens"], 5);
     }
 }

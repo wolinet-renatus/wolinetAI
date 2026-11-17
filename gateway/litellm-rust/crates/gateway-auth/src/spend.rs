@@ -171,8 +171,8 @@ async fn flush_batch(
         let prompt = ev.prompt_tokens as i32;
         let completion = ev.completion_tokens as i32;
         let duration_ms = ev.duration_ms();
-        let start_dt = ev.start_datetime();
-        let end_dt = ev.end_datetime();
+        let start_dt = ev.start_datetime().naive_utc();
+        let end_dt = ev.end_datetime().naive_utc();
         let tags_json: Value = json!(ev.request_tags);
         let metadata_json: Value = json!({});
         let model_id = ev.model_id.as_deref().unwrap_or("");

@@ -54,7 +54,6 @@ jobs:
       - name: Run pure-Rust test suite
         run: >
           cargo test
-          -p litellm-gateway
           -p litellm-gateway-auth
           -p litellm-gateway-inference
           -p litellm-config
@@ -63,7 +62,7 @@ jobs:
           -p litellm-cost
           -p litellm-model-catalog
           --locked &&
-          cargo test -p litellm-core --locked -- --test-threads=1
+          cargo test -p litellm-gateway -p litellm-core --locked -- --test-threads=1
 
       - name: Build release binary and Ubuntu 24.04 x86_64 .deb package
         run: |

@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
 use moka::future::Cache;
 use redis::AsyncCommands;
@@ -125,6 +125,16 @@ pub async fn fetch_virtual_key(
     fetch_from_pg_and_cache(key_hash, cache, None, pg_pool, redis_ttl_secs).await
 }
 
+fn pg_col<'a, T: tokio_postgres::types::FromSql<'a>>(
+    row: &'a tokio_postgres::Row,
+    name: &str,
+) -> Result<T, Error> {
+    row.try_get(name).map_err(|err| {
+        tracing::error!("postgres column `{name}` decode failed: {err}");
+        Error::Store
+    })
+}
+
 async fn fetch_from_pg_and_cache(
     key_hash: &str,
     cache: &Cache<String, VirtualKeyRecord>,
@@ -168,18 +178,19 @@ async fn fetch_from_pg_and_cache(
         return Ok(None);
     };
 
+    let expires = pg_col::<Option<NaiveDateTime>>(&row, "expires")?.map(|dt| dt.and_utc());
     let record = VirtualKeyRecord {
-        token_hash: row.try_get("token").map_err(|_| Error::Store)?,
-        spend: row.try_get("spend").map_err(|_| Error::Store)?,
-        max_budget: row.try_get("max_budget").map_err(|_| Error::Store)?,
-        expires: row.try_get("expires").map_err(|_| Error::Store)?,
-        models: row.try_get("models").map_err(|_| Error::Store)?,
-        user_id: row.try_get("user_id").map_err(|_| Error::Store)?,
-        team_id: row.try_get("team_id").map_err(|_| Error::Store)?,
-        organization_id: row.try_get("organization_id").map_err(|_| Error::Store)?,
-        blocked: row.try_get("blocked").map_err(|_| Error::Store)?,
-        rpm_limit: row.try_get("rpm_limit").map_err(|_| Error::Store)?,
-        tpm_limit: row.try_get("tpm_limit").map_err(|_| Error::Store)?,
+        token_hash: pg_col(&row, "token")?,
+        spend: pg_col(&row, "spend")?,
+        max_budget: pg_col(&row, "max_budget")?,
+        expires,
+        models: pg_col(&row, "models")?,
+        user_id: pg_col(&row, "user_id")?,
+        team_id: pg_col(&row, "team_id")?,
+        organization_id: pg_col(&row, "organization_id")?,
+        blocked: pg_col(&row, "blocked")?,
+        rpm_limit: pg_col(&row, "rpm_limit")?,
+        tpm_limit: pg_col(&row, "tpm_limit")?,
     };
 
     cache.insert(key_hash.to_owned(), record.clone()).await;
