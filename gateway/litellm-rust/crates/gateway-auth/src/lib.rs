@@ -1,4 +1,5 @@
 mod error;
+pub mod management;
 pub mod pricing;
 pub mod spend;
 pub mod store;
@@ -21,8 +22,9 @@ use store::{PgPool, build_pg_pool};
 use subtle::ConstantTimeEq;
 
 pub use error::Error;
+pub use management::management_router;
 pub use spend::{SpendEvent, SpendLogger};
-pub use store::{VirtualKeyRecord, fetch_virtual_key, validate_key_record};
+pub use store::{VirtualKeyRecord, fetch_virtual_key, load_db_models, validate_key_record};
 
 #[derive(Clone)]
 pub struct Auth {
@@ -197,6 +199,18 @@ impl GatewayAuth {
 
     pub fn spend_logger(&self) -> &SpendLogger {
         &self.spend_logger
+    }
+
+    pub async fn invalidate_key(&self, key_hash: &str) {
+        let mut redis_conn = self.redis.clone();
+        store::invalidate_vkey_cache(&self.cache, redis_conn.as_mut(), key_hash).await;
+    }
+
+    pub async fn load_db_models(&self) -> Vec<litellm_config::Model> {
+        let Some(pool) = self.pg_pool.as_ref() else {
+            return Vec::new();
+        };
+        store::load_db_models(pool).await
     }
 
     pub async fn authenticate_headers(&self, headers: &HeaderMap) -> Result<AuthContext, Error> {

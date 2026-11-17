@@ -56,7 +56,7 @@ async fn handle(
         .and_then(Value::as_str)
         .ok_or_else(|| Error::InvalidBody("model is required".into()))?
         .to_owned();
-    let candidates = providers::candidates_for(gateway, &requested_model)?;
+    let candidates = providers::candidates_for_auth(gateway, &requested_model, auth_meta.as_ref())?;
     let candidate = candidates[0];
     let (provider, upstream_model) = providers::split_provider_and_model(candidate)
         .ok_or_else(|| Error::Internal("unable to resolve provider for transcription".into()))?;

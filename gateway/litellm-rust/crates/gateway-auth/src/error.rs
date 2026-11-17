@@ -21,6 +21,10 @@ pub enum Error {
     BudgetExceeded,
     #[error("rate limit exceeded: {0}")]
     RateLimitExceeded(String),
+    #[error("invalid management request: {0}")]
+    InvalidRequest(String),
+    #[error("{0}")]
+    NotFound(String),
     #[error("gateway authentication unavailable")]
     Secret(#[from] litellm_secrets::Error),
     #[error("authentication store error")]
@@ -34,6 +38,8 @@ impl IntoResponse for Error {
             Self::BlockedKey | Self::ModelNotAllowed(_) => StatusCode::FORBIDDEN,
             Self::BudgetExceeded => StatusCode::PAYMENT_REQUIRED,
             Self::RateLimitExceeded(_) => StatusCode::TOO_MANY_REQUESTS,
+            Self::InvalidRequest(_) => StatusCode::BAD_REQUEST,
+            Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::Unconfigured | Self::Secret(_) | Self::Store => StatusCode::INTERNAL_SERVER_ERROR,
         };
         if matches!(

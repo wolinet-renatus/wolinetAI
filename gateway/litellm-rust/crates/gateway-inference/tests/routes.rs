@@ -3,11 +3,14 @@ mod support;
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 use axum::{
+    Extension,
     body::{Body, to_bytes},
     http::Request,
 };
 use litellm_core::resources::CoreResources;
-use litellm_gateway_inference::{Deployment, Gateway, PassThroughRoute, router_with_passthrough};
+use litellm_gateway_inference::{
+    AuthMetadata, Deployment, Gateway, PassThroughRoute, router_with_passthrough,
+};
 use litellm_http::{HttpClientPool, HttpSettings, Resolution, media::PublicDnsResolver};
 use litellm_llms::base_llm::ocr::settings::OcrSettings;
 use litellm_secrets::{SecretValue, source::SecretSource};
@@ -316,4 +319,30 @@ async fn transcription_aliases_reach_core_validation(#[case] path: &str) {
             .unwrap()
             .contains("audio.format")
     );
+}
+
+#[tokio::test]
+async fn enforces_allowed_models_acl_on_inference_and_models_list() {
+    let app = support::app("openai/gpt-4o", "http://127.0.0.1:1").layer(Extension(AuthMetadata {
+        allowed_models: vec!["other-model".into()],
+        ..Default::default()
+    }));
+
+    let chat_req = Request::post("/v1/chat/completions")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            json!({"model": "public/model", "messages": [{"role": "user", "content": "hi"}]})
+                .to_string(),
+        ))
+        .unwrap();
+    let chat_resp = app.clone().oneshot(chat_req).await.unwrap();
+    assert_eq!(chat_resp.status(), 403);
+    let chat_body = support::json(chat_resp).await;
+    assert_eq!(chat_body["error"]["type"], "permission_error");
+
+    let list_req = Request::get("/v1/models").body(Body::empty()).unwrap();
+    let list_resp = app.oneshot(list_req).await.unwrap();
+    assert_eq!(list_resp.status(), 200);
+    let list_body = support::json(list_resp).await;
+    assert_eq!(list_body["data"], json!([]));
 }

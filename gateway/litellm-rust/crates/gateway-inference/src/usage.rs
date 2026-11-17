@@ -3,7 +3,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct AuthMetadata {
     pub key_hash: Option<String>,
     pub user_id: Option<String>,
@@ -11,6 +11,23 @@ pub struct AuthMetadata {
     pub end_user: Option<String>,
     pub organization_id: Option<String>,
     pub tags: Vec<String>,
+    pub allowed_models: Vec<String>,
+}
+
+impl AuthMetadata {
+    pub fn is_model_allowed(&self, requested_model: &str, resolved_group: Option<&str>) -> bool {
+        if self.allowed_models.is_empty()
+            || self
+                .allowed_models
+                .iter()
+                .any(|m| m == "*" || m == "all-proxy-models")
+        {
+            return true;
+        }
+        self.allowed_models
+            .iter()
+            .any(|m| m == requested_model || resolved_group.is_some_and(|group| m == group))
+    }
 }
 
 #[derive(Clone, Debug)]

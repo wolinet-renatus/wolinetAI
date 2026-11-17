@@ -3,7 +3,7 @@
 use std::{convert::Infallible, sync::Arc};
 
 use axum::{
-    Json,
+    Extension, Json,
     body::{Body, Bytes},
     extract::State,
     http::{HeaderMap, StatusCode, header},
@@ -16,7 +16,7 @@ use litellm_core::messages::{
 use litellm_types::utils::{ProviderSpecificHeader, ProviderSpecificHeaders};
 use serde_json::{Map, Value};
 
-use crate::{Deployment, Error, Gateway};
+use crate::{Deployment, Error, Gateway, usage::AuthMetadata};
 
 /// Client headers Python forwards to Anthropic-speaking providers on every call.
 const ANTHROPIC_API_HEADERS: [&str; 2] = ["anthropic-version", "anthropic-beta"];
@@ -25,19 +25,25 @@ const ANTHROPIC_API_HEADER_PROVIDERS: &str = "anthropic,bedrock,bedrock_mantle,v
 pub async fn create(
     State(gateway): State<Arc<Gateway>>,
     headers: HeaderMap,
+    auth_meta: Option<Extension<AuthMetadata>>,
     body: Bytes,
 ) -> Response {
     let request_id = headers
         .get("x-request-id")
         .and_then(|value| value.to_str().ok())
         .map(str::to_owned);
-    match handle(&gateway, &headers, &body).await {
+    match handle(&gateway, &headers, auth_meta.map(|Extension(a)| a), &body).await {
         Ok(response) => response,
         Err(error) => (error.status(), Json(error.body(request_id.as_deref()))).into_response(),
     }
 }
 
-async fn handle(gateway: &Gateway, headers: &HeaderMap, body: &[u8]) -> Result<Response, Error> {
+async fn handle(
+    gateway: &Gateway,
+    headers: &HeaderMap,
+    auth_meta: Option<AuthMetadata>,
+    body: &[u8],
+) -> Result<Response, Error> {
     let body = match serde_json::from_slice(body) {
         Ok(Value::Object(body)) => body,
         Ok(_) => return Err(Error::InvalidBody("expected a JSON object".into())),
@@ -47,6 +53,12 @@ async fn handle(gateway: &Gateway, headers: &HeaderMap, body: &[u8]) -> Result<R
         .get("model")
         .and_then(Value::as_str)
         .ok_or_else(|| Error::InvalidBody("model is required".into()))?;
+    let resolved = gateway.models.resolve_model_name(model_name);
+    if let Some(meta) = auth_meta.as_ref()
+        && !meta.is_model_allowed(model_name, Some(resolved))
+    {
+        return Err(Error::PermissionDenied(model_name.to_owned()));
+    }
     let deployment = gateway
         .models
         .get(model_name)

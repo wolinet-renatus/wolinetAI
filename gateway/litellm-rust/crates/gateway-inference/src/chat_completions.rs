@@ -95,7 +95,7 @@ async fn handle(
         .and_then(Value::as_str)
         .ok_or_else(|| Error::InvalidBody("model is required".into()))?
         .to_owned();
-    let candidates = providers::candidates_for(gateway, &requested_model)?;
+    let candidates = providers::candidates_for_auth(gateway, &requested_model, auth_meta.as_ref())?;
     let stream = body.get("stream").and_then(Value::as_bool) == Some(true);
     if !body.contains_key("messages") {
         return Err(Error::InvalidBody("messages is required".into()));

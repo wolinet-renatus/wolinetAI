@@ -6,7 +6,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-axum = { workspace = true, features = ["json"] }
+axum = { workspace = true, features = ["json", "query"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 deadpool-postgres = "0.14"
 litellm-auth-types.workspace = true
@@ -23,6 +23,7 @@ serde_json.workspace = true
 sha2.workspace = true
 subtle.workspace = true
 thiserror.workspace = true
+uuid.workspace = true
 tokio = { workspace = true, features = ["sync", "time", "rt"] }
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-serde_json-1"] }
 tokio-postgres-rustls = "0.13"

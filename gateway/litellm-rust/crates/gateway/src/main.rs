@@ -60,15 +60,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Logger::new(StderrSink { level }).install_global()?;
     let config_path = std::env::var("LITELLM_CONFIG").unwrap_or_else(|_| "config.yaml".into());
     let config = Config::load(config_path)?;
-    let inference = litellm_gateway::build_inference(&config)?;
-    let app = litellm_gateway::build_router(inference, &config).await;
+    let (inference, gateway_auth, effective_config) =
+        litellm_gateway::build_gateway_with_db_models(config).await?;
+    let app =
+        litellm_gateway::build_router_with_auth(inference, &effective_config, gateway_auth).await;
     let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".into());
     let port = std::env::var("PORT")
         .unwrap_or_else(|_| "4000".into())
         .parse::<u16>()?;
     let listener = tokio::net::TcpListener::bind((host.as_str(), port)).await?;
 
-    tracing::info!(address = %listener.local_addr()?, models = config.model_list.len(), log_level = %level, "gateway listening");
+    tracing::info!(
+        address = %listener.local_addr()?,
+        models = effective_config.model_list.len(),
+        log_level = %level,
+        "gateway listening"
+    );
 
     axum::serve(listener, app).await?;
     Ok(())

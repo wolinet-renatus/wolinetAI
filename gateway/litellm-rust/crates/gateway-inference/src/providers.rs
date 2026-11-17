@@ -75,6 +75,20 @@ pub(crate) fn candidates_for<'a>(
     Ok(list)
 }
 
+pub(crate) fn candidates_for_auth<'a>(
+    gateway: &'a Gateway,
+    requested_model: &str,
+    auth: Option<&AuthMetadata>,
+) -> Result<Vec<&'a ModelDeployment>, Error> {
+    let resolved = gateway.models.resolve_model_name(requested_model);
+    if let Some(meta) = auth
+        && !meta.is_model_allowed(requested_model, Some(resolved))
+    {
+        return Err(Error::PermissionDenied(requested_model.to_owned()));
+    }
+    candidates_for(gateway, requested_model)
+}
+
 pub(crate) fn is_retryable(error: &Error) -> bool {
     match error {
         Error::Route(RouteError::Transport(

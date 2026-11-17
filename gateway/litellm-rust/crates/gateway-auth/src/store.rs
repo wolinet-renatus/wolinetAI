@@ -1,5 +1,7 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
+use litellm_auth_types::SecretValue;
+use litellm_config::{LiteLlmParams, Model, ModelInfo};
 use moka::future::Cache;
 use redis::AsyncCommands;
 use rustls::{ClientConfig, RootCertStore};
@@ -245,6 +247,120 @@ pub async fn check_redis_rate_limits(
     }
 
     Ok(())
+}
+
+pub async fn invalidate_vkey_cache(
+    cache: &Cache<String, VirtualKeyRecord>,
+    redis: Option<&mut redis::aio::ConnectionManager>,
+    key_hash: &str,
+) {
+    cache.invalidate(key_hash).await;
+    if let Some(conn) = redis {
+        let rkey = redis_vkey_cache_key(key_hash);
+        let _: Result<(), _> = conn.del::<_, ()>(&rkey).await;
+    }
+}
+
+#[derive(Deserialize)]
+struct DbLiteLlmParams {
+    model: String,
+    api_key: Option<String>,
+    api_base: Option<String>,
+    custom_llm_provider: Option<String>,
+    timeout: Option<f64>,
+    temperature: Option<f64>,
+    top_p: Option<f64>,
+    merge_reasoning_content_in_choices: Option<bool>,
+    input_cost_per_token: Option<f64>,
+    output_cost_per_token: Option<f64>,
+    cache_read_input_token_cost: Option<f64>,
+    rpm: Option<u64>,
+    tpm: Option<u64>,
+}
+
+#[derive(Default, Deserialize)]
+struct DbModelInfo {
+    id: Option<String>,
+    mode: Option<String>,
+    base_model: Option<String>,
+    max_input_tokens: Option<u64>,
+    max_output_tokens: Option<u64>,
+    rpm: Option<u64>,
+    tpm: Option<u64>,
+}
+
+pub async fn load_db_models(pg_pool: &PgPool) -> Vec<Model> {
+    let Ok(client) = pg_pool.get().await else {
+        tracing::warn!("postgres pool acquisition failed while loading DB models");
+        return Vec::new();
+    };
+    let rows = match client
+        .query(
+            r#"
+            SELECT model_name, litellm_params, model_info
+            FROM "LiteLLM_ProxyModelTable"
+            WHERE blocked = false
+            ORDER BY created_at ASC
+            "#,
+            &[],
+        )
+        .await
+    {
+        Ok(rows) => rows,
+        Err(err) => {
+            tracing::warn!("failed to query LiteLLM_ProxyModelTable: {err}");
+            return Vec::new();
+        }
+    };
+
+    let mut models = Vec::with_capacity(rows.len());
+    for row in rows {
+        let Ok(model_name) = row.try_get::<_, String>("model_name") else {
+            continue;
+        };
+        let Ok(raw_params) = row.try_get::<_, serde_json::Value>("litellm_params") else {
+            continue;
+        };
+        let Ok(parsed_params) = serde_json::from_value::<DbLiteLlmParams>(raw_params) else {
+            tracing::warn!(model = %model_name, "skipping DB model with unparseable litellm_params");
+            continue;
+        };
+        let parsed_info = row
+            .try_get::<_, Option<serde_json::Value>>("model_info")
+            .ok()
+            .flatten()
+            .and_then(|val| serde_json::from_value::<DbModelInfo>(val).ok())
+            .map(|info| ModelInfo {
+                id: info.id,
+                mode: info.mode,
+                base_model: info.base_model,
+                max_input_tokens: info.max_input_tokens,
+                max_output_tokens: info.max_output_tokens,
+                rpm: info.rpm,
+                tpm: info.tpm,
+            });
+        models.push(Model {
+            model_name,
+            litellm_params: LiteLlmParams {
+                model: parsed_params.model,
+                api_key: parsed_params.api_key.map(SecretValue::new),
+                api_base: parsed_params.api_base,
+                custom_llm_provider: parsed_params.custom_llm_provider,
+                timeout: parsed_params.timeout,
+                temperature: parsed_params.temperature,
+                top_p: parsed_params.top_p,
+                merge_reasoning_content_in_choices: parsed_params
+                    .merge_reasoning_content_in_choices,
+                input_cost_per_token: parsed_params.input_cost_per_token,
+                output_cost_per_token: parsed_params.output_cost_per_token,
+                cache_read_input_token_cost: parsed_params.cache_read_input_token_cost,
+                rpm: parsed_params.rpm,
+                tpm: parsed_params.tpm,
+            },
+            model_info: parsed_info,
+        });
+    }
+    models
 }
 
 #[cfg(test)]

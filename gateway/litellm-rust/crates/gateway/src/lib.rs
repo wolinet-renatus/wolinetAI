@@ -12,8 +12,9 @@ use http_body_util::BodyExt;
 
 use litellm_config::Config;
 use litellm_core::resources::CoreResources;
+pub use litellm_gateway_auth::GatewayAuth;
 use litellm_gateway_auth::{
-    Auth, AuthContext, GatewayAuth, RequireMasterKey, SpendEvent, authenticate_middleware,
+    Auth, AuthContext, RequireMasterKey, SpendEvent, authenticate_middleware, management_router,
 };
 use litellm_gateway_inference::{
     AuthMetadata, Gateway, ModelList, PassThroughRoute, UsageRecord, UsageSink,
@@ -88,22 +89,60 @@ pub fn router(inference: Arc<Gateway>, config: &Config) -> Router {
         .layer(middleware::from_fn(log_request))
 }
 
+pub async fn build_gateway_with_db_models(
+    mut config: Config,
+) -> Result<(Arc<Gateway>, GatewayAuth, Config), litellm_http::Error> {
+    let pool = Arc::new(HttpClientPool::new(Arc::new(PublicDnsResolver)));
+    let http = Resolution::from(&HttpSettings::default()).config;
+    let client = pool.client(&http, ClientVariant::Provider)?;
+    let secrets = Arc::new(EnvironmentSecrets::python_compatible(client));
+    let gateway_auth = GatewayAuth::connect(&config, secrets.clone()).await;
+
+    if config.general_settings.store_model_in_db == Some(true) {
+        let db_models = gateway_auth.load_db_models().await;
+        if !db_models.is_empty() {
+            tracing::info!(count = db_models.len(), "loaded models from PostgreSQL");
+            let mut merged = config.model_list.into_vec();
+            merged.extend(db_models);
+            config.model_list = merged.into_boxed_slice();
+        }
+    }
+
+    let resources = CoreResources::new(pool);
+    let ocr = resources.ocr_client(
+        &http,
+        Default::default(),
+        OcrSettings::default(),
+        secrets.clone(),
+    )?;
+    let inference = Arc::new(Gateway {
+        resources,
+        http,
+        secrets,
+        models: ModelList::from_config(&config),
+        ocr,
+    });
+    Ok((inference, gateway_auth, config))
+}
+
 pub async fn build_router(inference: Arc<Gateway>, config: &Config) -> Router {
     let gateway_auth = GatewayAuth::connect(config, inference.secrets.clone()).await;
+    build_router_with_auth(inference, config, gateway_auth).await
+}
+
+pub async fn build_router_with_auth(
+    inference: Arc<Gateway>,
+    config: &Config,
+    gateway_auth: GatewayAuth,
+) -> Router {
     let db_configured = gateway_auth.is_db_configured();
     let redis_configured = gateway_auth.is_redis_configured();
     let model_count = inference.models.model_names().len();
     let spend_logger = gateway_auth.spend_logger().clone();
+    let mgmt_router = management_router(gateway_auth.clone());
 
     let usage_sink: UsageSink = Arc::new(move |rec: UsageRecord| {
-        let auth = rec.auth.unwrap_or(AuthMetadata {
-            key_hash: None,
-            user_id: None,
-            team_id: None,
-            end_user: None,
-            organization_id: None,
-            tags: Vec::new(),
-        });
+        let auth = rec.auth.unwrap_or_default();
         spend_logger.record(SpendEvent {
             request_id: rec.request_id,
             call_type: rec.call_type,
@@ -143,6 +182,17 @@ pub async fn build_router(inference: Arc<Gateway>, config: &Config) -> Router {
     Router::new()
         .route("/health/liveliness", get(|| async { Json("I'm alive!") }))
         .route(
+            "/health/readiness",
+            get(move || async move {
+                Json(json!({
+                    "status": "connected",
+                    "postgres": db_configured,
+                    "redis": redis_configured,
+                    "models": model_count
+                }))
+            }),
+        )
+        .route(
             "/health",
             get(move || async move {
                 Json(json!({
@@ -153,6 +203,7 @@ pub async fn build_router(inference: Arc<Gateway>, config: &Config) -> Router {
                 }))
             }),
         )
+        .merge(mgmt_router)
         .merge(inference_router)
         .layer(middleware::from_fn(log_request))
 }
@@ -166,6 +217,7 @@ async fn bridge_auth_context(mut request: Request, next: Next) -> Response {
             end_user: ctx.end_user,
             organization_id: ctx.organization_id,
             tags: ctx.tags,
+            allowed_models: ctx.allowed_models,
         });
     }
     next.run(request).await

@@ -22,6 +22,8 @@ pub enum Error {
     Ocr(#[from] OcrError),
     #[error("{0} is not implemented by the Rust gateway")]
     Unsupported(String),
+    #[error("key is not allowed to access model `{0}`")]
+    PermissionDenied(String),
     #[error("request body exceeds the size limit")]
     BodyTooLarge,
     #[error("{0}")]
@@ -34,6 +36,7 @@ impl Error {
             Self::Unsupported(_)
             | Self::Route(RouteError::Unsupported(_))
             | Self::Ocr(OcrError::Unsupported(_)) => StatusCode::NOT_IMPLEMENTED,
+            Self::PermissionDenied(_) => StatusCode::FORBIDDEN,
             Self::BodyTooLarge => StatusCode::PAYLOAD_TOO_LARGE,
             Self::Ocr(
                 OcrError::Auth(litellm_auth::Error::MissingApiKey { .. })
