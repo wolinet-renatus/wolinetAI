@@ -1176,6 +1176,16 @@ def _encode_tool_call_id_with_signature(tool_call_id: str, thought_signature: st
     return tool_call_id
 
 
+def _is_strict_base64(value: str) -> bool:
+    if not value:
+        return False
+    try:
+        base64.b64decode(value, validate=True)
+    except ValueError:
+        return False
+    return True
+
+
 def _get_thought_signature_from_tool(tool: dict) -> str | None:
     """Extract thought signature from tool call's provider_specific_fields.
 
@@ -1208,11 +1218,11 @@ def _get_thought_signature_from_tool(tool: dict) -> str | None:
                     return signature
     # Check if thought signature is embedded in tool call ID
     tool_call_id: Final = tool.get("id")
-    if tool_call_id and THOUGHT_SIGNATURE_SEPARATOR in tool_call_id:
+    if isinstance(tool_call_id, str) and THOUGHT_SIGNATURE_SEPARATOR in tool_call_id:
         parts: Final = tool_call_id.split(THOUGHT_SIGNATURE_SEPARATOR, 1)
         if len(parts) == 2:
             _, signature = parts
-            return signature
+            return signature if _is_strict_base64(signature) else None
     return None
 
 

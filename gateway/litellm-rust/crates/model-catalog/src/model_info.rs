@@ -1,9 +1,34 @@
 use crate::capabilities::{AudioFormat, InputModality, Mode, OutputModality, VertexAiAudioApi};
 use crate::pricing::{OffPeakPricing, SearchContextCostPerQuery, TieredRate, WebSearchBillingUnit};
 use litellm_types::llms::openai::ReasoningEffort;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
+
+fn de_opt_u64_lenient<'de, D>(deserializer: D) -> Result<Option<u64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Num {
+        U64(u64),
+        F64(f64),
+    }
+
+    match Option::<Num>::deserialize(deserializer)? {
+        None => Ok(None),
+        Some(Num::U64(n)) => Ok(Some(n)),
+        Some(Num::F64(f))
+            if f.is_finite() && f >= 0.0 && f.fract() == 0.0 && f <= (u64::MAX as f64) =>
+        {
+            Ok(Some(f as u64))
+        }
+        Some(Num::F64(f)) => Err(serde::de::Error::custom(format!(
+            "expected non-negative whole number, got {f}"
+        ))),
+    }
+}
 
 /// Typed mirror of one catalog model entry.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -243,13 +268,25 @@ pub struct ModelInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub litellm_provider: Option<String>,
     /// Maximum prompt/context tokens the model accepts.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "de_opt_u64_lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub max_input_tokens: Option<u64>,
     /// Maximum tokens the model can generate in one response.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "de_opt_u64_lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub max_output_tokens: Option<u64>,
     /// Legacy field: max output tokens if the provider specifies it, else max input tokens.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "de_opt_u64_lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub max_tokens: Option<u64>,
     /// Free-form notes about the entry (e.g. pricing derivation).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -373,10 +410,18 @@ pub struct ModelInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_dbu_cost_per_token: Option<f64>,
     /// Embedding dimension for embedding models.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "de_opt_u64_lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub output_vector_size: Option<u64>,
     /// Smallest prefix the provider will actually cache; absent means the provider default applies.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "de_opt_u64_lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub prompt_cache_min_tokens: Option<u64>,
     /// Provider-internal routing hints (e.g. bedrock_invocation_schema).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -394,7 +439,11 @@ pub struct ModelInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub regional_processing_uplift_multiplier_us: Option<f64>,
     /// Provider default requests-per-minute limit.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "de_opt_u64_lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub rpm: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rules: Option<Vec<Value>>,
@@ -509,7 +558,11 @@ pub struct ModelInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tiered_pricing: Option<Vec<TieredRate>>,
     /// Provider default tokens-per-minute limit.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "de_opt_u64_lenient",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub tpm: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub use_openai_responses_path: Option<bool>,

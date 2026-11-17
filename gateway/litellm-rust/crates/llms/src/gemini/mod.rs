@@ -4,6 +4,35 @@ use serde_json::{Map, Value, json};
 use crate::Error;
 
 pub const DEFAULT_GEMINI_API_BASE: &str = "https://generativelanguage.googleapis.com/v1beta";
+pub const MAX_IMAGE_FAN_OUT_REQUESTS: usize = 10;
+const THOUGHT_SIGNATURE_SEPARATOR: &str = "__thought__";
+
+fn is_strict_base64(value: &str) -> bool {
+    !value.is_empty() && BASE64.decode(value).is_ok()
+}
+
+fn thought_signature_from_tool_call(tc: &Value, func: &Value, id: &str) -> Option<String> {
+    if let Some(sig) = tc
+        .get("provider_specific_fields")
+        .and_then(|p| p.get("thought_signature"))
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+    {
+        return Some(sig.to_owned());
+    }
+    if let Some(sig) = func
+        .get("provider_specific_fields")
+        .and_then(|p| p.get("thought_signature"))
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+    {
+        return Some(sig.to_owned());
+    }
+    id.split_once(THOUGHT_SIGNATURE_SEPARATOR)
+        .map(|(_, sig)| sig)
+        .filter(|sig| is_strict_base64(sig))
+        .map(str::to_owned)
+}
 
 pub fn strip_gemini_prefix(model: &str) -> &str {
     model
@@ -90,12 +119,18 @@ pub fn openai_chat_to_gemini(
                                 Some(v @ Value::Object(_)) => v.clone(),
                                 _ => json!({}),
                             };
-                            parts.push(json!({
+                            let mut part = json!({
                                 "functionCall": {
                                     "name": name,
                                     "args": args
                                 }
-                            }));
+                            });
+                            if let Some(sig) = thought_signature_from_tool_call(tc, func, id)
+                                && let Some(obj) = part.as_object_mut()
+                            {
+                                obj.insert("thoughtSignature".to_owned(), Value::String(sig));
+                            }
+                            parts.push(part);
                         }
                     }
                 }
@@ -327,19 +362,33 @@ pub fn gemini_response_to_openai(
     created: u64,
 ) -> Value {
     let mut choices = Vec::new();
-    if let Some(candidates) = gemini.get("candidates").and_then(Value::as_array) {
+    if let Some(block_reason) = gemini
+        .get("promptFeedback")
+        .and_then(|pf| pf.get("blockReason"))
+        .and_then(Value::as_str)
+    {
+        choices.push(json!({
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": Value::Null
+            },
+            "finish_reason": "content_filter",
+            "provider_specific_fields": {
+                "block_reason": block_reason
+            }
+        }));
+    } else if let Some(candidates) = gemini.get("candidates").and_then(Value::as_array) {
         for (idx, candidate) in candidates.iter().enumerate() {
             let (text, reasoning, tool_calls) = extract_candidate_parts(candidate, idx);
             let has_tools = !tool_calls.is_empty();
-            let finish_reason = map_finish_reason(
-                candidate.get("finishReason").and_then(Value::as_str),
-                has_tools,
-            );
+            let raw_reason = candidate.get("finishReason").and_then(Value::as_str);
+            let finish_reason = map_finish_reason(raw_reason, has_tools);
             let mut msg = Map::new();
             msg.insert("role".to_owned(), Value::String("assistant".to_owned()));
             msg.insert(
                 "content".to_owned(),
-                if text.is_empty() && has_tools {
+                if text.is_empty() && (has_tools || finish_reason == "content_filter") {
                     Value::Null
                 } else {
                     Value::String(text)
@@ -351,11 +400,25 @@ pub fn gemini_response_to_openai(
             if has_tools {
                 msg.insert("tool_calls".to_owned(), Value::Array(tool_calls));
             }
-            choices.push(json!({
-                "index": candidate.get("index").and_then(Value::as_u64).unwrap_or(idx as u64),
-                "message": Value::Object(msg),
-                "finish_reason": finish_reason
-            }));
+            let mut choice = Map::new();
+            choice.insert(
+                "index".to_owned(),
+                json!(
+                    candidate
+                        .get("index")
+                        .and_then(Value::as_u64)
+                        .unwrap_or(idx as u64)
+                ),
+            );
+            choice.insert("message".to_owned(), Value::Object(msg));
+            choice.insert("finish_reason".to_owned(), json!(finish_reason));
+            if let Some(reason_str) = raw_reason.filter(|r| is_content_filter_reason(r)) {
+                choice.insert(
+                    "provider_specific_fields".to_owned(),
+                    json!({ "native_finish_reason": reason_str }),
+                );
+            }
+            choices.push(Value::Object(choice));
         }
     }
 
@@ -464,18 +527,49 @@ fn extract_candidate_parts(candidate: &Value, cand_idx: usize) -> (String, Strin
                 .get("args")
                 .map(|v| serde_json::to_string(v).unwrap_or_else(|_| "{}".to_owned()))
                 .unwrap_or_else(|| "{}".to_owned());
-            tool_calls.push(json!({
-                "id": format!("call_{cand_idx}_{part_idx}"),
+            let base_id = format!("call_{cand_idx}_{part_idx}");
+            let thought_sig = part
+                .get("thoughtSignature")
+                .and_then(Value::as_str)
+                .filter(|s| !s.is_empty());
+            let call_id = match thought_sig {
+                Some(sig) => format!("{base_id}{THOUGHT_SIGNATURE_SEPARATOR}{sig}"),
+                None => base_id,
+            };
+            let mut tc = json!({
+                "id": call_id,
                 "type": "function",
                 "function": {
                     "name": name,
                     "arguments": args
                 }
-            }));
+            });
+            if let Some(sig) = thought_sig
+                && let Some(obj) = tc.as_object_mut()
+            {
+                obj.insert(
+                    "provider_specific_fields".to_owned(),
+                    json!({ "thought_signature": sig }),
+                );
+            }
+            tool_calls.push(tc);
         }
     }
 
     (text, reasoning, tool_calls)
+}
+
+fn is_content_filter_reason(reason: &str) -> bool {
+    matches!(
+        reason,
+        "SAFETY"
+            | "RECITATION"
+            | "BLOCKLIST"
+            | "PROHIBITED_CONTENT"
+            | "SPII"
+            | "IMAGE_SAFETY"
+            | "IMAGE_PROHIBITED_CONTENT"
+    )
 }
 
 fn map_finish_reason(reason: Option<&str>, has_tools: bool) -> &'static str {
@@ -484,7 +578,7 @@ fn map_finish_reason(reason: Option<&str>, has_tools: bool) -> &'static str {
     }
     match reason {
         Some("MAX_TOKENS") => "length",
-        Some("SAFETY") | Some("RECITATION") => "content_filter",
+        Some(r) if is_content_filter_reason(r) => "content_filter",
         _ => "stop",
     }
 }
@@ -668,6 +762,22 @@ pub fn is_imagen_model(upstream_model: &str) -> bool {
     clean.starts_with("imagen") || clean.starts_with("imagegeneration")
 }
 
+pub fn image_request_count(
+    upstream_model: &str,
+    body: &Map<String, Value>,
+) -> Result<usize, Error> {
+    if is_imagen_model(upstream_model) {
+        return Ok(1);
+    }
+    let count = body.get("n").and_then(Value::as_u64).unwrap_or(1).max(1);
+    if count > MAX_IMAGE_FAN_OUT_REQUESTS as u64 {
+        return Err(Error::InvalidRequest(format!(
+            "n={count} is above the maximum of {MAX_IMAGE_FAN_OUT_REQUESTS} images per request."
+        )));
+    }
+    Ok(count as usize)
+}
+
 pub fn openai_image_to_gemini(
     upstream_model: &str,
     body: &Map<String, Value>,
@@ -705,9 +815,6 @@ pub fn openai_image_to_gemini(
 
     let mut gen_config = Map::new();
     gen_config.insert("responseModalities".to_owned(), json!(["TEXT", "IMAGE"]));
-    if n > 1 {
-        gen_config.insert("candidateCount".to_owned(), json!(n));
-    }
     if let Some(ar) = aspect_ratio {
         gen_config.insert("imageConfig".to_owned(), json!({ "aspectRatio": ar }));
     }
@@ -729,12 +836,7 @@ fn map_size_to_aspect_ratio(size: &str) -> &'static str {
     }
 }
 
-pub fn gemini_image_to_openai(
-    gemini: &Value,
-    is_imagen_predict: bool,
-    created: u64,
-) -> Result<Value, Error> {
-    let mut images = Vec::new();
+fn push_extracted_images(gemini: &Value, is_imagen_predict: bool, images: &mut Vec<Value>) {
     if is_imagen_predict {
         if let Some(preds) = gemini.get("predictions").and_then(Value::as_array) {
             for pred in preds {
@@ -743,7 +845,9 @@ pub fn gemini_image_to_openai(
                 }
             }
         }
-    } else if let Some(candidates) = gemini.get("candidates").and_then(Value::as_array) {
+        return;
+    }
+    if let Some(candidates) = gemini.get("candidates").and_then(Value::as_array) {
         for candidate in candidates {
             if let Some(parts) = candidate
                 .get("content")
@@ -760,6 +864,45 @@ pub fn gemini_image_to_openai(
             }
         }
     }
+}
+
+pub fn gemini_image_to_openai(
+    gemini: &Value,
+    is_imagen_predict: bool,
+    created: u64,
+) -> Result<Value, Error> {
+    merge_gemini_images_to_openai(std::slice::from_ref(gemini), is_imagen_predict, created)
+}
+
+pub fn merge_gemini_images_to_openai(
+    responses: &[Value],
+    is_imagen_predict: bool,
+    created: u64,
+) -> Result<Value, Error> {
+    let mut images = Vec::new();
+    let mut prompt_tokens = 0_u64;
+    let mut completion_tokens = 0_u64;
+    let mut total_tokens = 0_u64;
+    let mut has_usage = false;
+
+    for gemini in responses {
+        push_extracted_images(gemini, is_imagen_predict, &mut images);
+        if let Some(meta) = gemini.get("usageMetadata") {
+            has_usage = true;
+            prompt_tokens += meta
+                .get("promptTokenCount")
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
+            completion_tokens += meta
+                .get("candidatesTokenCount")
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
+            total_tokens += meta
+                .get("totalTokenCount")
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
+        }
+    }
 
     if images.is_empty() {
         return Err(Error::InvalidResponse(
@@ -767,10 +910,20 @@ pub fn gemini_image_to_openai(
         ));
     }
 
-    Ok(json!({
-        "created": created,
-        "data": images
-    }))
+    let mut out = Map::new();
+    out.insert("created".to_owned(), json!(created));
+    out.insert("data".to_owned(), Value::Array(images));
+    if has_usage {
+        out.insert(
+            "usage".to_owned(),
+            json!({
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens
+            }),
+        );
+    }
+    Ok(Value::Object(out))
 }
 
 pub fn audio_to_gemini_request(
@@ -942,5 +1095,100 @@ mod tests {
         let openai_emb = gemini_embeddings_to_openai(&pred_resp, "Wolinet Embeddings").unwrap();
         assert_eq!(openai_emb["data"][1]["embedding"], json!([0.3, 0.4]));
         assert_eq!(openai_emb["usage"]["prompt_tokens"], 5);
+    }
+
+    #[test]
+    fn preserves_content_filter_reason_and_strict_thought_signatures() {
+        let blocked = json!({
+            "promptFeedback": { "blockReason": "PROHIBITED_CONTENT" },
+            "usageMetadata": { "promptTokenCount": 7, "candidatesTokenCount": 0, "totalTokenCount": 7 }
+        });
+        let blocked_out = gemini_response_to_openai(&blocked, "Wolinet Max", "chatcmpl-2", 200);
+        assert_eq!(blocked_out["choices"][0]["finish_reason"], "content_filter");
+        assert_eq!(
+            blocked_out["choices"][0]["provider_specific_fields"]["block_reason"],
+            "PROHIBITED_CONTENT"
+        );
+
+        let safety_cand = json!({
+            "candidates": [{
+                "index": 0,
+                "finishReason": "IMAGE_SAFETY",
+                "content": { "parts": [] }
+            }]
+        });
+        let safety_out = gemini_response_to_openai(&safety_cand, "Wolinet Max", "chatcmpl-3", 200);
+        assert_eq!(safety_out["choices"][0]["finish_reason"], "content_filter");
+        assert_eq!(
+            safety_out["choices"][0]["provider_specific_fields"]["native_finish_reason"],
+            "IMAGE_SAFETY"
+        );
+
+        let tool_req = serde_json::from_value::<Map<String, Value>>(json!({
+            "model": "Wolinet Max",
+            "messages": [{
+                "role": "assistant",
+                "tool_calls": [
+                    {
+                        "id": "call_1__thought__QUJD",
+                        "type": "function",
+                        "function": { "name": "ping", "arguments": "{}" }
+                    },
+                    {
+                        "id": "call_2__thought__not-valid-base64!",
+                        "type": "function",
+                        "function": { "name": "pong", "arguments": "{}" }
+                    }
+                ]
+            }]
+        }))
+        .unwrap();
+        let gem_tools = openai_chat_to_gemini(&tool_req, None, None).unwrap();
+        assert_eq!(
+            gem_tools["contents"][0]["parts"][0]["thoughtSignature"],
+            "QUJD"
+        );
+        assert!(
+            gem_tools["contents"][0]["parts"][1]
+                .get("thoughtSignature")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn handles_gemini_image_fan_out_without_candidate_count() {
+        let req = serde_json::from_value::<Map<String, Value>>(json!({
+            "model": "dall-e-3",
+            "prompt": "Two sunsets",
+            "n": 3
+        }))
+        .unwrap();
+        assert_eq!(
+            image_request_count("gemini/gemini-3.1-flash-image", &req).unwrap(),
+            3
+        );
+        let (gem_req, is_imagen) =
+            openai_image_to_gemini("gemini/gemini-3.1-flash-image", &req).unwrap();
+        assert!(!is_imagen);
+        assert!(gem_req["generationConfig"].get("candidateCount").is_none());
+
+        let merged = merge_gemini_images_to_openai(
+            &[
+                json!({
+                    "candidates": [{ "content": { "parts": [{ "inlineData": { "data": "QQ==" } }] } }],
+                    "usageMetadata": { "promptTokenCount": 5, "candidatesTokenCount": 100, "totalTokenCount": 105 }
+                }),
+                json!({
+                    "candidates": [{ "content": { "parts": [{ "inlineData": { "data": "Qg==" } }] } }],
+                    "usageMetadata": { "promptTokenCount": 5, "candidatesTokenCount": 100, "totalTokenCount": 105 }
+                }),
+            ],
+            false,
+            300,
+        )
+        .unwrap();
+        assert_eq!(merged["data"][0]["b64_json"], "QQ==");
+        assert_eq!(merged["data"][1]["b64_json"], "Qg==");
+        assert_eq!(merged["usage"]["total_tokens"], 210);
     }
 }

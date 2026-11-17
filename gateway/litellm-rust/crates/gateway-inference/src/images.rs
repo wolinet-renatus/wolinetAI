@@ -77,6 +77,8 @@ async fn handle(
     if providers::is_gemini_provider(&provider, &upstream_model)
         || (provider == "vertex_ai" && gemini::is_imagen_model(&upstream_model))
     {
+        let request_count = gemini::image_request_count(&upstream_model, &body)
+            .map_err(|e| Error::InvalidBody(e.to_string()))?;
         let (gem_req, is_imagen) = gemini::openai_image_to_gemini(&upstream_model, &body)
             .map_err(|e| Error::InvalidBody(e.to_string()))?;
         let action = if is_imagen {
@@ -90,15 +92,12 @@ async fn handle(
             .map(gemini::auth_headers)
             .unwrap_or_default();
         let resolved_base = api_base.unwrap_or_else(|| gemini::DEFAULT_GEMINI_API_BASE.to_owned());
-        let gem_resp = providers::post_json_raw(
-            gateway,
-            &url,
-            req_headers,
-            &gem_req,
-            candidate.deployment.timeout,
-        )
+        let timeout = candidate.deployment.timeout;
+        let responses = futures_util::future::try_join_all((0..request_count).map(|_| {
+            providers::post_json_raw(gateway, &url, req_headers.clone(), &gem_req, timeout)
+        }))
         .await?;
-        let openai_resp = gemini::gemini_image_to_openai(&gem_resp, is_imagen, now_secs())
+        let openai_resp = gemini::merge_gemini_images_to_openai(&responses, is_imagen, now_secs())
             .map_err(|e| Error::Internal(e.to_string()))?;
         providers::emit_json_usage(
             providers::CallMeta {

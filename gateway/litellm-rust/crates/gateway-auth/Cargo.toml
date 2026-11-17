@@ -6,7 +6,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-axum.workspace = true
+axum = { workspace = true, features = ["json"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 deadpool-postgres = "0.14"
 litellm-auth-types.workspace = true
