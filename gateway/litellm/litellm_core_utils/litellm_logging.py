@@ -229,6 +229,7 @@ if TYPE_CHECKING:
     from litellm.litellm_core_utils.llm_cost_calc.utils import BilledTokenRates
     from litellm.llms.base_llm.passthrough.transformation import PassthroughStreamCollector
     from litellm.proxy.hooks.autorouter_baseline_cache import BaselineCacheContext, CapturedBaselineObservation
+    from litellm.proxy.pass_through_endpoints.passthrough_guardrails import PassThroughGuardrailsConfigInput
 try:
     from litellm_enterprise.enterprise_callbacks.callback_controls import (
         EnterpriseCallbackControls,
@@ -692,9 +693,10 @@ class Logging(LiteLLMLoggingBaseClass):
         self.response_timing_metrics: Mapping[str, float] = {}  # mutable-ok: kept deep-copyable
 
         # Passthrough endpoint guardrails config for field targeting
-        self.passthrough_guardrails_config: dict[str, Any] | None = None
+        self.passthrough_guardrails_config: "PassThroughGuardrailsConfigInput | None" = None
 
-        self.model_call_details: dict[str, Any] = {
+        # heterogeneous callback payload matched against guardrail Protocols (e.g. hiddenlayer._LoggedCallDetails)
+        self.model_call_details: dict[str, Any] = {  # pyright: ignore[reportExplicitAny]  # dynamic callback dict
             "litellm_trace_id": self.litellm_trace_id,
             "litellm_call_id": litellm_call_id,
             "input": _input,
@@ -959,7 +961,7 @@ class Logging(LiteLLMLoggingBaseClass):
         automatically extracts metadata/litellm_metadata from kwargs,
         so callers don't need to manually plumb them into litellm_params.
         """
-        base_litellm_params: Final[dict[str, Any]] = {}
+        base_litellm_params: Final[dict[str, object]] = {}
 
         if isinstance(kwargs.get("metadata"), dict):
             base_litellm_params["metadata"] = kwargs["metadata"].copy()
@@ -976,10 +978,11 @@ class Logging(LiteLLMLoggingBaseClass):
             lp_metadata: Final = litellm_params.pop("metadata", None)
             base_litellm_params.update(litellm_params)
             if lp_metadata and isinstance(lp_metadata, dict):
-                base_litellm_params.setdefault("metadata", {})
-                for k, v in lp_metadata.items():
-                    if k not in base_litellm_params["metadata"]:
-                        base_litellm_params["metadata"][k] = v
+                existing_metadata: Final = base_litellm_params.get("metadata")
+                base_litellm_params["metadata"] = {
+                    **lp_metadata,
+                    **(existing_metadata if isinstance(existing_metadata, dict) else {}),
+                }
 
         self.update_environment_variables(
             litellm_params=base_litellm_params,
@@ -1332,9 +1335,11 @@ class Logging(LiteLLMLoggingBaseClass):
             )
         if model:  # if model name was changes pre-call, overwrite the initial model call name with the new one
             self.model_call_details["model"] = model
-        self.model_call_details["litellm_params"]["api_base"] = self._get_masked_api_base(
-            additional_args.get("api_base", "")
-        )
+        raw_litellm_params: Final = self.model_call_details.get("litellm_params")
+        if isinstance(raw_litellm_params, dict):
+            raw_litellm_params["api_base"] = self._get_masked_api_base(
+                additional_args.get("api_base", "")
+            )
 
     def pre_call(self, input, api_key, model=None, additional_args={}):
         # Log the exact input to the LLM API
@@ -6712,52 +6717,57 @@ def get_standard_logging_metadata(
         - If 'user_api_key' is present in metadata and is a valid SHA256 hash, it's stored as 'user_api_key_hash'.
     """
     # Initialize with default values
-    clean_metadata: Final = StandardLoggingMetadata(
-        user_api_key_hash=None,
-        user_api_key_alias=None,
-        user_api_key_spend=None,
-        user_api_key_max_budget=None,
-        user_api_key_budget_reset_at=None,
-        user_api_key_user_spend=None,
-        user_api_key_user_max_budget=None,
-        user_api_key_team_spend=None,
-        user_api_key_team_max_budget=None,
-        user_api_key_team_id=None,
-        user_api_key_org_id=None,
-        user_api_key_org_alias=None,
-        user_api_key_project_id=None,
-        user_api_key_project_alias=None,
-        user_api_key_user_id=None,
-        user_api_key_user_email=None,
-        user_api_key_team_alias=None,
-        spend_logs_metadata=None,
-        requester_ip_address=None,
-        user_agent=None,
-        requester_metadata=None,
-        user_api_key_end_user_id=None,
-        prompt_management_metadata=None,
-        applied_guardrails=None,
-        mcp_tool_call_metadata=None,
-        vector_store_request_metadata=None,
-        routing_decision=None,
-        usage_object=None,
-        requester_custom_headers=None,
-        user_api_key_request_route=None,
-        cold_storage_object_key=None,
-        user_api_key_auth_metadata=None,
-        team_alias=None,
-        team_id=None,
+    base_metadata: Final[dict[str, object]] = dict(
+        StandardLoggingMetadata(
+            user_api_key_hash=None,
+            user_api_key_alias=None,
+            user_api_key_spend=None,
+            user_api_key_max_budget=None,
+            user_api_key_budget_reset_at=None,
+            user_api_key_user_spend=None,
+            user_api_key_user_max_budget=None,
+            user_api_key_team_spend=None,
+            user_api_key_team_max_budget=None,
+            user_api_key_team_id=None,
+            user_api_key_org_id=None,
+            user_api_key_org_alias=None,
+            user_api_key_project_id=None,
+            user_api_key_project_alias=None,
+            user_api_key_user_id=None,
+            user_api_key_user_email=None,
+            user_api_key_team_alias=None,
+            spend_logs_metadata=None,
+            requester_ip_address=None,
+            user_agent=None,
+            requester_metadata=None,
+            user_api_key_end_user_id=None,
+            prompt_management_metadata=None,
+            applied_guardrails=None,
+            mcp_tool_call_metadata=None,
+            vector_store_request_metadata=None,
+            routing_decision=None,
+            usage_object=None,
+            requester_custom_headers=None,
+            user_api_key_request_route=None,
+            cold_storage_object_key=None,
+            user_api_key_auth_metadata=None,
+            team_alias=None,
+            team_id=None,
+        )
     )
-    if isinstance(metadata, dict):
-        # Update the clean_metadata with values from input metadata that match StandardLoggingMetadata fields
-        for key in StandardLoggingMetadata.__annotations__:
-            if key in metadata:
-                clean_metadata[key] = metadata[key]
+    if not isinstance(metadata, dict):
+        return cast(StandardLoggingMetadata, base_metadata)
 
-        if metadata.get("user_api_key") is not None:
-            if is_valid_sha256_hash(str(metadata.get("user_api_key"))):
-                clean_metadata["user_api_key_hash"] = metadata.get("user_api_key")  # this is the hash
-    return clean_metadata
+    filtered_updates: Final[dict[str, object]] = {
+        key: metadata[key] for key in _STANDARD_LOGGING_METADATA_KEYS if key in metadata
+    }
+    raw_user_api_key: Final = metadata.get("user_api_key")
+    hash_override: Final[dict[str, object]] = (
+        {"user_api_key_hash": raw_user_api_key}
+        if isinstance(raw_user_api_key, str) and is_valid_sha256_hash(raw_user_api_key)
+        else {}
+    )
+    return cast(StandardLoggingMetadata, {**base_metadata, **filtered_updates, **hash_override})
 
 
 def scrub_sensitive_keys_in_metadata(litellm_params: dict | None):
