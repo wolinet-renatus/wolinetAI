@@ -21,7 +21,9 @@ RUN python3 -m pip install --no-cache-dir --break-system-packages "uv==${UV_VERS
 ENV UV_PYTHON_INSTALL_DIR=/opt/wolinet/mitambo/python \
     UV_HTTP_TIMEOUT=300 \
     NO_WEB_UI=1 \
-    XINFERENCE_SKIP_MODEL_SPEC_VALIDATION=1
+    XINFERENCE_SKIP_MODEL_SPEC_VALIDATION=1 \
+    SETUPTOOLS_SCM_PRETEND_VERSION="${MITAMBO_VERSION}" \
+    SETUPTOOLS_SCM_PRETEND_VERSION_FOR_WOLINET_INFERENCE="${MITAMBO_VERSION}"
 
 RUN uv python install "${PYTHON_VERSION}" \
     && PY_BIN="$(find /opt/wolinet/mitambo/python -path '*/bin/python3' | head -n1)" \
@@ -67,6 +69,9 @@ RUN . /opt/wolinet/mitambo/venv/bin/activate \
          "peft>=0.18.0" \
          "timm" \
          "packaging>=24.2" \
+         "setuptools>=77,<82" \
+         "setuptools-scm>=8" \
+         "wheel" \
          "gguf" \
          "xllamacpp>=0.2.0" \
     && uv pip install --python /opt/wolinet/mitambo/venv/bin/python --no-build-isolation --no-deps /src/inference \

@@ -44,12 +44,16 @@ env
 env/
 **/env/
 ENV/
+!orchestrator/1apanel/**/env/
+!orchestrator/1apanel/**/env/*
 __pycache__/
 **/*.py[cod]
 **/*$py.class
 *.so
 .Python
 build/
+!orchestrator/1apanel/**/build/
+!orchestrator/1apanel/**/build/*
 develop-eggs/
 downloads/
 eggs/
@@ -201,5 +205,7 @@ orchestrator/appstore/apps/**/data/
 orchestrator/appstore/apps/**/1pwaf/
 orchestrator/runtime/**/data/
 gateway/data/
-tools/
+/tools/
+!apps/wolinex/src/**/Tools/
+!apps/wolinex/src/**/Tools/*
 

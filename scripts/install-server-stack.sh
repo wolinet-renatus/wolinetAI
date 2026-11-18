@@ -191,8 +191,11 @@ if [[ -x "${ORCH_BIN}" ]]; then
 fi
 
 if [[ "${DEFER_START}" == "1" ]]; then
-  log_header "[Boot] Starting Stage 2 -> Stage 3 -> Stage 4 systemd services"
+  log_header "[Boot] Starting Stage 1 -> Stage 2 -> Stage 3 -> Stage 4 systemd services"
   run_root systemctl daemon-reload
+  if has_stage 1; then
+    run_root systemctl restart 1panel-agent.service 1apanel.service >/dev/null 2>&1 || true
+  fi
   if has_stage 2; then
     run_root systemctl enable --now mitambo.service
     wait_http_ok "http://127.0.0.1:9997/status" 60 \

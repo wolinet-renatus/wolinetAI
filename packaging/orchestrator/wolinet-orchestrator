@@ -77,7 +77,7 @@ datastore_up() {
     [[ -f "${init_script}" ]] && pg_args+=(-v "${init_script}:/docker-entrypoint-initdb.d/00-init.sh:ro")
     local pg_cmd=(postgres -c tcp_keepalives_idle=60 -c tcp_keepalives_interval=10 -c tcp_keepalives_count=5)
     [[ -n "${PG_SHARED_BUFFERS_MB:-}" ]] && pg_cmd+=(-c "shared_buffers=${PG_SHARED_BUFFERS_MB}MB")
-    podman run -d "${pg_args[@]}" docker.io/library/postgres:16-alpine \
+    podman run -d "${pg_args[@]}" docker.io/pgvector/pgvector:pg16 \
       "${pg_cmd[@]}" >/dev/null
   else
     podman start wolinetai-postgres-1 >/dev/null

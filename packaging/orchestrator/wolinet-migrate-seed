@@ -87,6 +87,9 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${WOLINEX_DB}')
 EOSQL
   for db_name in "${LITELLM_DB}" "${WEBUI_DB}" "${WOLINEX_DB}"; do
     run_psql_cmd "${db_name}" -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION IF NOT EXISTS "pgcrypto"; CREATE EXTENSION IF NOT EXISTS "uuid-ossp";' >/dev/null
+    if [[ "${db_name}" == "${WEBUI_DB}" || "${db_name}" == "${WOLINEX_DB}" ]]; then
+      run_psql_cmd "${db_name}" -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION IF NOT EXISTS "vector";' >/dev/null 2>&1 || true
+    fi
   done
 }
 

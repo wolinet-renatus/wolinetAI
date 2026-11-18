@@ -148,7 +148,8 @@ install_go_toolchain() {
 install_go_toolchain
 export PATH="/usr/local/go/bin:${PATH}"
 
-configure_podman_registries() {
+configure_podman_registries
+systemctl enable --now podman.socket >/dev/null 2>&1 || true() {
   install -d -m 0755 /etc/containers/registries.conf.d
   cat > /etc/containers/registries.conf.d/99-wolinet-dockerhub.conf <<'EOF'
 unqualified-search-registries = ["docker.io"]
@@ -157,6 +158,7 @@ EOF
 }
 
 configure_podman_registries
+systemctl enable --now podman.socket >/dev/null 2>&1 || true
 
 log "2/6 Syncing WolinetAI repository (${REPO_BRANCH}) into ${REPO_DIR}..."
 if [[ -d "${REPO_DIR}/.git" ]]; then
@@ -230,6 +232,13 @@ check_local "nginx-mitambo" "https://127.0.0.1/status" "mitambo.${DOMAIN}"
 check_local "nginx-lango-ui" "https://127.0.0.1/ui/" "lango.${DOMAIN}"
 check_local "nginx-wolinex" "https://127.0.0.1/health" "wolinex.${DOMAIN}"
 nginx -t >/dev/null && printf '  [OK] %-14s -> nginx -t passed\n' "nginx"
+
+PG_PASS="$(awk -F= '/^POSTGRES_PASSWORD=/{print $2; exit}' /etc/wolinet/1apanel.env 2>/dev/null || echo '')"
+if [[ -n "${PG_PASS}" ]] && command -v psql >/dev/null 2>&1; then
+  LITELLM_MODELS_CNT="$(PGPASSWORD="${PG_PASS}" psql -h 127.0.0.1 -p 5433 -U postgres -d litellm -tAc 'SELECT count(*) FROM "LiteLLM_ProxyModelTable";' 2>/dev/null || echo '0')"
+  WEBUI_ALEMBIC="$(PGPASSWORD="${PG_PASS}" psql -h 127.0.0.1 -p 5433 -U postgres -d webui -tAc 'SELECT version_num FROM alembic_version LIMIT 1;' 2>/dev/null || echo 'none')"
+  printf '  [OK] %-14s -> litellm_models=%s webui_alembic=%s\n' "postgres-db" "${LITELLM_MODELS_CNT}" "${WEBUI_ALEMBIC}"
+fi
 
 ORCH_USER="$(awk -F= '/^ORIGINAL_USERNAME=/{print $2; exit}' /etc/wolinet/1apanel.env 2>/dev/null || echo admin)"
 ORCH_PASS="$(awk -F= '/^ORIGINAL_PASSWORD=/{print $2; exit}' /etc/wolinet/1apanel.env 2>/dev/null || echo '')"
