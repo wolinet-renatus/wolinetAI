@@ -219,6 +219,44 @@ def put_file(bucket: str, remote_key: str, local_path: str) -> int:
     return 1
 
 
+def get_file(bucket: str, remote_key: str, local_path: str) -> int:
+    st, body = s3_request("GET", bucket, key=remote_key)
+    if st == 200:
+        with open(local_path, "wb") as fh:
+            fh.write(body)
+        print(f"Downloaded s3://{bucket}/{remote_key} -> {local_path} ({len(body)} bytes)")
+        return 0
+    print(f"[r2:error] Download failed for {remote_key}: http={st} {body.decode('utf-8', 'ignore')}", file=sys.stderr)
+    return 1
+
+
+def list_objects(bucket: str, prefix: str, latest_only: bool = False) -> int:
+    q = urllib.parse.urlencode({"list-type": "2", "prefix": prefix})
+    st, body = s3_request("GET", bucket, query=q)
+    if st != 200:
+        print(f"[r2:error] List failed for {bucket}/{prefix}: http={st}", file=sys.stderr)
+        return 1
+    root = ET.fromstring(body)
+    ns = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
+    rows = []
+    for item in root.findall("s3:Contents", ns):
+        key_el = item.find("s3:Key", ns)
+        sz_el = item.find("s3:Size", ns)
+        lm_el = item.find("s3:LastModified", ns)
+        if key_el is None or not key_el.text:
+            continue
+        rows.append((key_el.text, int(sz_el.text or 0) if sz_el is not None else 0, lm_el.text if lm_el is not None else ""))
+    rows.sort(key=lambda r: r[0])
+    if not rows:
+        return 2
+    if latest_only:
+        print(rows[-1][0])
+        return 0
+    for k, sz, lm in rows:
+        print(f"{lm}\t{sz}\t{k}")
+    return 0
+
+
 def prune_older(bucket: str, prefix: str, days: int) -> int:
     q = urllib.parse.urlencode({"list-type": "2", "prefix": prefix})
     st, body = s3_request("GET", bucket, query=q)
@@ -241,13 +279,19 @@ def prune_older(bucket: str, prefix: str, days: int) -> int:
 
 def main() -> int:
     if len(sys.argv) < 3:
-        print("Usage: wolinet-r2-client <ensure-bucket|put|prune> ...", file=sys.stderr)
+        print("Usage: wolinet-r2-client <ensure-bucket|put|get|list|latest|prune> ...", file=sys.stderr)
         return 1
     cmd = sys.argv[1]
     if cmd == "ensure-bucket":
         return ensure_bucket(sys.argv[2])
     if cmd == "put":
         return put_file(sys.argv[2], sys.argv[3], sys.argv[4])
+    if cmd == "get":
+        return get_file(sys.argv[2], sys.argv[3], sys.argv[4])
+    if cmd == "list":
+        return list_objects(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "")
+    if cmd == "latest":
+        return list_objects(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "", latest_only=True)
     if cmd == "prune":
         return prune_older(sys.argv[2], sys.argv[3], int(sys.argv[4]))
     print(f"Unknown command: {cmd}", file=sys.stderr)
@@ -259,7 +303,7 @@ if __name__ == "__main__":
 PY
 run_root chmod 0755 /usr/local/bin/wolinet-r2-client
 
-log_header "Installing daily backup runner (/usr/local/bin/wolinet-backup-r2)"
+log_header "Installing scheduled backup runner (/usr/local/bin/wolinet-backup-r2)"
 run_root tee /usr/local/bin/wolinet-backup-r2 >/dev/null <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -282,23 +326,25 @@ DAY="$(date -u +%Y-%m-%d)"
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "${WORK_DIR:-}"' EXIT
 
-# 1. Stage 1 Podman PostgreSQL 16 (litellm + webui)
-if command -v podman >/dev/null 2>&1 && podman ps --format '{{.Names}}' | grep -qx 'wolinetai-postgres-1'; then
-  podman exec wolinetai-postgres-1 sh -ec 'exec pg_dumpall -U "${POSTGRES_USER:-postgres}"' \
+# 1. Stage 1 Podman PostgreSQL 16 (Wolinex chat history in webui + Lango keys/logs in litellm)
+PG_CONTAINER="$(podman ps --format '{{.Names}}' 2>/dev/null | grep -E 'wolinet.*postgres|postgres.*1' | head -n1 || true)"
+if [[ -n "${PG_CONTAINER}" ]]; then
+  podman exec "${PG_CONTAINER}" sh -ec 'exec pg_dumpall --clean --if-exists -U "${POSTGRES_USER:-postgres}"' \
     | gzip -c > "${WORK_DIR}/postgres_all.sql.gz"
   gzip -t "${WORK_DIR}/postgres_all.sql.gz"
 fi
 
-# 2. Stage 1 1apanel native SQLite + Stage 2 Mitambo state + configs
+# 2. Stage 1 1apanel SQLite + Stage 2 Mitambo + Stage 4 Wolinex state + configs
 TAR_PATHS=()
 [[ -d /var/lib/wolinet/data/1panel ]] && TAR_PATHS+=(/var/lib/wolinet/data/1panel)
 [[ -d /var/lib/wolinet/mitambo ]] && TAR_PATHS+=(/var/lib/wolinet/mitambo)
+[[ -d /var/lib/wolinet/wolinex-web ]] && TAR_PATHS+=(/var/lib/wolinet/wolinex-web)
 [[ -d /etc/wolinet ]] && TAR_PATHS+=(/etc/wolinet)
 [[ -d /etc/litellm ]] && TAR_PATHS+=(/etc/litellm)
 [[ -f /etc/nginx/sites-available/wolinet-edge.conf ]] && TAR_PATHS+=(/etc/nginx/sites-available/wolinet-edge.conf)
 
 if [[ "${#TAR_PATHS[@]}" -gt 0 ]]; then
-  tar -czf "${WORK_DIR}/state_and_configs.tar.gz" "${TAR_PATHS[@]}" 2>/dev/null || true
+  tar --ignore-failed-read -czf "${WORK_DIR}/state_and_configs.tar.gz" "${TAR_PATHS[@]}"
 fi
 
 BUNDLE="${BACKUP_ROOT}/wolinet_backup_${STAMP}.tar.gz"
@@ -311,14 +357,94 @@ find "${BACKUP_ROOT}" -type f -name 'wolinet_backup_*.tar.gz' -mtime +7 -delete
 if [[ -n "${R2_ACCESS_KEY_ID:-}" && -n "${R2_SECRET_ACCESS_KEY:-}" && -n "${R2_ENDPOINT:-}" ]]; then
   BUCKET="${R2_BACKUP_BUCKET:-wolinet-backups}"
   if /usr/local/bin/wolinet-r2-client ensure-bucket "${BUCKET}"; then
-    /usr/local/bin/wolinet-r2-client put "${BUCKET}" "daily/${DAY}/wolinet_backup_${STAMP}.tar.gz" "${BUNDLE}"
-    /usr/local/bin/wolinet-r2-client prune "${BUCKET}" "daily/" "${R2_RETENTION_DAYS:-30}"
+    /usr/local/bin/wolinet-r2-client put "${BUCKET}" "snapshots/${DAY}/wolinet_backup_${STAMP}.tar.gz" "${BUNDLE}"
+    /usr/local/bin/wolinet-r2-client prune "${BUCKET}" "snapshots/" "${R2_RETENTION_DAYS:-30}"
   else
     echo "[backup:warn] Local backup saved to ${BUNDLE}; R2 upload deferred until R2 is enabled on Cloudflare Dashboard" >&2
   fi
 fi
 EOF
 run_root chmod 0755 /usr/local/bin/wolinet-backup-r2
+
+log_header "Installing disaster-recovery restore tool (/usr/local/bin/wolinet-restore-r2)"
+run_root tee /usr/local/bin/wolinet-restore-r2 >/dev/null <<'EOF'
+#!/usr/bin/env bash
+# Restore Wolinet chat history (Postgres webui + litellm), 1apanel SQLite, Mitambo, and configs from R2 or local backup.
+set -euo pipefail
+
+if [[ -f /etc/wolinet/r2.env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source /etc/wolinet/r2.env
+  set +a
+fi
+
+REMOTE_KEY=""
+LOCAL_FILE=""
+LIST_ONLY=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --list) LIST_ONLY=1; shift ;;
+    --key)  REMOTE_KEY="${2:-}"; shift 2 ;;
+    --file) LOCAL_FILE="${2:-}"; shift 2 ;;
+    -h|--help)
+      cat <<'USAGE'
+Usage:
+  wolinet-restore-r2 --list                  List backups available in Cloudflare R2
+  wolinet-restore-r2                         Restore latest backup snapshot from R2
+  wolinet-restore-r2 --key <s3-key>          Restore a specific backup key from R2
+  wolinet-restore-r2 --file <local.tar.gz>   Restore from a local backup archive
+USAGE
+      exit 0 ;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+
+BUCKET="${R2_BACKUP_BUCKET:-wolinet-backups}"
+if [[ "${LIST_ONLY}" == "1" ]]; then
+  exec /usr/local/bin/wolinet-r2-client list "${BUCKET}" "snapshots/"
+fi
+
+WORK_DIR="$(mktemp -d)"
+trap 'rm -rf "${WORK_DIR:-}"' EXIT
+
+if [[ -n "${LOCAL_FILE}" ]]; then
+  ARCHIVE="${LOCAL_FILE}"
+else
+  if [[ -z "${REMOTE_KEY}" ]]; then
+    REMOTE_KEY="$(/usr/local/bin/wolinet-r2-client latest "${BUCKET}" "snapshots/")"
+  fi
+  ARCHIVE="${WORK_DIR}/restore_bundle.tar.gz"
+  /usr/local/bin/wolinet-r2-client get "${BUCKET}" "${REMOTE_KEY}" "${ARCHIVE}"
+fi
+
+tar -C "${WORK_DIR}" -xzf "${ARCHIVE}"
+
+echo "[restore] Stopping application services before state restore..."
+systemctl stop wolinex-web litellm-gateway mitambo 1apanel 1panel-agent >/dev/null 2>&1 || true
+
+if [[ -f "${WORK_DIR}/state_and_configs.tar.gz" ]]; then
+  echo "[restore] Restoring /var/lib/wolinet, /etc/wolinet, /etc/litellm & Nginx site config..."
+  tar -C / -xzf "${WORK_DIR}/state_and_configs.tar.gz"
+fi
+
+PG_CONTAINER="$(podman ps -a --format '{{.Names}}' 2>/dev/null | grep -E 'wolinet.*postgres|postgres.*1' | head -n1 || true)"
+if [[ -n "${PG_CONTAINER}" && -f "${WORK_DIR}/postgres_all.sql.gz" ]]; then
+  podman start "${PG_CONTAINER}" >/dev/null 2>&1 || true
+  for _ in $(seq 1 30); do
+    podman exec "${PG_CONTAINER}" pg_isready -U postgres >/dev/null 2>&1 && break
+    sleep 1
+  done
+  echo "[restore] Restoring PostgreSQL databases (webui chat history + litellm)..."
+  gunzip -c "${WORK_DIR}/postgres_all.sql.gz" | podman exec -i "${PG_CONTAINER}" psql -U postgres -v ON_ERROR_STOP=0 >/dev/null
+fi
+
+echo "[restore] Restarting services in 4-stage boot order..."
+systemctl start 1panel-agent 1apanel mitambo litellm-gateway wolinex-web nginx || true
+echo "[restore] Disaster-recovery restore completed from ${REMOTE_KEY:-${LOCAL_FILE}}"
+EOF
+run_root chmod 0755 /usr/local/bin/wolinet-restore-r2
 
 if [[ "${CONFIGURE_WOLINEX_S3}" == "1" ]] && [[ -f /etc/wolinet/wolinex-web.env ]]; then
   log_header "Wiring Cloudflare R2 S3 storage into /etc/wolinet/wolinex-web.env"
@@ -354,10 +480,10 @@ EOF
 
 run_root tee /etc/systemd/system/wolinet-backup.timer >/dev/null <<'EOF'
 [Unit]
-Description=Daily Wolinet AI Sovereign Backup Timer
+Description=6-Hourly Wolinet AI Sovereign Backup Timer
 
 [Timer]
-OnCalendar=*-*-* 02:30:00 UTC
+OnCalendar=*-*-* 00/6:15:00 UTC
 RandomizedDelaySec=600
 Persistent=true
 
