@@ -138,7 +138,7 @@ elif [[ -d "${ROOT_DIR}/gateway/litellm/proxy/_experimental/out" ]]; then
 fi
 cp -f "${ROOT_DIR}/dist/installers/server/wolinex-web/wolinex-web_amd64.deb"* "${STAGE_DIR}/dist/installers/server/wolinex-web/"
 
-cp -f "${ROOT_DIR}/scripts/install-"*.sh "${ROOT_DIR}/scripts/setup-contabo-edge.sh" "${ROOT_DIR}/scripts/setup-r2-backup.sh" "${STAGE_DIR}/scripts/"
+cp -f "${ROOT_DIR}/scripts/install-"*.sh "${ROOT_DIR}/scripts/setup-contabo-edge.sh" "${ROOT_DIR}/scripts/setup-r2-backup.sh" "${ROOT_DIR}/scripts/clean-contabo-server.sh" "${STAGE_DIR}/scripts/"
 cp -R "${ROOT_DIR}/scripts/lib/." "${STAGE_DIR}/scripts/lib/"
 chmod +x "${STAGE_DIR}/scripts/"*.sh
 
@@ -170,6 +170,9 @@ if [[ "${DRY_RUN}" == "1" ]]; then
   exit 0
 fi
 
+log_header "Pre-cleaning old compile artifacts, checkpoints & configuring reliable DNS on ${TARGET}"
+ssh "${SSH_OPTS[@]}" "${TARGET}" sudo bash -s < "${ROOT_DIR}/scripts/clean-contabo-server.sh"
+
 log_header "Uploading binary-only server stack bundle to ${TARGET}:${REMOTE_DIR}"
 ssh "${SSH_OPTS[@]}" "${TARGET}" "sudo mkdir -p '${REMOTE_DIR}' && sudo chown -R \"\$(id -u):\$(id -g)\" '${REMOTE_DIR}'"
 tar -C "${STAGE_DIR}" -czf - . | ssh "${SSH_OPTS[@]}" "${TARGET}" "tar -C '${REMOTE_DIR}' -xzf -"
@@ -178,15 +181,17 @@ log_header "Provisioning Ubuntu 24.04 runtime, 4-stage stack, Cloudflare edge & 
 # Pass secrets cleanly via remote stdin env rather than CLI process args
 ssh "${SSH_OPTS[@]}" "${TARGET}" bash -s <<EOF
 set -euo pipefail
+if [[ -d /run/systemd/system ]]; then
+  sudo install -d -m 0755 /etc/systemd/resolved.conf.d
+  printf '[Resolve]\nDNS=1.1.1.1 9.9.9.9\nFallbackDNS=8.8.8.8 1.0.0.1\nDNSStubListener=yes\n' | sudo tee /etc/systemd/resolved.conf.d/99-wolinet-dns.conf >/dev/null
+  sudo systemctl reload-or-restart systemd-resolved >/dev/null 2>&1 || true
+fi
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update -qq
 sudo apt-get install -y -qq podman uidmap slirp4netns nginx ufw curl ca-certificates openssl postgresql-client >/dev/null
 sudo mkdir -p /etc/containers/registries.conf.d
 printf 'unqualified-search-registries = ["docker.io"]\nshort-name-mode = "permissive"\n' | sudo tee /etc/containers/registries.conf.d/99-wolinet-dockerhub.conf >/dev/null
 sudo systemctl enable --now podman.socket >/dev/null 2>&1 || true
-
-# Clean any leftover source checkout so proprietary source never remains on the VPS
-sudo rm -rf /opt/wolinetai
 
 sudo bash "${REMOTE_DIR}/scripts/install-server-stack.sh" --with-datastore
 

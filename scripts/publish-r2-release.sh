@@ -91,7 +91,7 @@ elif [[ -d "${ROOT_DIR}/gateway/litellm/proxy/_experimental/out" ]]; then
   cp -R "${ROOT_DIR}/gateway/litellm/proxy/_experimental/out" "${STAGE_DIR}/bundle/dist/installers/server/lango/ui"
 fi
 
-cp -f "${ROOT_DIR}/scripts/install-"*.sh "${ROOT_DIR}/scripts/setup-contabo-edge.sh" "${ROOT_DIR}/scripts/setup-r2-backup.sh" "${STAGE_DIR}/bundle/scripts/"
+cp -f "${ROOT_DIR}/scripts/install-"*.sh "${ROOT_DIR}/scripts/setup-contabo-edge.sh" "${ROOT_DIR}/scripts/setup-r2-backup.sh" "${ROOT_DIR}/scripts/clean-contabo-server.sh" "${STAGE_DIR}/bundle/scripts/"
 cp -R "${ROOT_DIR}/scripts/lib/." "${STAGE_DIR}/bundle/scripts/lib/"
 chmod +x "${STAGE_DIR}/bundle/scripts/"*.sh
 

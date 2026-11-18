@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Binary-Only Zero-Source Server Installer from Cloudflare R2:
-# Downloads pre-compiled amd64 .deb packages + .sha256 checksums + installer scripts from R2,
-# verifies SHA-256 checksums, removes any leftover /opt/wolinetai source checkout,
-# installs Stages 1->4, configures Cloudflare Origin SSL/DNS/Nginx/UFW + R2 auto-backup, and cleans up.
+# 1. Configures reliable systemd-resolved DNS (1.1.1.1 / 9.9.9.9) up front
+# 2. Cleans up any prior source clones, compilers, Podman build images, checkpoints & .deb caches
+# 3. Downloads pre-compiled amd64 .deb packages + .sha256 sidecars + installer assets from R2
+# 4. Verifies SHA-256 checksums, installs Stages 1->4, runs DB migrations/seeding,
+#    configures Cloudflare Origin CA SSL/DNS/Nginx/UFW + 6-hourly R2 backups, and wipes /tmp staging.
 set -euo pipefail
 
 if [[ "${EUID}" -ne 0 ]]; then
@@ -26,6 +28,7 @@ R2_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY:-}"
 R2_ENDPOINT="${R2_ENDPOINT:-}"
 R2_BUCKET="${R2_BUCKET:-wolinetai}"
 R2_PREFIX="${R2_PREFIX:-releases/latest}"
+SKIP_PRE_CLEAN="${SKIP_PRE_CLEAN:-0}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -42,6 +45,7 @@ while [[ $# -gt 0 ]]; do
     --r2-endpoint)       R2_ENDPOINT="${2:-}"; shift 2 ;;
     --r2-bucket)         R2_BUCKET="${2:-wolinetai}"; shift 2 ;;
     --r2-prefix)         R2_PREFIX="${2:-releases/latest}"; shift 2 ;;
+    --skip-clean)        SKIP_PRE_CLEAN=1; shift ;;
     *) echo "[r2-install:error] Unknown option: $1" >&2; exit 1 ;;
   esac
 done
@@ -54,6 +58,79 @@ fi
   exit 1
 }
 
+echo "[r2-install] 1/5 Configuring reliable DNS (1.1.1.1 / 9.9.9.9)..."
+if [[ -d /run/systemd/system ]]; then
+  install -d -m 0755 /etc/systemd/resolved.conf.d
+  cat > /etc/systemd/resolved.conf.d/99-wolinet-dns.conf <<'EOF'
+[Resolve]
+DNS=1.1.1.1 9.9.9.9
+FallbackDNS=8.8.8.8 1.0.0.1
+DNSStubListener=yes
+EOF
+  systemctl reload-or-restart systemd-resolved >/dev/null 2>&1 || true
+fi
+
+if [[ "${SKIP_PRE_CLEAN}" == "0" ]]; then
+  echo "[r2-install] 2/5 Cleaning old source trees, compilers, Podman build images & checkpoints..."
+  rm -rf \
+    /opt/wolinetai \
+    /opt/wolinet-src \
+    /root/wolinetai \
+    /opt/wolinet-release \
+    /tmp/wolinet-* \
+    /tmp/*.deb \
+    /tmp/*.deb.sha256 \
+    /tmp/wolinet*.tar.gz* \
+    /root/*.deb \
+    /root/go \
+    /usr/local/go \
+    /usr/local/bin/go \
+    /usr/local/bin/gofmt \
+    /root/.cache/go-build \
+    /root/.cache/pip \
+    /root/.cache/uv \
+    /root/.cargo \
+    /root/.rustup \
+    /root/.npm
+
+  for d in /var/lib/wolinet/models /var/lib/wolinet/mitambo /root/.cache/huggingface /root/.xinference; do
+    [[ -d "${d}" ]] && find "${d}" -type f \( -name '*.incomplete' -o -name '*.part' -o -name '*.tmp' -o -name '*.lock' \) -delete 2>/dev/null || true
+  done
+
+  if command -v podman >/dev/null 2>&1; then
+    while IFS= read -r cid; do
+      [[ -n "${cid}" ]] || continue
+      cname="$(podman inspect --format '{{.Name}}' "${cid}" 2>/dev/null || true)"
+      case "${cname}" in
+        wolinetai-postgres-1|wolinetai-redis-1|wolinetai-core-pod*) continue ;;
+      esac
+      podman rm -f "${cid}" >/dev/null 2>&1 || true
+    done < <(podman ps -aq 2>/dev/null || true)
+
+    if podman container exists wolinetai-postgres-1 >/dev/null 2>&1; then
+      pg_img="$(podman inspect --format '{{.ImageName}}' wolinetai-postgres-1 2>/dev/null || true)"
+      if [[ -n "${pg_img}" && "${pg_img}" != *"pgvector"* ]]; then
+        podman rm -f wolinetai-postgres-1 >/dev/null 2>&1 || true
+      fi
+    fi
+
+    while IFS= read -r img; do
+      [[ -n "${img}" ]] || continue
+      case "${img}" in
+        *pgvector*|*redis*) continue ;;
+      esac
+      podman rmi -f "${img}" >/dev/null 2>&1 || true
+    done < <(podman images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | grep -E '(deb-builder|library/node|library/ubuntu|library/postgres|<none>)' || true)
+
+    podman builder prune -af >/dev/null 2>&1 || true
+  fi
+
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get purge -y -qq git golang-go rustc cargo make gcc g++ build-essential cmake >/dev/null 2>&1 || true
+  apt-get autoremove -y -qq >/dev/null 2>&1 || true
+fi
+
+echo "[r2-install] 3/5 Installing lightweight runtime dependencies..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq podman uidmap slirp4netns nginx ufw curl ca-certificates openssl postgresql-client python3 >/dev/null
@@ -65,9 +142,6 @@ short-name-mode = "permissive"
 EOF
 systemctl enable --now podman.socket >/dev/null 2>&1 || true
 
-# Remove any prior source checkout so zero source code stays on production server
-rm -rf /opt/wolinetai
-
 WORK_DIR="$(mktemp -d /tmp/wolinet-bin-XXXXXX)"
 trap 'rm -rf "${WORK_DIR:-}"' EXIT
 
@@ -77,7 +151,7 @@ mkdir -p \
   "${WORK_DIR}/dist/installers/server/lango" \
   "${WORK_DIR}/dist/installers/server/wolinex-web"
 
-echo "[r2-install] Downloading pre-built binary packages from s3://${R2_BUCKET}/${R2_PREFIX}/..."
+echo "[r2-install] 4/5 Downloading verified binary packages from s3://${R2_BUCKET}/${R2_PREFIX}/..."
 R2_ACCESS_KEY_ID="${R2_ACCESS_KEY_ID}" \
 R2_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY}" \
 R2_ENDPOINT="${R2_ENDPOINT}" \
@@ -152,6 +226,7 @@ done
 tar -C "${WORK_DIR}" -xzf "${WORK_DIR}/wolinet-deploy-assets.tar.gz"
 chmod +x "${WORK_DIR}/scripts/"*.sh
 
+echo "[r2-install] 5/5 Installing Stages 1->4, DB migrations/seeding, Cloudflare edge & R2 backup..."
 bash "${WORK_DIR}/scripts/install-server-stack.sh" --with-datastore
 
 EDGE_ARGS=(--domain "${DOMAIN}")
@@ -170,8 +245,17 @@ R2_STORAGE_BUCKET="${R2_BUCKET}" \
 CLOUDFLARE_API_TOKEN="${CF_TOKEN}" \
   bash "${WORK_DIR}/scripts/setup-r2-backup.sh" --run-now
 
-echo "[r2-install] Verifying running services (zero source code stored on server)..."
+apt-get clean >/dev/null 2>&1 || true
+
+echo "[r2-install] Verifying running services, PostgreSQL & cleanup status..."
 curl -fsS --max-time 10 http://127.0.0.1:8888/ >/dev/null && echo "  [OK] 1apanel :8888"
 curl -fsS --max-time 10 http://127.0.0.1:9997/status >/dev/null && echo "  [OK] Mitambo :9997"
 curl -fsS --max-time 10 http://127.0.0.1:4000/health/liveliness >/dev/null && echo "  [OK] Lango :4000"
 curl -fsS --max-time 10 http://127.0.0.1:8081/health >/dev/null && echo "  [OK] Wolinex Web :8081"
+PG_PASS="$(awk -F= '/^POSTGRES_PASSWORD=/{print $2; exit}' /etc/wolinet/1apanel.env 2>/dev/null || echo '')"
+if [[ -n "${PG_PASS}" ]] && command -v psql >/dev/null 2>&1; then
+  MC="$(PGPASSWORD="${PG_PASS}" psql -h 127.0.0.1 -p 5433 -U postgres -d litellm -tAc 'SELECT count(*) FROM "LiteLLM_ProxyModelTable";' 2>/dev/null || echo '0')"
+  AV="$(PGPASSWORD="${PG_PASS}" psql -h 127.0.0.1 -p 5433 -U postgres -d webui -tAc 'SELECT version_num FROM alembic_version LIMIT 1;' 2>/dev/null || echo 'none')"
+  echo "  [OK] PostgreSQL litellm_models=${MC} webui_alembic=${AV}"
+fi
+df -h / | tail -n 1
