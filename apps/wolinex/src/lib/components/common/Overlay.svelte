@@ -12,7 +12,7 @@
 		<div class="absolute w-full h-full flex">
 			<div
 				class="absolute rounded-sm"
-				style="inset: -10px; opacity: {opacity}; -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);"
+				style="inset: -10px; opacity: {opacity}; backdrop-filter: blur(5px);"
 			/>
 
 			<div class="flex w-full flex-col justify-center">
@@ -21,7 +21,7 @@
 				</div>
 
 				{#if content !== ''}
-					<div class="text-center text-gray-100 text-xs font-medium z-50">
+					<div class="text-center text-gray-100 text-xs font-normal z-50">
 						{content}
 					</div>
 				{/if}

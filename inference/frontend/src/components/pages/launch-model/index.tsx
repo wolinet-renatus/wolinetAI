@@ -2,7 +2,20 @@
 
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ExternalLink, Info, Loader2, RefreshCw, Rocket, Search, Star, Trash2 } from 'lucide-react';
+import {
+  ExternalLink,
+  Info,
+  Loader2,
+  RefreshCw,
+  Rocket,
+  Search,
+  Star,
+  Square,
+  HardDrive,
+  Sparkles,
+  Sliders,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import request from '@/lib/request';
 import PageContainer from '@/components/ui/page-container';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +23,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { RadioGroup } from '@/components/ui/radio-group';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useI18n } from '@/contexts/i18n-context';
 import { useGlobal } from '@/contexts/global-context';
 import { cn } from '@/lib/utils';
@@ -24,6 +36,10 @@ import LaunchDialog from './launch-dialog/launch-dialog';
 import CacheManagementDialog from './cache-management.dialog';
 import EnvManagementDialog from './env-management-dialog';
 import CustomEditDialog from './custom-edit-dialog';
+import { CustomModelPurgeDialog } from './custom-model-purge-dialog';
+import { CustomModelConfigDialog } from './custom-model-config-dialog';
+import { CheckpointMarketSection } from './checkpoint-market-section';
+import { StorageDriveManager } from './storage-drive-manager';
 import type { VirtualEnv } from '@/types/services';
 import type { CatalogModel, RouteModelType, RequestModelType } from './types';
 import {
@@ -64,12 +80,13 @@ const LaunchModel = ({ routeType, initialCustomType }: LaunchModelProps) => {
   const [loading, setLoading] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [refreshType, setRefreshType] = useState<RequestModelType>(ModelType.LLM);
+  const [customViewMode, setCustomViewMode] = useState<'registry' | 'checkpoints' | 'drive'>('registry');
+  const [runningInstances, setRunningInstances] = useState<Record<string, { model_uid: string; model_name: string }>>({});
   const [query, setQuery] = useState('');
   const [ability, setAbility] = useState('');
   const [status, setStatus] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<CatalogModel>();
-  const [deleteModel, setDeleteModel] = useState<CatalogModel>();
   const handledLaunchTargetRef = useRef('');
   const requestType = isCustomRoute ? customType : (routeType as RequestModelType);
   const showAbilityFilter = routeType !== ModelType.Custom;
@@ -146,6 +163,22 @@ const LaunchModel = ({ routeType, initialCustomType }: LaunchModelProps) => {
         if (requestId === modelRequestIdRef.current) {
           setModels(normalizeModels(modelsWithDetails));
         }
+
+        // Fetch running models to display live running status
+        try {
+          const runningRes = await request.get('/v1/models');
+          const runningMap: Record<string, { model_uid: string; model_name: string }> = {};
+          if (isRecord(runningRes)) {
+            Object.entries(runningRes).forEach(([uid, info]) => {
+              const infoRecord = isRecord(info) ? info : {};
+              const name = typeof infoRecord.model_name === 'string' ? infoRecord.model_name : '';
+              if (name) {
+                runningMap[name] = { model_uid: uid, model_name: name };
+              }
+            });
+          }
+          setRunningInstances(runningMap);
+        } catch {}
       } catch {
         if (requestId === modelRequestIdRef.current) {
           setModels([]);
@@ -158,6 +191,18 @@ const LaunchModel = ({ routeType, initialCustomType }: LaunchModelProps) => {
     },
     [isCustomRoute, requestType]
   );
+
+  const handleStopModel = async (modelName: string, modelUid?: string) => {
+    try {
+      await request.post('/v1/storage/models/stop', {
+        model_name: modelName,
+        model_uid: modelUid,
+      });
+      fetchModels(customType);
+    } catch (err) {
+      console.error('Stop model error:', err);
+    }
+  };
 
   useEffect(() => {
     setAbility('');
@@ -306,19 +351,6 @@ const LaunchModel = ({ routeType, initialCustomType }: LaunchModelProps) => {
       return next;
     });
   };
-  const handleDelete = (event: MouseEvent<HTMLButtonElement>, model: CatalogModel) => {
-    event.stopPropagation();
-    setDeleteModel(model);
-  };
-  const handleDeleteModel = () => {
-    if (!deleteModel) return;
-    request
-      .delete(`/v1/model_registrations/${customType}/${deleteModel?.model_name}`)
-      .then(() => {
-        fetchModels(customType);
-      })
-      .finally(() => setDeleteModel(undefined));
-  };
   const handleDetail = (event: MouseEvent<HTMLButtonElement>, model: CatalogModel) => {
     event.stopPropagation();
 
@@ -346,16 +378,18 @@ const LaunchModel = ({ routeType, initialCustomType }: LaunchModelProps) => {
             {model.model_name}
           </h3>
           {isCustomRoute ? (
-            <div className="flex gap-1 shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
+              <CustomModelConfigDialog
+                model={model}
+                modelType={customType}
+                onSuccess={() => fetchModels(customType)}
+              />
               <CustomEditDialog model={model} modelType={customType} />
-              <button
-                type="button"
-                aria-label="Delete model"
-                onClick={(event) => handleDelete(event, model)}
-                className="rounded-full p-1 text-muted-foreground transition-colors hover:text-destructive"
-              >
-                <Trash2 className="size-5" />
-              </button>
+              <CustomModelPurgeDialog
+                model={model}
+                modelType={customType}
+                onSuccess={() => fetchModels(customType)}
+              />
             </div>
           ) : (
             <button
@@ -395,10 +429,23 @@ const LaunchModel = ({ routeType, initialCustomType }: LaunchModelProps) => {
         <div
           className={cn(
             'mt-5 flex items-center gap-3',
-            isCustomRoute ? 'justify-end' : 'justify-between'
+            isCustomRoute ? 'justify-between' : 'justify-between'
           )}
         >
-          {!isCustomRoute && (
+          {isCustomRoute ? (
+            <div className="flex items-center gap-2">
+              {runningInstances[model.model_name] ? (
+                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1 text-[11px]">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Running ({runningInstances[model.model_name].model_uid})
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-[11px] text-muted-foreground">
+                  Stopped
+                </Badge>
+              )}
+            </div>
+          ) : (
             <button
               type="button"
               onClick={(event) => handleDetail(event, model)}
@@ -408,16 +455,32 @@ const LaunchModel = ({ routeType, initialCustomType }: LaunchModelProps) => {
               Details
             </button>
           )}
-          <Button
-            size="sm"
-            onClick={(event) => {
-              event.stopPropagation();
-              setSelectedModel(model);
-            }}
-          >
-            <Rocket />
-            Launch
-          </Button>
+
+          <div className="flex items-center gap-2">
+            {isCustomRoute && runningInstances[model.model_name] && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStopModel(model.model_name, runningInstances[model.model_name]?.model_uid);
+                }}
+              >
+                <Square className="size-3.5 mr-1 fill-current" />
+                Stop
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={(event) => {
+                event.stopPropagation();
+                setSelectedModel(model);
+              }}
+            >
+              <Rocket />
+              Launch
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -458,89 +521,121 @@ const LaunchModel = ({ routeType, initialCustomType }: LaunchModelProps) => {
 
         <TabsContent value={routeType} className="space-y-5">
           {isCustomRoute && (
-            <div className="border-b border-border/80 pb-4 flex items-center gap-4 pl-4">
-              <span className="font-medium">{t('launchModel.modelType')}:</span>
-              <RadioGroup
-                value={customType}
-                onChange={(value) => {
-                  setCustomType(value as RequestModelType);
-                  setRefreshType(value as RequestModelType);
-                  setAbility('');
-                  setStatus('');
-                  setQuery('');
-                }}
-                options={customTypesRadioOptions}
-                className="flex flex-wrap gap-6"
-              />
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-3">
+                <Button
+                  variant={customViewMode === 'registry' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCustomViewMode('registry')}
+                  className="text-xs"
+                >
+                  <Sliders className="size-3.5 mr-1.5" />
+                  Custom Models Registry
+                </Button>
+                <Button
+                  variant={customViewMode === 'checkpoints' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCustomViewMode('checkpoints')}
+                  className="text-xs"
+                >
+                  <Sparkles className="size-3.5 mr-1.5 text-primary" />
+                  Self-Trained Market (Checkpoints)
+                </Button>
+                <Button
+                  variant={customViewMode === 'drive' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCustomViewMode('drive')}
+                  className="text-xs"
+                >
+                  <HardDrive className="size-3.5 mr-1.5" />
+                  Local Drive & Weights Manager
+                </Button>
+              </div>
+
+              {customViewMode === 'registry' && (
+                <div className="border-b border-border/80 pb-4 flex items-center gap-4 pl-4">
+                  <span className="font-medium">{t('launchModel.modelType')}:</span>
+                  <RadioGroup
+                    value={customType}
+                    onChange={(value) => {
+                      setCustomType(value as RequestModelType);
+                      setRefreshType(value as RequestModelType);
+                      setAbility('');
+                      setStatus('');
+                      setQuery('');
+                    }}
+                    options={customTypesRadioOptions}
+                    className="flex flex-wrap gap-6"
+                  />
+                </div>
+              )}
             </div>
           )}
 
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="relative w-full md:max-w-sm">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={t('launchModel.search')}
-                className="h-10 pl-9"
-              />
-            </div>
-            <div className="flex gap-3">
-              {showAbilityFilter && (
-                <Select
-                  value={ability}
-                  onChange={(value) => setAbility(value ?? '')}
-                  options={abilityOptions}
-                  placeholder={t('launchModel.modelAbility')}
-                  allowClear
-                  className="w-40"
-                  dropdownAutoWidth
-                />
-              )}
-              {showStatusFilter && (
-                <Select
-                  value={status}
-                  onChange={(value) => setStatus(value ?? '')}
-                  options={statusOptions}
-                  placeholder={t('launchModel.status')}
-                  allowClear
-                  className="w-40"
-                />
-              )}
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="flex min-h-72 items-center justify-center text-muted-foreground">
-              <Loader2 className="mr-2 size-5 animate-spin" />
-              Loading models...
-            </div>
-          ) : visibleModels.length ? (
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-              {visibleModels.map(renderModelCard)}
-            </div>
+          {isCustomRoute && customViewMode === 'checkpoints' ? (
+            <CheckpointMarketSection onModelLaunched={() => fetchModels(customType)} />
+          ) : isCustomRoute && customViewMode === 'drive' ? (
+            <StorageDriveManager onRefreshRegistrations={() => fetchModels(customType)} />
           ) : (
-            <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed border-border text-center">
-              <Info className="mb-3 size-8 text-muted-foreground" />
-              <p className="font-medium">No models found</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Try changing your search or filters.
-              </p>
-            </div>
+            <>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="relative w-full md:max-w-sm">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder={t('launchModel.search')}
+                    className="h-10 pl-9"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  {showAbilityFilter && (
+                    <Select
+                      value={ability}
+                      onChange={(value) => setAbility(value ?? '')}
+                      options={abilityOptions}
+                      placeholder={t('launchModel.modelAbility')}
+                      allowClear
+                      className="w-40"
+                      dropdownAutoWidth
+                    />
+                  )}
+                  {showStatusFilter && (
+                    <Select
+                      value={status}
+                      onChange={(value) => setStatus(value ?? '')}
+                      options={statusOptions}
+                      placeholder={t('launchModel.status')}
+                      allowClear
+                      className="w-40"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex min-h-72 items-center justify-center text-muted-foreground">
+                  <Loader2 className="mr-2 size-5 animate-spin" />
+                  Loading models...
+                </div>
+              ) : visibleModels.length ? (
+                <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  {visibleModels.map(renderModelCard)}
+                </div>
+              ) : (
+                <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed border-border text-center">
+                  <Info className="mb-3 size-8 text-muted-foreground" />
+                  <p className="font-medium">No models found</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Try changing your search or filters.
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
       </Tabs>
 
-      <ConfirmDialog
-        isOpen={!!deleteModel}
-        onOpenChange={(open) => !open && setDeleteModel(undefined)}
-        description={t('launchModel.confirmDeleteCustomModel', {
-          modelName: deleteModel?.model_name,
-        })}
-        confirmText={t('common.confirm')}
-        confirmClassName="bg-destructive  hover:bg-destructive/90"
-        onConfirm={handleDeleteModel}
-      />
       <LaunchDialog
         model={selectedModel}
         modelType={requestType}

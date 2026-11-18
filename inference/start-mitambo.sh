@@ -177,38 +177,108 @@ try:
     running_models = client.list_models()
     print(f'==> [mitambo-init] Currently active models: {list(running_models.keys())}')
 
-    # 4. Auto-launch Sovereign Wolinex Coder & Wolinet Pro (DeepSeek-R1 Distill Qwen 1.5B Uncensored)
+    # 4. Auto-launch Sovereign Models with Aligned RAM Buffers (>= 6 GB Cache RAM)
     ws_root = os.environ.get("WORKSPACE_ROOT", os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    
+    # Check for DeepSeek-V4-Pro-4B
+    v4_candidates = [
+        os.path.join(ws_root, "inference/models/llm/DeepSeek-V4-Pro-Qwen3.5-4B.Q4_K_M.gguf"),
+        os.path.join(ws_root, "models/llm/DeepSeek-V4-Pro-Qwen3.5-4B.Q4_K_M.gguf"),
+        "/models/llm/DeepSeek-V4-Pro-Qwen3.5-4B.Q4_K_M.gguf",
+    ]
+    v4_src = next((p for p in v4_candidates if os.path.exists(p)), None)
+
+    # Check for Spark-X2.6-1.7B
+    spark_candidates = [
+        os.path.join(ws_root, "inference/models/llm/Spark-X2.6-1.7B-Q8_0.gguf"),
+        os.path.join(ws_root, "models/llm/Spark-X2.6-1.7B-Q8_0.gguf"),
+        "/models/llm/Spark-X2.6-1.7B-Q8_0.gguf",
+    ]
+    spark_src = next((p for p in spark_candidates if os.path.exists(p)), None)
+
+    # Legacy fallback
     candidate_paths = [
+        os.path.join(ws_root, "inference/models/llm/wolinet-brain-r1-1.5b.gguf"),
         os.path.join(ws_root, "models/llm/wolinet-brain-r1-1.5b.gguf"),
-        "/models/llm/wolinet-brain-r1-1.5b.gguf",
-        os.path.expanduser("~/models/llm/wolinet-brain-r1-1.5b.gguf"),
     ]
     r1_src = next((p for p in candidate_paths if os.path.exists(p)), None)
 
-    for uid in ("wolinex-coder", "wolinet-pro"):
-        if uid not in running_models and r1_src:
-            try:
-                print(f"==> [mitambo-init] Auto-launching {uid} from {r1_src}...")
-                client.launch_model(
-                    model_name="deepseek-r1-distill-qwen",
-                    model_uid=uid,
-                    model_engine="llama.cpp",
-                    model_format="ggufv2",
-                    model_size_in_billions="1_5",
-                    quantization="Q4_K_M",
-                    model_path=r1_src,
-                    n_gpu_layers=0,
-                    n_ctx=32768,
-                    n_parallel=1,
-                    n_threads=int(os.environ.get("XINFERENCE_THREADS", "8")),
-                    n_batch=2048,
-                    n_ubatch=512,
-                    cache_ram_mib=8192,
-                )
-                print(f"==> [mitambo-init] {uid} (DeepSeek-R1 Distill Qwen 1.5B Uncensored) auto-launched successfully.")
-            except Exception as pe:
-                print(f"==> [mitambo-init] Notice launching {uid}: {pe}")
+    # 4a. Launch DeepSeek-V4-Pro-4B (Primary Reasoning & Coding Brain: 131k context, 60-72 tok/s)
+    if "deepseek-v4-pro-4b" not in running_models and v4_src:
+        try:
+            print(f"==> [mitambo-init] Auto-launching deepseek-v4-pro-4b from {v4_src} (RAM aligned >= 8GB)...")
+            client.launch_model(
+                model_name="deepseek-v4-pro-4b",
+                model_uid="deepseek-v4-pro-4b",
+                model_engine="llama.cpp",
+                model_format="ggufv2",
+                model_size_in_billions=4,
+                quantization="Q4_K_M",
+                model_path=v4_src,
+                n_gpu_layers=-1,
+                n_ctx=131072,
+                n_parallel=1,
+                n_threads=int(os.environ.get("XINFERENCE_THREADS", "8")),
+                n_batch=4096,
+                n_ubatch=1024,
+                cache_ram_mib=16384,
+                cache_type_k=8,
+                cache_type_v=8,
+                flash_attn_type=1,
+            )
+            print("==> [mitambo-init] deepseek-v4-pro-4b auto-launched successfully.")
+        except Exception as pe:
+            print(f"==> [mitambo-init] Notice launching deepseek-v4-pro-4b: {pe}")
+
+    # 4b. Launch Spark-X2.6-1.7B (Ultra-Fast Agent Engine: 32k context, 85-105 tok/s)
+    if "spark-x2.6-1.7b" not in running_models and spark_src:
+        try:
+            print(f"==> [mitambo-init] Auto-launching spark-x2.6-1.7b from {spark_src} (RAM aligned >= 6GB)...")
+            client.launch_model(
+                model_name="spark-x2.6-1.7b",
+                model_uid="spark-x2.6-1.7b",
+                model_engine="llama.cpp",
+                model_format="ggufv2",
+                model_size_in_billions="1_7",
+                quantization="Q8_0",
+                model_path=spark_src,
+                n_gpu_layers=-1,
+                n_ctx=32768,
+                n_parallel=1,
+                n_threads=int(os.environ.get("XINFERENCE_THREADS", "8")),
+                n_batch=4096,
+                n_ubatch=1024,
+                cache_ram_mib=12288,
+                cache_type_k=8,
+                cache_type_v=8,
+                flash_attn_type=1,
+            )
+            print("==> [mitambo-init] spark-x2.6-1.7b auto-launched successfully.")
+        except Exception as pe:
+            print(f"==> [mitambo-init] Notice launching spark-x2.6-1.7b: {pe}")
+
+    # 4c. Fallback for wolinex-coder if neither v4 nor spark is active
+    if not any(m in running_models for m in ("deepseek-v4-pro-4b", "spark-x2.6-1.7b", "wolinex-coder")) and r1_src:
+        try:
+            print(f"==> [mitambo-init] Launching fallback wolinex-coder from {r1_src}...")
+            client.launch_model(
+                model_name="deepseek-r1-distill-qwen",
+                model_uid="wolinex-coder",
+                model_engine="llama.cpp",
+                model_format="ggufv2",
+                model_size_in_billions="1_5",
+                quantization="Q4_K_M",
+                model_path=r1_src,
+                n_gpu_layers=0,
+                n_ctx=32768,
+                n_parallel=1,
+                n_threads=int(os.environ.get("XINFERENCE_THREADS", "8")),
+                n_batch=2048,
+                n_ubatch=512,
+                cache_ram_mib=8192,
+            )
+        except Exception as pe:
+            print(f"==> [mitambo-init] Notice launching fallback wolinex-coder: {pe}")
 
     running_models = client.list_models()
     print(f'==> [mitambo-init] Active Xinference models now: {list(running_models.keys())}')

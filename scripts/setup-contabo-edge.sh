@@ -153,7 +153,8 @@ stage_lango_static_ui() {
     for cand in \
       "${TARGET_UI_DIR}" \
       "${ROOT_DIR}/dist/installers/server/lango/ui" \
-      "${ROOT_DIR}/gateway/ui/litellm-dashboard/out"; do
+      "${ROOT_DIR}/gateway/ui/litellm-dashboard/out" \
+      "${ROOT_DIR}/gateway/litellm/proxy/_experimental/out"; do
       if [[ -d "${cand}" && -f "${cand}/index.html" ]]; then
         src="${cand}"
         break

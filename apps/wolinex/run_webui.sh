@@ -7,10 +7,14 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-VENV_DIR="${ROOT_DIR}/.venv"
+if [ -d "${ROOT_DIR}/inference/.venv" ]; then
+    VENV_DIR="${ROOT_DIR}/inference/.venv"
+else
+    VENV_DIR="${ROOT_DIR}/.venv"
+fi
 
 echo "================================================================="
-echo "   WOLINET AI - SOVEREIGN WEB PORTAL (Open WebUI v0.9.6)         "
+echo "   WOLINET AI - SOVEREIGN WEB PORTAL (Open WebUI v0.13.2)        "
 echo "================================================================="
 
 # Source environment
@@ -23,11 +27,13 @@ fi
 export PORT="${PORT:-8081}"
 export HOST="${HOST:-0.0.0.0}"
 export LITELLM_BASE_URL="${LITELLM_BASE_URL:-http://127.0.0.1:4000}"
-export LITELLM_MASTER_KEY="${LITELLM_MASTER_KEY:-sk-XvKFiwDoOtOe8i4lwbzb8Q}"
+export LITELLM_MASTER_KEY="${LITELLM_MASTER_KEY:-sk-wolinet-admin-2026}"
 export OPENAI_API_BASE_URL="${OPENAI_API_BASE_URL:-http://127.0.0.1:4000/v1}"
 export OPENAI_API_BASE_URLS="${OPENAI_API_BASE_URLS:-http://127.0.0.1:4000/v1}"
 export OPENAI_API_KEY="${OPENAI_API_KEY:-${LITELLM_MASTER_KEY}}"
 export OPENAI_API_KEYS="${OPENAI_API_KEYS:-${OPENAI_API_KEY}}"
+export AUDIO_TTS_ENGINE="${AUDIO_TTS_ENGINE:-}"
+export BYPASS_PYDUB_PREPROCESSING="True"
 export ENABLE_OPENAI_API="${ENABLE_OPENAI_API:-True}"
 export ENABLE_OLLAMA_API="${ENABLE_OLLAMA_API:-False}"
 export DEFAULT_MODELS="${DEFAULT_MODELS:-Wolinet Pro}"

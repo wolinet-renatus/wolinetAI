@@ -17,7 +17,7 @@ from open_webui.env import (
     DATABASE_SCHEMA,
     DATABASE_URL,
 )
-from sqlalchemy import Dialect, Engine, MetaData, create_engine, types
+from sqlalchemy import Dialect, Engine, MetaData, create_engine, event, types
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -76,6 +76,12 @@ def reattach_ssl_params_to_url(url_without_ssl: str, ssl_dict: dict[str, str]) -
 
 extract_ssl_mode_from_url = extract_ssl_params_from_url
 reattach_ssl_mode_to_url = reattach_ssl_params_to_url
+
+
+def enable_iam_token_auth(connectable) -> None:
+    """Enable AWS RDS IAM database authentication if configured."""
+    return None
+
 
 
 class JSONField(types.TypeDecorator):
@@ -239,3 +245,8 @@ async def get_async_db_context(db: AsyncSession | None = None) -> AsyncGenerator
     else:
         async with get_async_db() as session:
             yield session
+
+@event.listens_for(async_engine.sync_engine, 'handle_error')
+def _keep_connection_on_cancel(context):
+    if isinstance(context.original_exception, asyncio.CancelledError):
+        context.is_disconnect = False

@@ -50,6 +50,9 @@ build_sanitized_assets() {
   if [[ -d "${ROOT_DIR}/gateway/ui/litellm-dashboard/out" ]]; then
     rm -rf "${OUT_DIR}/ui"
     cp -R "${ROOT_DIR}/gateway/ui/litellm-dashboard/out" "${OUT_DIR}/ui"
+  elif [[ -d "${ROOT_DIR}/gateway/litellm/proxy/_experimental/out" ]]; then
+    rm -rf "${OUT_DIR}/ui"
+    cp -R "${ROOT_DIR}/gateway/litellm/proxy/_experimental/out" "${OUT_DIR}/ui"
   fi
 }
 

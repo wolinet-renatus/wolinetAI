@@ -1,26 +1,42 @@
 <script lang="ts">
+	import { canUseApiKeys } from '$lib/utils/settings-access';
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 
-	import { user, config, settings } from '$lib/stores';
-	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { user, config } from '$lib/stores';
+	import {
+		updateUserProfile,
+		createAPIKey,
+		deleteAPIKey,
+		getAPIKey,
+		getSessionUser
+	} from '$lib/apis/auths';
+	import { getUserVariables, updateUserVariables } from '$lib/apis/users';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
+	import Mfa from './Account/Mfa.svelte';
 	import { generateInitialsImage } from '$lib/utils';
 	import { copyToClipboard } from '$lib/utils';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import Refresh from '$lib/components/icons/Refresh.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Modal from '$lib/components/common/Modal.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import UserProfileImage from './Account/UserProfileImage.svelte';
+	import UserSettingField from './UserSettingField.svelte';
+	import UserSettingRow from './UserSettingRow.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import UserSettingSection from './UserSettingSection.svelte';
 
 	const i18n = getContext('i18n');
 
-	export let saveHandler: Function = () => {};
-	export let saveSettings: Function = () => {};
-
-	let loaded = false;
-	let isSaving = false;
+	export let saveHandler: () => void | Promise<void>;
 
 	let profileImageUrl = '';
 	let name = '';
@@ -30,431 +46,637 @@
 	let gender = '';
 	let dateOfBirth = '';
 
-	let webhookUrl = '';
 	let showAPIKeys = false;
 
 	let JWTTokenCopied = false;
+
 	let APIKey = '';
 	let APIKeyCopied = false;
+	let showAPIKeyMenu = false;
+	let showDeleteAPIKeyConfirm = false;
+	let variableRows: { key: string; value: string }[] = [];
+	let variableModalOpen = false;
+	let variableFormIndex: number | null = null;
+	let variableFormKey = '';
+	let variableFormValue = '';
+
+	const textareaClass =
+		'w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const inputClass =
+		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const variableValueClass =
+		'w-full resize-none rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const actionButtonClass =
+		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+	const variableRowClass = 'flex w-full items-center gap-1.5';
+	const variableKeyRegex = /^[a-z][a-z0-9_]*$/;
+
+	const setVariableRows = (variables = {}) => {
+		variableRows = Object.entries(variables).map(([key, value]) => ({
+			key,
+			value: String(value ?? '')
+		}));
+	};
+
+	const openVariableModal = (idx: number | null = null) => {
+		const row = idx === null ? null : variableRows[idx];
+		variableFormIndex = idx;
+		variableFormKey = row?.key ?? '';
+		variableFormValue = row?.value ?? '';
+		variableModalOpen = true;
+	};
+
+	const removeVariable = (idx: number) => {
+		variableRows = variableRows.filter((_, rowIdx) => rowIdx !== idx);
+	};
+
+	const saveVariableForm = () => {
+		const key = variableFormKey.trim();
+
+		if (!variableKeyRegex.test(key)) {
+			toast.error($i18n.t('Variable keys must use lowercase snake case.'));
+			return;
+		}
+		if (variableRows.some((row, idx) => idx !== variableFormIndex && row.key === key)) {
+			toast.error($i18n.t('Variable keys must be unique.'));
+			return;
+		}
+
+		const row = { key, value: variableFormValue ?? '' };
+		variableRows =
+			variableFormIndex === null
+				? [...variableRows, row]
+				: variableRows.map((current, idx) => (idx === variableFormIndex ? row : current));
+		variableModalOpen = false;
+	};
+
+	const deleteVariableForm = () => {
+		if (variableFormIndex !== null) {
+			removeVariable(variableFormIndex);
+		}
+		variableModalOpen = false;
+	};
+
+	const getVariablesPayload = () => {
+		const variables: Record<string, string> = {};
+		for (const row of variableRows) {
+			const key = row.key.trim();
+			if (!key && !row.value) {
+				continue;
+			}
+			if (!variableKeyRegex.test(key)) {
+				throw $i18n.t('Variable keys must use lowercase snake case.');
+			}
+			if (Object.prototype.hasOwnProperty.call(variables, key)) {
+				throw $i18n.t('Variable keys must be unique.');
+			}
+			variables[key] = row.value ?? '';
+		}
+		return variables;
+	};
 
 	const submitHandler = async () => {
-		isSaving = true;
+		let variables: Record<string, string>;
 		try {
-			if (name !== $user?.name) {
-				if (profileImageUrl === generateInitialsImage($user?.name) || profileImageUrl === '') {
-					profileImageUrl = generateInitialsImage(name);
-				}
-			}
+			variables = getVariablesPayload();
+		} catch (error) {
+			toast.error(`${error}`);
+			return false;
+		}
 
-			if (webhookUrl !== $settings?.notifications?.webhook_url) {
-				saveSettings({
-					notifications: {
-						...$settings.notifications,
-						webhook_url: webhookUrl
-					}
-				});
+		if (name !== $user?.name) {
+			if (profileImageUrl === generateInitialsImage($user?.name) || profileImageUrl === '') {
+				profileImageUrl = generateInitialsImage(name);
 			}
+		}
 
-			const updatedUser = await updateUserProfile(localStorage.token, {
-				name: name,
-				profile_image_url: profileImageUrl,
-				bio: bio ? bio : null,
-				gender: gender ? gender : null,
-				date_of_birth: dateOfBirth ? dateOfBirth : null
-			}).catch((error) => {
+		const updatedUser = await updateUserProfile(localStorage.token, {
+			name: name,
+			profile_image_url: profileImageUrl,
+			bio: bio ? bio : null,
+			gender: gender ? gender : null,
+			date_of_birth: dateOfBirth ? dateOfBirth : null
+		}).catch((error) => {
+			toast.error(`${error}`);
+		});
+
+		const variablesRes = await updateUserVariables(localStorage.token, variables).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (updatedUser && variablesRes) {
+			setVariableRows(variablesRes.variables ?? {});
+			// Get Session User Info
+			const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
 				toast.error(`${error}`);
+				return null;
 			});
 
-			if (updatedUser) {
-				const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-					toast.error(`${error}`);
-					return null;
-				});
-
-				await user.set(sessionUser);
-				return true;
-			}
-			return false;
-		} finally {
-			isSaving = false;
+			await user.set(sessionUser);
+			return true;
 		}
+		return false;
 	};
 
 	const createAPIKeyHandler = async () => {
 		APIKey = await createAPIKey(localStorage.token);
 		if (APIKey) {
-			toast.success($i18n.t('API Key created successfully'));
+			toast.success($i18n.t('API Key created.'));
 		} else {
-			toast.error($i18n.t('Failed to create API Key'));
+			toast.error($i18n.t('Failed to create API Key.'));
+		}
+	};
+
+	const deleteAPIKeyHandler = async () => {
+		const res = await deleteAPIKey(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return false;
+		});
+
+		if (res) {
+			APIKey = '';
+			toast.success($i18n.t('API Key deleted.'));
 		}
 	};
 
 	onMount(async () => {
-		const currentUser = await getSessionUser(localStorage.token).catch((error) => {
+		const user = await getSessionUser(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
-		if (currentUser) {
-			name = currentUser?.name ?? '';
-			profileImageUrl = currentUser?.profile_image_url ?? '';
-			bio = currentUser?.bio ?? '';
-			_gender = currentUser?.gender ?? '';
-			gender = _gender;
-			dateOfBirth = currentUser?.date_of_birth ?? '';
+		if (user) {
+			name = user?.name ?? '';
+			profileImageUrl = user?.profile_image_url ?? '';
+			bio = user?.bio ?? '';
+
+			gender = user?.gender ?? '';
+			_gender = ['', 'male', 'female'].includes(gender) ? gender : 'custom';
+
+			dateOfBirth = user?.date_of_birth ?? '';
 		}
 
-		webhookUrl = $settings?.notifications?.webhook_url ?? '';
+		const userVariables = await getUserVariables(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		setVariableRows(userVariables?.variables ?? {});
 
+		// Only fetch API key if the feature is enabled and user has permission
 		if (
-			currentUser &&
+			user &&
 			($config?.features?.enable_api_keys ?? true) &&
-			(currentUser?.role === 'admin' || (currentUser?.permissions?.features?.api_keys ?? false))
+			(user?.role === 'admin' || (user?.permissions?.features?.api_keys ?? false))
 		) {
 			APIKey = await getAPIKey(localStorage.token).catch((error) => {
 				console.log(error);
 				return '';
 			});
 		}
-
-		loaded = true;
 	});
 </script>
 
-<div id="tab-account" class="flex flex-col h-full justify-between text-sm pr-1">
-	<div class="overflow-y-auto max-h-[30rem] md:max-h-[calc(100vh-14rem)] space-y-4 pr-1">
-		<!-- Header -->
-		<div class="border-b border-gray-100 dark:border-gray-800 pb-3">
-			<div class="flex items-center justify-between">
-				<div>
-					<h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">
-						{$i18n.t('Your Account')}
-					</h2>
-					<p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-						{$i18n.t('Manage your account information.')}
-					</p>
-				</div>
-				<!-- Sovereign Role / Status Badge -->
-				<div class="flex items-center gap-1.5">
-					<span
-						class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-					>
-						<span class="size-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
-						{$user?.role === 'admin' ? $i18n.t('Sovereign Admin') : $i18n.t('Cloud Member')}
-					</span>
-				</div>
-			</div>
-		</div>
+<form
+	id="tab-account"
+	class="flex h-full flex-col text-sm"
+	on:submit|preventDefault={async () => {
+		const res = await submitHandler();
 
-		<!-- Identity & Profile Card -->
-		<div
-			class="bg-gray-50/70 dark:bg-gray-850/40 border border-gray-200/80 dark:border-gray-800 rounded-2xl p-4 transition shadow-xs"
-		>
-			<div class="flex flex-col sm:flex-row gap-5 items-start">
-				<div class="shrink-0 self-center sm:self-start">
-					<UserProfileImage bind:profileImageUrl user={$user} imageClassName="size-20" />
-				</div>
+		if (res) {
+			saveHandler();
+		}
+	}}
+>
+	<div class="flex-1 min-h-0 w-full overflow-y-auto scrollbar-hover pr-1.5">
+		<h2 class="mb-4 text-sm font-medium text-gray-900 dark:text-white">
+			{$i18n.t('settings.personal.account.title')}
+		</h2>
 
-				<div class="flex-1 w-full space-y-3">
-					<!-- Full Name -->
-					<div>
-						<label for="account-name" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-							{$i18n.t('Name')}
-						</label>
-						<input
-							id="account-name"
-							class="w-full text-xs sm:text-sm bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700/80 rounded-xl px-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-gray-900 dark:focus:ring-white transition"
-							type="text"
-							bind:value={name}
-							aria-label={$i18n.t('Name')}
-							required
-							placeholder={$i18n.t('Enter your full name')}
-						/>
-					</div>
+		<UserSettingSection title={$i18n.t('settings.personal.account.sections.profile.title')} first>
+			<UserProfileImage
+				bind:profileImageUrl
+				user={$user}
+				variant="account"
+				displayName={$user?.name}
+			/>
 
-					<!-- Bio -->
-					<div>
-						<label for="account-bio" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-							{$i18n.t('Bio')}
-						</label>
-						<textarea
-							id="account-bio"
-							rows="2"
-							class="w-full text-xs sm:text-sm bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700/80 rounded-xl px-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-gray-900 dark:focus:ring-white transition resize-none"
-							bind:value={bio}
-							aria-label={$i18n.t('Bio')}
-							placeholder={$i18n.t('Share your background and interests')}
-						/>
-					</div>
-
-					<!-- Gender & Birth Date Grid -->
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						<div>
-							<label for="account-gender" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-								{$i18n.t('Gender')}
-							</label>
-							<div class="relative">
-								<select
-									id="account-gender"
-									class="w-full appearance-none text-xs sm:text-sm bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700/80 rounded-xl px-3 py-2 pr-8 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-gray-900 dark:focus:ring-white transition cursor-pointer"
-									bind:value={_gender}
-									aria-label={$i18n.t('Gender')}
-									on:change={() => {
-										if (_gender === 'custom') {
-											gender = '';
-										} else {
-											gender = _gender;
-										}
-									}}
-								>
-									<option value="">{$i18n.t('Prefer not to say')}</option>
-									<option value="male">{$i18n.t('Male')}</option>
-									<option value="female">{$i18n.t('Female')}</option>
-									<option value="custom">{$i18n.t('Custom')}</option>
-								</select>
-								<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-gray-400">
-									<svg class="size-3.5" viewBox="0 0 20 20" fill="currentColor">
-										<path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-									</svg>
-								</div>
-							</div>
-
-							{#if _gender === 'custom'}
-								<input
-									class="w-full text-xs sm:text-sm bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700/80 rounded-xl px-3 py-2 text-gray-900 dark:text-gray-100 mt-2 focus:outline-hidden focus:ring-2 focus:ring-gray-900 dark:focus:ring-white transition"
-									type="text"
-									aria-label={$i18n.t('Custom Gender')}
-									placeholder={$i18n.t('Enter your gender')}
-									bind:value={gender}
-								/>
-							{/if}
-						</div>
-
-						<div>
-							<label for="account-dob" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-								{$i18n.t('Birth Date')}
-							</label>
-							<input
-								id="account-dob"
-								class="w-full text-xs sm:text-sm bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700/80 rounded-xl px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-gray-900 dark:focus:ring-white transition"
-								type="date"
-								aria-label={$i18n.t('Birth Date')}
-								bind:value={dateOfBirth}
-							/>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Wolinet AI Cloud Status & Credits Banner -->
-		<div
-			class="bg-linear-to-r from-gray-50 via-slate-50 to-gray-100 dark:from-gray-900 dark:via-gray-850 dark:to-gray-900 border border-gray-200/90 dark:border-gray-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs"
-		>
-			<div class="flex items-center gap-3">
-				<div
-					class="size-9 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 flex items-center justify-center font-bold text-xs tracking-wider"
-				>
-					W
-				</div>
-				<div>
-					<div class="text-xs font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-						<span>Wolinet AI Sovereign Gateway</span>
-						<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-mono">
-							Active
-						</span>
-					</div>
-					<div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-						Models and spend are managed by the enabled gateway catalog.
-					</div>
-				</div>
-			</div>
-
-			<div class="flex items-center gap-2 self-end sm:self-center">
-				<a
-					href="/docs"
-					target="_blank"
-					class="px-2.5 py-1 text-[11px] font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition shadow-2xs"
-				>
-					{$i18n.t('API Documentation')} ↗
-				</a>
-			</div>
-		</div>
-
-		<!-- Notification Webhook (if enabled) -->
-		{#if $config?.features?.enable_user_webhooks}
-			<div
-				class="bg-gray-50/70 dark:bg-gray-850/40 border border-gray-200/80 dark:border-gray-800 rounded-2xl p-4"
+			<UserSettingField
+				label={$i18n.t('settings.personal.account.name.label')}
+				description={$i18n.t('settings.personal.account.name.description')}
 			>
-				<label for="account-webhook" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-					{$i18n.t('Notification Webhook')}
-				</label>
 				<input
-					id="account-webhook"
-					class="w-full text-xs sm:text-sm bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700/80 rounded-xl px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-gray-900 dark:focus:ring-white transition"
-					type="url"
-					placeholder={$i18n.t('Enter your webhook URL')}
-					aria-label={$i18n.t('Notification Webhook')}
-					bind:value={webhookUrl}
+					class={inputClass}
+					type="text"
+					bind:value={name}
+					aria-label={$i18n.t('settings.personal.account.name.label')}
+					required
+					placeholder={$i18n.t('Enter your name')}
 				/>
-			</div>
-		{/if}
+			</UserSettingField>
 
-		<!-- Security & Password -->
-		{#if $config?.features.enable_login_form && $config?.features.enable_password_change_form}
-			<div
-				class="bg-gray-50/70 dark:bg-gray-850/40 border border-gray-200/80 dark:border-gray-800 rounded-2xl p-4"
+			<UserSettingField
+				label={$i18n.t('settings.personal.account.bio.label')}
+				description={$i18n.t('settings.personal.account.bio.description')}
 			>
-				<UpdatePassword />
-			</div>
-		{/if}
+				<Textarea
+					className={textareaClass}
+					minSize={60}
+					bind:value={bio}
+					ariaLabel={$i18n.t('settings.personal.account.bio.label')}
+					placeholder={$i18n.t('Share your background and interests')}
+				/>
+			</UserSettingField>
 
-		<!-- API Keys & Sovereign Tokens -->
-		{#if ($config?.features?.enable_api_keys ?? true) && ($user?.role === 'admin' || ($user?.permissions?.features?.api_keys ?? false))}
-			<div
-				class="bg-gray-50/70 dark:bg-gray-850/40 border border-gray-200/80 dark:border-gray-800 rounded-2xl p-4 space-y-3"
+			<UserSettingField
+				label={$i18n.t('settings.personal.account.gender.label')}
+				description={$i18n.t('settings.personal.account.gender.description')}
 			>
-				<div class="flex justify-between items-center">
-					<div>
-						<div class="text-xs font-semibold text-gray-900 dark:text-gray-100">
-							{$i18n.t('Developer & API Access')}
+				<SettingsSelect
+					bind:value={_gender}
+					className="w-full"
+					ariaLabel={$i18n.t('settings.personal.account.gender.label')}
+					on:change={() => {
+						console.log(_gender);
+
+						if (_gender === 'custom') {
+							// Handle custom gender input
+							gender = '';
+						} else {
+							gender = _gender;
+						}
+					}}
+				>
+					<option value="" selected>{$i18n.t('Prefer not to say')}</option>
+					<option value="male">{$i18n.t('Male')}</option>
+					<option value="female">{$i18n.t('Female')}</option>
+					<option value="custom">{$i18n.t('Custom')}</option>
+				</SettingsSelect>
+
+				{#if _gender === 'custom'}
+					<input
+						class="mt-1 {inputClass}"
+						type="text"
+						required
+						aria-label={$i18n.t('Custom Gender')}
+						placeholder={$i18n.t('Enter your gender')}
+						bind:value={gender}
+					/>
+				{/if}
+			</UserSettingField>
+
+			<UserSettingField
+				label={$i18n.t('settings.personal.account.birthDate.label')}
+				description={$i18n.t('settings.personal.account.birthDate.description')}
+			>
+				<input
+					class="{inputClass} dark:scheme-dark"
+					type="date"
+					aria-label={$i18n.t('settings.personal.account.birthDate.label')}
+					bind:value={dateOfBirth}
+				/>
+			</UserSettingField>
+		</UserSettingSection>
+
+		<section class="mt-4 w-full">
+			<div
+				class="mb-0.5 flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-400"
+			>
+				<div class="flex min-w-0 items-center gap-1.5">
+					{$i18n.t('User Variables')}
+					<span class="text-gray-400 dark:text-gray-600">{variableRows.length}</span>
+				</div>
+				<button class={actionButtonClass} type="button" on:click={() => openVariableModal()}>
+					{$i18n.t('Add')}
+				</button>
+			</div>
+			<div class="flex flex-col gap-1 py-1">
+				{#each variableRows as row, idx}
+					<div class={variableRowClass}>
+						<div class="min-w-0 truncate font-mono text-xs text-gray-700 dark:text-gray-300">
+							{row.key || $i18n.t('key_name')}
 						</div>
-						<div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-							{$i18n.t('Manage your programmatic access keys and sovereign authorization tokens.')}
+						<div class="min-w-0 flex-1 truncate text-xs text-gray-500 dark:text-gray-500">
+							{row.value || $i18n.t('Empty')}
 						</div>
+						<button class={actionButtonClass} type="button" on:click={() => openVariableModal(idx)}>
+							{$i18n.t('Edit')}
+						</button>
 					</div>
+				{/each}
+
+				{#if variableRows.length === 0}
+					<div class="text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('No user variables configured.')}
+					</div>
+				{/if}
+			</div>
+
+			<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+				{$i18n.t('Use these in model system prompts as {{example}}.', {
+					example: '{{user.variables.key_name}}'
+				})}
+			</div>
+		</section>
+
+		{#if $config?.features.enable_login_form && $config?.features.enable_password_change_form}
+			<UserSettingSection title={$i18n.t('settings.personal.account.sections.password.title')}>
+				<UpdatePassword />
+			</UserSettingSection>
+		{/if}
+
+		<Mfa />
+
+		{#if canUseApiKeys({ user: $user, config: $config })}
+			<UserSettingSection title={$i18n.t('settings.personal.account.sections.apiKeys.title')}>
+				<UserSettingRow
+					let:labelId
+					description={$i18n.t('settings.personal.account.secrets.description')}
+				>
+					<span slot="label">{$i18n.t('settings.personal.account.secrets.label')}</span>
 					<button
-						class="px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg transition cursor-pointer shadow-2xs"
+						id={`${labelId}-control`}
+						class={actionButtonClass}
 						type="button"
 						on:click={() => {
 							showAPIKeys = !showAPIKeys;
-						}}
+						}}>{showAPIKeys ? $i18n.t('Hide') : $i18n.t('Show')}</button
 					>
-						{showAPIKeys ? $i18n.t('Hide Keys') : $i18n.t('Manage Keys')}
-					</button>
-				</div>
+				</UserSettingRow>
 
 				{#if showAPIKeys}
-					<div class="space-y-3 pt-2 border-t border-gray-200/80 dark:border-gray-800">
-						<!-- JWT Token -->
+					<div class="flex flex-col gap-2.5">
 						{#if $user?.role === 'admin'}
-							<div>
-								<div class="text-[11px] font-medium text-gray-700 dark:text-gray-300 mb-1">
-									{$i18n.t('Session JWT Token')}
-								</div>
-								<div class="flex items-center gap-1.5">
-									<div class="flex-1">
-										<SensitiveInput value={localStorage.token} readOnly={true} />
-									</div>
+							<UserSettingField
+								label={$i18n.t('settings.personal.account.jwtToken.label')}
+								description={$i18n.t('settings.personal.account.jwtToken.description')}
+							>
+								<div class="flex">
+									<SensitiveInput
+										variant="settings"
+										placeholder={$i18n.t('settings.personal.account.jwtToken.label')}
+										value={localStorage.token}
+										readOnly={true}
+									/>
+
 									<button
-										class="p-2 text-xs font-medium bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-xl transition cursor-pointer"
-										title={$i18n.t('Copy Token')}
+										type="button"
+										class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 										aria-label={$i18n.t('Copy Token')}
 										on:click={() => {
 											copyToClipboard(localStorage.token);
 											JWTTokenCopied = true;
-											toast.success($i18n.t('Token copied to clipboard'));
 											setTimeout(() => {
 												JWTTokenCopied = false;
 											}, 2000);
 										}}
 									>
 										{#if JWTTokenCopied}
-											<svg class="size-4 text-emerald-500" viewBox="0 0 20 20" fill="currentColor">
-												<path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+													clip-rule="evenodd"
+												/>
 											</svg>
 										{:else}
-											<svg class="size-4 text-gray-500" viewBox="0 0 16 16" fill="currentColor">
-												<path fill-rule="evenodd" d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z" clip-rule="evenodd" />
-												<path fill-rule="evenodd" d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1.75 2.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5ZM4 11.75a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" />
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z"
+													clip-rule="evenodd"
+												/>
+												<path
+													fill-rule="evenodd"
+													d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1.75 2.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5ZM4 11.75a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Z"
+													clip-rule="evenodd"
+												/>
 											</svg>
 										{/if}
 									</button>
 								</div>
-							</div>
+							</UserSettingField>
 						{/if}
 
-						<!-- API Secret Key -->
-						<div>
-							<div class="text-[11px] font-medium text-gray-700 dark:text-gray-300 mb-1">
-								{$i18n.t('Wolinet Virtual API Key')}
-							</div>
-							<div class="flex items-center gap-1.5">
-								{#if APIKey}
-									<div class="flex-1">
-										<SensitiveInput value={APIKey} readOnly={true} />
-									</div>
-									<button
-										class="p-2 text-xs font-medium bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-xl transition cursor-pointer"
-										title={$i18n.t('Copy API Key')}
-										aria-label={$i18n.t('Copy API Key')}
-										on:click={() => {
-											copyToClipboard(APIKey);
-											APIKeyCopied = true;
-											toast.success($i18n.t('API key copied to clipboard'));
-											setTimeout(() => {
-												APIKeyCopied = false;
-											}, 2000);
-										}}
-									>
-										{#if APIKeyCopied}
-											<svg class="size-4 text-emerald-500" viewBox="0 0 20 20" fill="currentColor">
-												<path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
-											</svg>
-										{:else}
-											<svg class="size-4 text-gray-500" viewBox="0 0 16 16" fill="currentColor">
-												<path fill-rule="evenodd" d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z" clip-rule="evenodd" />
-												<path fill-rule="evenodd" d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1.75 2.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5ZM4 11.75a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" />
-											</svg>
-										{/if}
-									</button>
+						{#if canUseApiKeys({ user: $user, config: $config })}
+							<UserSettingField
+								label={$i18n.t('settings.personal.account.apiKey.label')}
+								description={$i18n.t('settings.personal.account.apiKey.description')}
+							>
+								<div class="flex">
+									{#if APIKey}
+										<SensitiveInput
+											variant="settings"
+											placeholder={$i18n.t('settings.personal.account.apiKey.label')}
+											value={APIKey}
+											readOnly={true}
+										/>
 
-									<button
-										class="p-2 text-xs font-medium bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-xl transition cursor-pointer"
-										title={$i18n.t('Generate New Key')}
-										aria-label={$i18n.t('Generate New Key')}
-										on:click={() => {
-											createAPIKeyHandler();
-										}}
-									>
-										<svg class="size-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-											<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-										</svg>
-									</button>
-								{:else}
-									<button
-										class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-900 hover:bg-black text-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 rounded-xl transition shadow-2xs"
-										type="button"
-										on:click={() => {
-											createAPIKeyHandler();
-										}}
-									>
-										<Plus strokeWidth="2" className="size-3.5" />
-										{$i18n.t('Generate New Secret Key')}
-									</button>
-								{/if}
-							</div>
-						</div>
+										<button
+											type="button"
+											class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+											aria-label={$i18n.t('Copy API Key')}
+											on:click={() => {
+												copyToClipboard(APIKey);
+												APIKeyCopied = true;
+												setTimeout(() => {
+													APIKeyCopied = false;
+												}, 2000);
+											}}
+										>
+											{#if APIKeyCopied}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											{:else}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 16 16"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z"
+														clip-rule="evenodd"
+													/>
+													<path
+														fill-rule="evenodd"
+														d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1.75 2.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5ZM4 11.75a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											{/if}
+										</button>
+
+										<Dropdown bind:show={showAPIKeyMenu} align="end" sideOffset={4}>
+											<Tooltip content={$i18n.t('More')}>
+												<button
+													type="button"
+													class="rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+													aria-label={$i18n.t('More')}
+												>
+													<EllipsisHorizontal strokeWidth="2" className="size-4" />
+												</button>
+											</Tooltip>
+
+											<div slot="content">
+												<DropdownMenu className="min-w-[10.625rem]">
+													<button
+														type="button"
+														on:click={() => {
+															showAPIKeyMenu = false;
+															createAPIKeyHandler();
+														}}
+													>
+														<Refresh strokeWidth="2" className="size-3.5 scale-90" />
+														<div class="flex items-center">{$i18n.t('Create new key')}</div>
+													</button>
+
+													<hr class="border-gray-50 dark:border-gray-850/30" />
+
+													<button
+														type="button"
+														on:click={() => {
+															showAPIKeyMenu = false;
+															showDeleteAPIKeyConfirm = true;
+														}}
+													>
+														<XMark strokeWidth="2" className="size-3.5" />
+														<div class="flex items-center">{$i18n.t('Delete')}</div>
+													</button>
+												</DropdownMenu>
+											</div>
+										</Dropdown>
+									{:else}
+										<button
+											class="inline-flex items-center gap-1.5 {actionButtonClass}"
+											type="button"
+											on:click={() => {
+												createAPIKeyHandler();
+											}}
+										>
+											<Plus strokeWidth="2" className="size-3.5" />
+
+											{$i18n.t('settings.personal.account.createNewSecretKey.label')}</button
+										>
+									{/if}
+								</div>
+							</UserSettingField>
+						{/if}
 					</div>
 				{/if}
-			</div>
+			</UserSettingSection>
 		{/if}
 	</div>
 
-	<!-- Footer with Save Button -->
-	<div class="flex justify-end pt-3 mt-2 border-t border-gray-100 dark:border-gray-800">
+	<div class="shrink-0 flex w-full justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-5 py-2 text-xs font-semibold text-white bg-gray-900 hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition rounded-xl shadow-xs disabled:opacity-50 cursor-pointer"
-			disabled={isSaving}
-			on:click={async () => {
-				const res = await submitHandler();
-				if (res) {
-					saveHandler();
-					toast.success($i18n.t('Account changes saved successfully'));
-				}
-			}}
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+			type="submit"
 		>
-			{isSaving ? $i18n.t('Saving...') : $i18n.t('Save Changes')}
+			{$i18n.t('Save')}
 		</button>
 	</div>
-</div>
+</form>
+
+<ConfirmDialog
+	bind:show={showDeleteAPIKeyConfirm}
+	title={$i18n.t('Delete API Key?')}
+	confirmLabel={$i18n.t('Delete')}
+	on:confirm={deleteAPIKeyHandler}
+>
+	<div class="text-sm text-gray-500">
+		{$i18n.t('This will revoke the current API key.')}
+	</div>
+</ConfirmDialog>
+
+<Modal
+	ariaLabel={variableFormIndex === null
+		? $i18n.t('Add User Variable')
+		: $i18n.t('Edit User Variable')}
+	size="sm"
+	bind:show={variableModalOpen}
+>
+	<form class="p-4" on:submit|preventDefault={saveVariableForm}>
+		<h2 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">
+			{variableFormIndex === null ? $i18n.t('Add User Variable') : $i18n.t('Edit User Variable')}
+		</h2>
+
+		<div class="mb-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
+			{$i18n.t('Key')}
+		</div>
+		<input
+			class={inputClass}
+			type="text"
+			bind:value={variableFormKey}
+			aria-label={$i18n.t('Variable key')}
+			placeholder={$i18n.t('key_name')}
+			autocomplete="off"
+			spellcheck="false"
+		/>
+
+		<div class="mb-1 mt-3 text-[0.625rem] text-gray-400 dark:text-gray-600">
+			{$i18n.t('Value')}
+		</div>
+		<Textarea
+			className={variableValueClass}
+			rows="6"
+			minSize={132}
+			bind:value={variableFormValue}
+			ariaLabel={$i18n.t('Variable value')}
+			placeholder={$i18n.t('Value')}
+		/>
+
+		<div class="mt-4 flex items-center justify-between gap-2">
+			<div>
+				{#if variableFormIndex !== null}
+					<button
+						class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+						type="button"
+						on:click={deleteVariableForm}
+					>
+						{$i18n.t('Delete')}
+					</button>
+				{/if}
+			</div>
+
+			<div class="flex items-center gap-3">
+				<button
+					class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+					type="button"
+					on:click={() => {
+						variableModalOpen = false;
+					}}
+				>
+					{$i18n.t('Cancel')}
+				</button>
+				<button
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+					type="submit"
+				>
+					{$i18n.t('Done')}
+				</button>
+			</div>
+		</div>
+	</form>
+</Modal>

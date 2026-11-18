@@ -1,7 +1,7 @@
 """add PostgreSQL GIN index for chat payload search
 
 Revision ID: f2a4b6c8d0e1
-Revises: 461111b60977
+Revises: 9f6c2a8d1b43
 """
 
 from typing import Sequence, Union
@@ -9,7 +9,7 @@ from typing import Sequence, Union
 from alembic import op
 
 revision: str = 'f2a4b6c8d0e1'
-down_revision: Union[str, None] = '461111b60977'
+down_revision: Union[str, None] = '9f6c2a8d1b43'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

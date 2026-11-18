@@ -17,6 +17,7 @@ from . import (
     llm,
     models,
     rerank,
+    storage,
     system_settings,
     token_routers,
     videos,
@@ -40,6 +41,7 @@ def register_all_routes(api: RESTfulAPI) -> None:
     videos.register_routes(api)
     worlds.register_routes(api)
     launch_history.register_routes(api)
+    storage.register_routes(api)
     from ...constants import XINFERENCE_TOKEN_ROUTER_ENABLED
 
     if XINFERENCE_TOKEN_ROUTER_ENABLED:

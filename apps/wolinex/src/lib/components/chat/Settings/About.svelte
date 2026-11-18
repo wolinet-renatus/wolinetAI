@@ -1,213 +1,192 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	// Keep keys in nested template expressions visible to i18next-parser.
+	// $i18n.t("licensed under");
 
-	const i18n = getContext('i18n');
-	const version = '1.0.0';
+	import { getVersionUpdates } from '$lib/apis';
+	import { getOllamaVersion } from '$lib/apis/ollama';
+	import { WEBUI_BUILD_CHANNEL, WEBUI_VERSION } from '$lib/constants';
+	import { WEBUI_NAME, config, settings, showChangelog } from '$lib/stores';
+	import { compareVersion } from '$lib/utils';
+	import { onMount, getContext } from 'svelte';
+
+	import BuildVersion from '$lib/components/common/BuildVersion.svelte';
+	import UserSettingRow from './UserSettingRow.svelte';
+	import UserSettingSection from './UserSettingSection.svelte';
+
+	const i18n: any = getContext('i18n');
+
+	let ollamaVersion = '';
+
+	let updateAvailable = null;
+	let version = {
+		current: '',
+		latest: ''
+	};
+	const actionButtonClass =
+		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+
+	const checkForVersionUpdates = async () => {
+		updateAvailable = null;
+		version = await getVersionUpdates(localStorage.token).catch((error) => {
+			return {
+				current: WEBUI_VERSION,
+				latest: null
+			};
+		});
+
+		console.log(version);
+
+		updateAvailable = compareVersion(version.latest, version.current);
+		console.log(updateAvailable);
+	};
+
+	onMount(async () => {
+		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
+			return '';
+		});
+
+		if (WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check) {
+			checkForVersionUpdates();
+		}
+	});
 </script>
 
-<div id="tab-about" class="flex flex-col h-full justify-between text-sm pr-1">
-	<div class="overflow-y-auto max-h-[30rem] md:max-h-[calc(100vh-14rem)] space-y-4 pr-1">
-		<!-- Header Banner -->
-		<div
-			class="relative overflow-hidden rounded-2xl bg-linear-to-br from-gray-950 via-gray-900 to-black text-white p-5 border border-gray-800 shadow-md"
+<div id="tab-about" class="flex flex-col h-full justify-between text-sm">
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('settings.personal.about.title')}
+	</h2>
+
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
+		<!-- LICENSE covers this Open WebUI About identifier.
+		Do not alter, remove, obscure, or replace it except as LICENSE permits:
+		https://docs.openwebui.com/license. -->
+		<UserSettingSection
+			title={`${$WEBUI_NAME} ${$i18n.t('settings.personal.about.sections.version.title')}`}
+			first
 		>
-			<div class="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
-				<div
-					class="size-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center p-2.5 shadow-inner shrink-0"
-				>
-					<img
-						src="/static/logo.png"
-						alt="Wolinet AI"
-						class="w-full h-full object-contain filter drop-shadow"
-						on:error={(e) => {
-							const target = e.currentTarget as HTMLImageElement;
-							if (target) {
-								target.src = '/favicon.png';
-							}
+			<UserSettingRow description={$i18n.t('settings.personal.about.seeWhatSNew.description')}>
+				<div slot="label" class="flex flex-col text-xs text-gray-600 dark:text-gray-400">
+					<div
+						class="flex flex-wrap {($settings?.highContrastMode ?? false)
+							? 'items-center'
+							: ''} gap-1"
+					>
+						<BuildVersion />
+
+						{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
+							{#if version.latest === null}
+								<span>{$i18n.t('Could not check for updates')}</span>
+							{:else}
+								<a
+									class={($settings?.highContrastMode ?? false)
+										? 'inline-flex min-h-6 items-center'
+										: ''}
+									href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
+									target="_blank"
+								>
+									{updateAvailable === null
+										? $i18n.t('Checking for updates...')
+										: updateAvailable
+											? `(v${version.latest} ${$i18n.t('available!')})`
+											: $i18n.t('(latest)')}
+								</a>
+							{/if}
+						{/if}
+					</div>
+
+					<button
+						class="self-start {($settings?.highContrastMode ?? false)
+							? 'inline-flex min-h-6 items-center'
+							: ''} {actionButtonClass}"
+						on:click={() => {
+							showChangelog.set(true);
 						}}
-					/>
+					>
+						<div>{$i18n.t('settings.personal.about.seeWhatSNew.label')}</div>
+					</button>
 				</div>
 
-				<div class="space-y-1">
-					<div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-						<h1 class="text-xl font-bold tracking-tight text-white">Wolinet AI</h1>
-						<span
-							class="px-2.5 py-0.5 text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full"
-						>
-							v{version} Sovereign Edition
-						</span>
-					</div>
-					<p class="text-xs text-gray-300 font-normal">
-						{$i18n.t('Sovereign LLM & High-Performance Inference Platform')}
-					</p>
-					<div class="pt-1 flex items-center justify-center sm:justify-start gap-1.5 text-xs text-emerald-400">
-						<span class="size-2 rounded-full bg-emerald-400 inline-block shadow-xs"></span>
-						<span class="font-medium">{$i18n.t('Created and engineered by')} <strong class="text-white">Wolinet Technology</strong></span>
-					</div>
+				{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
+					<button
+						class={actionButtonClass}
+						on:click={() => {
+							checkForVersionUpdates();
+						}}
+					>
+						{$i18n.t('settings.personal.about.checkForUpdates.label')}
+					</button>
+				{/if}
+			</UserSettingRow>
+		</UserSettingSection>
+
+		{#if ollamaVersion}
+			<UserSettingSection title={$i18n.t('settings.personal.about.sections.ollamaVersion.title')}>
+				<div class="text-xs text-gray-600 dark:text-gray-400">
+					{ollamaVersion ?? 'N/A'}
 				</div>
-			</div>
+			</UserSettingSection>
+		{/if}
 
-			<!-- Subtle ambient glow -->
-			<div
-				class="absolute -right-10 -bottom-10 size-44 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"
-			></div>
-		</div>
+		<UserSettingSection title={$i18n.t('settings.personal.about.sections.community.title')}>
+			{#if $config?.license_metadata}
+				<!-- LICENSE covers this Open WebUI license attribution.
+				Do not alter, remove, obscure, or replace it except as LICENSE permits:
+				https://docs.openwebui.com/license. -->
+				<div class="text-xs text-gray-600 dark:text-gray-400">
+					{#if !$WEBUI_NAME.includes('Open WebUI')}
+						<span>{$WEBUI_NAME}</span> -
+					{/if}
 
-		<!-- Platform Mission & Overview -->
-		<div
-			class="p-4 rounded-xl bg-gray-50/80 dark:bg-gray-850/50 border border-gray-200/80 dark:border-gray-800 space-y-2 leading-relaxed text-xs text-gray-700 dark:text-gray-300"
-		>
-			<div class="font-semibold text-gray-900 dark:text-gray-100 text-sm">
-				{$i18n.t('What Wolinet AI Delivers')}
-			</div>
-			<p>
-				Wolinet AI gives organizations complete ownership of their artificial intelligence operations. Instead of sending sensitive internal queries and proprietary code to third-party endpoints, all model interactions, embeddings, and context retrievals route through your private, sovereign infrastructure.
-			</p>
-			<p>
-				Whether writing software, querying proprietary datasets, or building multi-agent systems, Wolinet AI provides real-time spend attribution, isolated model routing, and deterministic inference.
-			</p>
-		</div>
-
-		<!-- What Users Can Achieve -->
-		<div
-			class="p-4 rounded-xl bg-gray-50/80 dark:bg-gray-850/50 border border-gray-200/80 dark:border-gray-800 space-y-3"
-		>
-			<div class="font-semibold text-gray-900 dark:text-gray-100 text-xs uppercase tracking-wider">
-				{$i18n.t('What You Can Achieve')}
-			</div>
-
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-				<div class="p-3 rounded-lg bg-white dark:bg-gray-900/90 border border-gray-200/70 dark:border-gray-750 space-y-1">
-					<div class="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
-						<span class="size-1.5 rounded-full bg-emerald-500"></span>
-						{$i18n.t('Full Model Sovereignty')}
-					</div>
-					<p class="text-[11px] text-gray-500 dark:text-gray-400 leading-normal">
-						Run top-tier coding, reasoning, and vision models without vendor telemetry, arbitrary rate limits, or training on your proprietary data.
-					</p>
+					<span class="capitalize">{$config?.license_metadata?.type}</span>
+					{$i18n.t('license purchased by')}
+					<span class="capitalize">{$config?.license_metadata?.organization_name}</span>
 				</div>
-
-				<div class="p-3 rounded-lg bg-white dark:bg-gray-900/90 border border-gray-200/70 dark:border-gray-750 space-y-1">
-					<div class="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
-						<span class="size-1.5 rounded-full bg-blue-500"></span>
-						{$i18n.t('Real-Time Spend Metering')}
-					</div>
-					<p class="text-[11px] text-gray-500 dark:text-gray-400 leading-normal">
-						Track token usage and budgets down to fractions of a cent per user. Every workspace member gets allocated credits with strict limits.
-					</p>
+			{:else}
+				<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 dark:text-gray-600">
+					<a
+						class="hover:text-gray-700 dark:hover:text-gray-400"
+						href="https://discord.gg/5rJgQTnV4s"
+						target="_blank">Discord</a
+					>
+					<a
+						class="hover:text-gray-700 dark:hover:text-gray-400"
+						href="https://twitter.com/OpenWebUI"
+						target="_blank">X</a
+					>
+					<a
+						class="hover:text-gray-700 dark:hover:text-gray-400"
+						href="https://github.com/open-webui/open-webui"
+						target="_blank">GitHub</a
+					>
 				</div>
+			{/if}
 
-				<div class="p-3 rounded-lg bg-white dark:bg-gray-900/90 border border-gray-200/70 dark:border-gray-750 space-y-1">
-					<div class="font-semibold text-gray-900 dark:text-gray-100 flex items-center justify-between">
-						<div class="flex items-center gap-1.5">
-							<span class="size-1.5 rounded-full bg-purple-500"></span>
-							<span>{$i18n.t('Universal Wolinet API')}</span>
-						</div>
-						<a
-							href="/docs"
-							target="_blank"
-							class="text-[10px] text-purple-600 dark:text-purple-400 font-medium hover:underline inline-flex items-center gap-0.5 cursor-pointer"
-						>
-							<span>Docs ↗</span>
-						</a>
-					</div>
-					<p class="text-[11px] text-gray-500 dark:text-gray-400 leading-normal">
-						Connect IDEs, command-line scripts, and backend services directly to the Wolinet API endpoint (<code class="font-mono text-gray-700 dark:text-gray-300">/v1</code>) on any server or domain deployment.
-					</p>
-				</div>
-
-				<div class="p-3 rounded-lg bg-white dark:bg-gray-900/90 border border-gray-200/70 dark:border-gray-750 space-y-1">
-					<div class="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
-						<span class="size-1.5 rounded-full bg-amber-500"></span>
-						{$i18n.t('Private Knowledge & RAG')}
-					</div>
-					<p class="text-[11px] text-gray-500 dark:text-gray-400 leading-normal">
-						Ingest source code and documents with the embedding provider configured for this workspace.
-					</p>
-				</div>
-			</div>
-		</div>
-
-		<!-- Sovereign Core Architecture -->
-		<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-			<div
-				class="p-3.5 rounded-xl bg-gray-50/80 dark:bg-gray-850/50 border border-gray-200/80 dark:border-gray-800 space-y-1.5"
-			>
-				<div class="text-xs font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-					<div class="p-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
-						<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-						</svg>
-					</div>
-					{$i18n.t('Sovereign Gateway')}
-				</div>
-				<p class="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-					Sovereign proxy layer managing distributed model execution with real-time per-user token metering and budget attribution.
-				</p>
+			<div class="text-xs text-gray-400 dark:text-gray-500">
+				{$i18n.t('Emoji graphics provided by')}
+				<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, {$i18n.t(
+					'licensed under'
+				)}
+				<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
 			</div>
 
-			<div
-				class="p-3.5 rounded-xl bg-gray-50/80 dark:bg-gray-850/50 border border-gray-200/80 dark:border-gray-800 space-y-1.5"
-			>
-				<div class="text-xs font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-					<div class="p-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-						<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-						</svg>
-					</div>
-					{$i18n.t('Privacy & Data Sovereignty')}
-				</div>
-				<p class="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-					Zero external tracking, air-gapped readiness, and strict enterprise data isolation.
-				</p>
-			</div>
-		</div>
-
-		<!-- Sovereign Model Suite -->
-		<div
-			class="p-4 rounded-xl bg-gray-50/80 dark:bg-gray-850/50 border border-gray-200/80 dark:border-gray-800 space-y-2.5"
-		>
-			<div class="text-xs font-semibold text-gray-900 dark:text-gray-100 flex items-center justify-between">
-				<span>{$i18n.t('Gateway Model Catalog')}</span>
-				<span class="text-[10px] text-gray-400 font-mono">{$i18n.t('Wolinet Unified API')}</span>
+			<div class="text-xs text-gray-400 dark:text-gray-500">
+				<!-- LICENSE covers this Open WebUI copyright attribution.
+				Do not alter, remove, obscure, or replace it except as LICENSE permits:
+				https://docs.openwebui.com/license. -->
+				{$i18n.t('Copyright (c)')}
+				{new Date().getFullYear()}
+				<a href="https://openwebui.com" target="_blank" class="underline">Open WebUI Inc.</a>
+				<a href="https://github.com/open-webui/open-webui/blob/main/LICENSE" target="_blank"
+					>{$i18n.t('All rights reserved.')}</a
+				>
 			</div>
 
-			<p class="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-				Models shown in chat are powered by the Wolinet Sovereign Neural Gateway and reflect models currently provisioned for this workspace.
-			</p>
-		</div>
-
-		<!-- Developer & API Documentation Links -->
-		<div class="flex flex-wrap items-center gap-2 pt-1">
-			<a
-				href="/docs"
-				target="_blank"
-				class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-black dark:hover:bg-gray-100 transition shadow-2xs cursor-pointer"
-			>
-				<span>{$i18n.t('Wolinet API Documentation')}</span>
-				<svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-				</svg>
-			</a>
-
-			<a
-				href="/api/version"
-				target="_blank"
-				class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-gray-100 hover:bg-gray-200/80 dark:bg-gray-800 dark:hover:bg-gray-700/80 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700/80 transition cursor-pointer"
-			>
-				<span>{$i18n.t('System Version & Status')}</span>
-				<span class="size-1.5 rounded-full bg-emerald-500"></span>
-			</a>
-		</div>
-
-		<!-- Footer -->
-		<div class="border-t border-gray-100 dark:border-gray-800/80 pt-4 space-y-1">
-			<div class="text-xs text-gray-600 dark:text-gray-400 font-medium">
-				© {new Date().getFullYear()} <strong>Wolinet Technology</strong>. All rights reserved.
+			<div class="text-xs text-gray-400 dark:text-gray-500">
+				{$i18n.t('Created by')}
+				<a class="text-gray-500 dark:text-gray-400" href="https://github.com/tjbck" target="_blank"
+					>Tim J. Baek</a
+				>
 			</div>
-			<div class="text-[11px] text-gray-400 dark:text-gray-500">
-				Engineered and maintained by <strong>Wolinet Technology</strong> for sovereign enterprise artificial intelligence.
-			</div>
-		</div>
+		</UserSettingSection>
 	</div>
 </div>

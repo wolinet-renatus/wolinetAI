@@ -9,7 +9,7 @@ import time
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.misc import sanitize_metadata
 from pydantic import BaseModel, ConfigDict, model_validator
-from sqlalchemy import BigInteger, Column, String, Text, delete, func, select
+from sqlalchemy import JSON, BigInteger, Column, String, Text, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -24,8 +24,8 @@ class File(Base):  # uploaded file record
     filename = Column(Text)  # original upload filename
     path = Column(Text, nullable=True)
 
-    data = Column(JSONField, nullable=True)
-    meta = Column(JSONField, nullable=True)
+    data = Column(JSON, nullable=True)
+    meta = Column(JSON, nullable=True)
 
     created_at = Column(BigInteger, index=True)  # upload timestamp
     updated_at = Column(BigInteger)
@@ -48,7 +48,7 @@ class FileModel(BaseModel):
     updated_at: int | None  # timestamp in epoch
 
 
-# --- metadata structures ---
+# Metadata structures
 class FileMeta(BaseModel):
     name: str | None = None
     content_type: str | None = None
@@ -142,7 +142,6 @@ class FilesTable:
                 result = File(**file.model_dump())
                 db.add(result)
                 await db.commit()
-                await db.refresh(result)
                 if result:
                     return FileModel.model_validate(result)
                 else:
@@ -200,6 +199,18 @@ class FilesTable:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(File))
             return [FileModel.model_validate(file) for file in result.scalars().all()]
+
+    async def count_files_by_user_id(
+        self,
+        user_id: str | None = None,
+        db: AsyncSession | None = None,
+    ) -> int:
+        async with get_async_db_context(db) as db:
+            stmt = select(func.count(File.id))
+            if user_id:
+                stmt = stmt.filter_by(user_id=user_id)
+            result = await db.execute(stmt)
+            return result.scalar() or 0
 
     async def check_access_by_user_id(self, id, user_id, permission='write', db: AsyncSession | None = None) -> bool:
         file = await self.get_file_by_id(id, db=db)
@@ -403,7 +414,7 @@ class FilesTable:
         have not yet been added to the ``knowledge_file`` join table.
 
         The JSON subscript syntax (``Column['key']['subkey'].as_string()``)
-        uses PostgreSQL JSONB operators
+        is supported by both SQLite (``json_extract``) and PostgreSQL
         (``->>``/``->``).
         """
         async with get_async_db_context(db) as db:
