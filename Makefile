@@ -127,3 +127,40 @@ docker-up:
 
 docker-down:
 	@docker compose down
+
+package-orchestrator:
+	@./packaging/orchestrator/build.sh
+
+package-lango:
+	@./packaging/lango/build.sh
+
+package-mitambo:
+	@./packaging/mitambo/build.sh
+
+package-wolinex-web:
+	@./packaging/wolinex/build.sh --components web
+
+package-wolinex-client:
+	@./packaging/wolinex/build.sh --components cli
+
+package-server: package-orchestrator package-mitambo package-lango package-wolinex-web
+
+package-all: package-server package-wolinex-client
+
+install-orchestrator:
+	@./scripts/install-orchestrator.sh
+
+install-lango:
+	@./scripts/install-lango.sh
+
+install-mitambo:
+	@./scripts/install-mitambo.sh
+
+install-wolinex-web:
+	@./scripts/install-wolinex-web.sh
+
+install-wolinex-client:
+	@./scripts/install-wolinex-client.sh
+
+install-server:
+	@./scripts/install-server-stack.sh

@@ -202,17 +202,39 @@ def cmd_sync(args: argparse.Namespace) -> None:
             print(f"    [!] Failed to merge sub-branch: {e}")
 
 
+def resolve_builder_cmd(product_id: str, build_target: str, rebuild: bool) -> Optional[list[str]]:
+    builder_map = {
+        "orchestrator": [str(REPO_ROOT / "packaging/orchestrator/build.sh")],
+        "lango": [str(REPO_ROOT / "packaging/lango/build.sh")],
+        "mitambo": [str(REPO_ROOT / "packaging/mitambo/build.sh")],
+        "web-client": [str(REPO_ROOT / "packaging/wolinex/build.sh"), "--components", "web"],
+        "wolinex-ide": [str(REPO_ROOT / "packaging/wolinex/build.sh"), "--components", "cli"],
+    }
+    cmd = builder_map.get(product_id)
+    if not cmd:
+        return None
+    extra = ["--target", build_target]
+    if rebuild:
+        extra.append("--rebuild")
+    return cmd + extra
+
+
 def cmd_build(args: argparse.Namespace) -> None:
     products = load_products()
-    mode = args.target  # 'server', 'desktop', 'all', 'changed', or specific product ID
+    mode = args.target  # 'server', 'desktop', 'client', 'all', 'changed', or specific product ID
+    platform_target = getattr(args, "platform", "all")
+    rebuild = getattr(args, "rebuild", False)
 
     targets = []
     if mode == "server":
-        targets = [p for p in products if p.get("deployable_to_server")]
-    elif mode == "desktop":
-        targets = [p for p in products if p["id"] == "desktop-ide"]
+        server_products = [p for p in products if p.get("deployable_to_server") and p["id"] in ("orchestrator", "mitambo", "lango", "web-client")]
+        targets = sorted(server_products, key=lambda p: p.get("installer", {}).get("boot_stage", 99))
+    elif mode in ("desktop", "client"):
+        targets = [p for p in products if p["id"] == "wolinex-ide"]
+    elif mode == "wolinex":
+        targets = [p for p in products if p["id"] in ("web-client", "wolinex-ide")]
     elif mode == "all":
-        targets = products
+        targets = sorted(products, key=lambda p: p.get("installer", {}).get("boot_stage", 99))
     elif mode == "changed":
         res = run_git(["status", "--porcelain"], check=False, capture=True)
         changed_files = [l[3:].strip() for l in res.stdout.splitlines() if len(l) > 3]
@@ -228,44 +250,56 @@ def cmd_build(args: argparse.Namespace) -> None:
             sys.exit(1)
 
     print("=" * 88)
-    print(f" 🔨 WOLINET AI CHANGE-AWARE BUILD PIPELINE (TARGET: {mode.upper()})")
+    print(f" WOLINET AI BINARY INSTALLER PIPELINE (TARGET: {mode.upper()}, PLATFORM: {platform_target.upper()})")
     print("=" * 88)
-    print(f"Selected Products to Build: {', '.join(t['id'] for t in targets) or 'None'}")
+    print(f"Selected Products: {', '.join(t['id'] for t in targets) or 'None'}")
     print("-" * 88)
 
     for p in targets:
-        print(f"\n📦 Building [{p['id']}] - {p['name']}...")
+        print(f"\nBuilding [{p['id']}] - {p['name']}...")
         build_cfg = p.get("build", {})
         b_type = build_cfg.get("type", "unknown")
         t0 = time.time()
 
-        if b_type == "tauri_desktop":
-            print(f"   • Type: Desktop Tauri Package")
-            print(f"   • Command: {build_cfg.get('command')}")
-            # If node_modules exist, test build
-            ide_dir = REPO_ROOT / p["path"]
-            if (ide_dir / "package.json").exists():
-                print(f"   ✓ IDE build configuration verified at {ide_dir}")
-            else:
-                print(f"   [!] IDE directory missing package.json")
-        elif b_type == "container":
-            print(f"   • Type: OCI Container Image ({build_cfg.get('image')})")
-            print(f"   ✓ Ready for deployment via docker-compose / Podman Quadlet")
+        builder_cmd = resolve_builder_cmd(p["id"], platform_target, rebuild)
+        if builder_cmd and Path(builder_cmd[0]).exists():
+            print(f"   -> Running {' '.join(builder_cmd)}")
+            subprocess.run(builder_cmd, cwd=REPO_ROOT, check=True)
         elif b_type == "go_binary":
-            print(f"   • Type: Go Standalone Binary")
-            print(f"   ✓ Output artifact: {build_cfg.get('output')} (Pre-compiled 67MB binary verified)")
-        elif b_type == "node_python":
-            print(f"   • Type: Web Client Bundle & Server")
-            print(f"   ✓ Build assets verified at apps/wolinex/build")
+            print(f"   -> Verified Go binary path: {build_cfg.get('output')}")
         else:
-            print(f"   • Type: {b_type} (Validated)")
+            print(f"   -> No standalone installer builder defined for type '{b_type}'; skipped")
 
         duration = time.time() - t0
-        print(f"   ✓ [{p['id']}] Build ready ({duration:.2f}s).")
+        print(f"   [ok] [{p['id']}] Completed in {duration:.2f}s.")
 
     print("\n" + "=" * 88)
-    print(" ✨ BUILD PROCESS COMPLETED SUCCESSFULLY")
+    print(" BUILD PIPELINE COMPLETED SUCCESSFULLY")
     print("=" * 88)
+
+
+def cmd_install(args: argparse.Namespace) -> None:
+    installer_map = {
+        "server": REPO_ROOT / "scripts/install-server-stack.sh",
+        "orchestrator": REPO_ROOT / "scripts/install-orchestrator.sh",
+        "1apanel": REPO_ROOT / "scripts/install-orchestrator.sh",
+        "mitambo": REPO_ROOT / "scripts/install-mitambo.sh",
+        "lango": REPO_ROOT / "scripts/install-lango.sh",
+        "web-client": REPO_ROOT / "scripts/install-wolinex-web.sh",
+        "wolinex-web": REPO_ROOT / "scripts/install-wolinex-web.sh",
+        "wolinex-client": REPO_ROOT / "scripts/install-wolinex-client.sh",
+        "wolinex-ide": REPO_ROOT / "scripts/install-wolinex-client.sh",
+        "wolinex": REPO_ROOT / "scripts/install-wolinex.sh",
+    }
+    script = installer_map.get(args.product)
+    if not script or not script.exists():
+        print(
+            f"[!] Error: No installer script for '{args.product}' "
+            "(server: server, orchestrator, mitambo, lango, wolinex-web; client: wolinex-client)",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    subprocess.run([str(script), *args.installer_args], cwd=REPO_ROOT, check=True)
 
 
 def main() -> None:
@@ -290,8 +324,15 @@ def main() -> None:
     p_sync.add_argument("direction", choices=["push", "pull"], help="push: main->branch, pull: branch->main")
 
     # build
-    p_build = subparsers.add_parser("build", help="Change-aware build pipeline")
-    p_build.add_argument("target", help="Build target: 'server', 'desktop', 'all', 'changed', or product ID")
+    p_build = subparsers.add_parser("build", help="Build standalone binary installers for products")
+    p_build.add_argument("target", help="Build target: 'lango', 'mitambo', 'wolinex', 'web-client', 'wolinex-ide', 'server', 'desktop', 'all', or 'changed'")
+    p_build.add_argument("--platform", choices=["all", "linux", "darwin"], default="all", help="Target OS platform")
+    p_build.add_argument("--rebuild", action="store_true", help="Force rebuild even if artifact already exists")
+
+    # install
+    p_install = subparsers.add_parser("install", help="Run terminal installer for a product")
+    p_install.add_argument("product", help="Product to install: 'lango', 'mitambo', 'wolinex'")
+    p_install.add_argument("installer_args", nargs=argparse.REMAINDER, help="Flags forwarded to install-<product>.sh")
 
     args = parser.parse_args()
 
@@ -305,6 +346,8 @@ def main() -> None:
         cmd_sync(args)
     elif args.command == "build":
         cmd_build(args)
+    elif args.command == "install":
+        cmd_install(args)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+
+if ! getent group wolinex >/dev/null 2>&1; then
+    groupadd --system wolinex
+fi
+
+if ! id -u wolinex >/dev/null 2>&1; then
+    useradd --system --gid wolinex --no-create-home --home-dir /var/lib/wolinet/wolinex --shell /usr/sbin/nologin wolinex
+fi
+
+install -d -m 0750 -o wolinex -g wolinex /var/lib/wolinet/wolinex
+install -d -m 0750 -o root -g wolinex /etc/wolinet
+
+if [ ! -f /etc/wolinet/wolinex-web.env ] && [ -f /etc/wolinet/wolinex-web.env.example ]; then
+    cp /etc/wolinet/wolinex-web.env.example /etc/wolinet/wolinex-web.env
+    chown root:wolinex /etc/wolinet/wolinex-web.env
+    chmod 0640 /etc/wolinet/wolinex-web.env
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+
+exit 0

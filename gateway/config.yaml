@@ -3,7 +3,7 @@ model_list:
   - model_name: "Wolinex Coder"
     litellm_params:
       model: "openai/Deepseeker Coder"
-      api_base: "http://host.docker.internal:8088/v1"
+      api_base: "http://127.0.0.1:9997/v1"
       api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
       merge_reasoning_content_in_choices: false
     model_info:
@@ -19,7 +19,7 @@ model_list:
   - model_name: "Wolinet Pro"
     litellm_params:
       model: "openai/Deepseeker Coder"
-      api_base: "http://host.docker.internal:8088/v1"
+      api_base: "http://127.0.0.1:9997/v1"
       api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
       merge_reasoning_content_in_choices: false
     model_info:
@@ -34,7 +34,7 @@ model_list:
   - model_name: "Secure Pro"
     litellm_params:
       model: "openai/Deepseeker Coder"
-      api_base: "http://host.docker.internal:8088/v1"
+      api_base: "http://127.0.0.1:9997/v1"
       api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
       merge_reasoning_content_in_choices: false
     model_info:
@@ -47,7 +47,7 @@ model_list:
   - model_name: "Wolinet Turbo Draft"
     litellm_params:
       model: "openai/Deepseeker Coder"
-      api_base: "http://host.docker.internal:8088/v1"
+      api_base: "http://127.0.0.1:9997/v1"
       api_key: "sk-XvKFiwDoOtOe8i4lwbzb8Q"
       merge_reasoning_content_in_choices: false
     model_info:
@@ -282,9 +282,9 @@ general_settings:
   - path: /v1/doc_analyze
     target: os.environ/WOLINET_INFERENCE_URL
   - path: /v1/defense/inspect
-    target: "http://host.docker.internal:8088"
+    target: "http://127.0.0.1:9997"
   - path: /defense/inspect
-    target: "http://host.docker.internal:8088"
+    target: "http://127.0.0.1:9997"
   store_model_in_db: true
   disable_env_credential_login: true
   hide_default_credentials_hint: true

@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+# Wolinet Mitambo Inference Engine CLI & Service Launcher
+set -euo pipefail
+
+resolve_real_path() {
+  python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null \
+    || readlink -f "$1" 2>/dev/null \
+    || printf '%s\n' "$1"
+}
+
+SELF_PATH="$(resolve_real_path "${BASH_SOURCE[0]}")"
+MITAMBO_HOME="$(cd "$(dirname "${SELF_PATH}")/.." && pwd)"
+MITAMBO_PYTHON="${MITAMBO_HOME}/venv/bin/python3"
+
+if [[ ! -x "${MITAMBO_PYTHON}" ]]; then
+  MITAMBO_PYTHON="$(find "${MITAMBO_HOME}/python" -path '*/bin/python3' 2>/dev/null | head -n1 || true)"
+fi
+[[ -x "${MITAMBO_PYTHON}" ]] || { echo "Mitambo runtime python3 not found under ${MITAMBO_HOME}" >&2; exit 1; }
+
+DEFAULT_ENV="/etc/wolinet/mitambo.env"
+if [[ -f "${MITAMBO_HOME}/etc/mitambo.env" ]]; then
+  DEFAULT_ENV="${MITAMBO_HOME}/etc/mitambo.env"
+fi
+ENV_FILE="${MITAMBO_ENV_FILE:-${DEFAULT_ENV}}"
+
+load_env() {
+  if [[ -f "${ENV_FILE}" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "${ENV_FILE}"
+    set +a
+  fi
+  export XINFERENCE_HOME="${XINFERENCE_HOME:-${MITAMBO_DATA_DIR:-${HOME}/.mitambo}}"
+  export XINFERENCE_MODEL_SRC="${XINFERENCE_MODEL_SRC:-huggingface}"
+  export XINFERENCE_AUTH_ADVANCED="${XINFERENCE_AUTH_ADVANCED:-true}"
+  if [[ -z "${XINFERENCE_FRONTEND_DIST_DIR:-}" && -d "${MITAMBO_HOME}/frontend" ]]; then
+    export XINFERENCE_FRONTEND_DIST_DIR="${MITAMBO_HOME}/frontend"
+  fi
+  export MITAMBO_HOST="${MITAMBO_HOST:-127.0.0.1}"
+  export MITAMBO_PORT="${MITAMBO_PORT:-9997}"
+  export PATH="${MITAMBO_HOME}/venv/bin:${PATH}"
+}
+
+sync_registrations() {
+  local reg_src="${MITAMBO_HOME}/models/registrations"
+  [[ -d "${reg_src}" ]] || return 0
+  "${MITAMBO_PYTHON}" - "${reg_src}" "${XINFERENCE_HOME}/model/v2" <<'PY'
+import json, os, pathlib, shutil, sys
+
+src_dir = pathlib.Path(sys.argv[1])
+dst_root = pathlib.Path(sys.argv[2])
+for fp in sorted(src_dir.glob("*.json")):
+    try:
+        data = json.loads(fp.read_text(encoding="utf-8"))
+    except Exception:
+        continue
+    name = data.get("model_name")
+    if not name:
+        continue
+    abilities = data.get("model_ability", [])
+    family = data.get("model_family", "")
+    if any(a in abilities for a in ("text2image", "image2image", "inpainting", "ocr", "docanalyze")) or family == "ocr":
+        mtype = "image"
+    elif any(a in abilities for a in ("audio2text", "text2audio", "speech2text")) or family == "whisper":
+        mtype = "audio"
+    elif "dimensions" in data:
+        mtype = "embedding"
+    elif "rerank" in name:
+        mtype = "rerank"
+    else:
+        mtype = "llm"
+    target_dir = dst_root / mtype
+    target_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(fp, target_dir / f"{name}.json")
+PY
+}
+
+serve_cmd() {
+  load_env
+  mkdir -p "${XINFERENCE_HOME}" "${MITAMBO_MODELS_DIR:-${XINFERENCE_HOME}/models}"
+  sync_registrations
+  exec "${MITAMBO_PYTHON}" -c 'import sys; from xinference.deploy.cmdline import local; sys.argv[0] = "xinference-local"; local()' \
+    --host "${MITAMBO_HOST}" \
+    --port "${MITAMBO_PORT}" \
+    "$@"
+}
+
+doctor_cmd() {
+  load_env
+  echo "MITAMBO_HOME=${MITAMBO_HOME}"
+  echo "MITAMBO_PYTHON=${MITAMBO_PYTHON}"
+  echo "XINFERENCE_HOME=${XINFERENCE_HOME}"
+  "${MITAMBO_PYTHON}" - <<'PY'
+import sys
+import xinference
+import xoscar
+import fastapi
+import uvicorn
+print("python:", sys.version.split()[0])
+print("xinference:", getattr(xinference, "__version__", "unknown"))
+try:
+    import torch
+    print("torch:", torch.__version__)
+except Exception as exc:
+    print("torch: unavailable ->", exc)
+try:
+    import xllamacpp
+    print("xllamacpp:", getattr(xllamacpp, "__version__", "installed"))
+except Exception as exc:
+    print("xllamacpp: optional ->", exc)
+PY
+}
+
+case "${1:-help}" in
+  serve|run)
+    shift
+    serve_cmd "$@"
+    ;;
+  start)
+    if [[ "$(uname -s)" == "Linux" ]] && command -v systemctl >/dev/null 2>&1 && [[ -d /run/systemd/system ]]; then
+      exec systemctl start mitambo
+    fi
+    if [[ "$(uname -s)" == "Darwin" ]] && launchctl print "gui/$(id -u)/com.wolinet.mitambo" >/dev/null 2>&1; then
+      exec launchctl kickstart -k "gui/$(id -u)/com.wolinet.mitambo"
+    fi
+    shift
+    serve_cmd "$@"
+    ;;
+  stop)
+    if [[ "$(uname -s)" == "Linux" ]] && command -v systemctl >/dev/null 2>&1 && [[ -d /run/systemd/system ]]; then
+      exec systemctl stop mitambo
+    fi
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+      exec launchctl bootout "gui/$(id -u)/com.wolinet.mitambo"
+    fi
+    pkill -f "xinference.deploy.cmdline" || true
+    ;;
+  status)
+    if [[ "$(uname -s)" == "Linux" ]] && command -v systemctl >/dev/null 2>&1 && [[ -d /run/systemd/system ]]; then
+      systemctl status mitambo --no-pager
+    else
+      load_env
+      curl -fsS "http://127.0.0.1:${MITAMBO_PORT}/status" && echo ""
+    fi
+    ;;
+  logs)
+    if [[ "$(uname -s)" == "Linux" ]] && command -v journalctl >/dev/null 2>&1; then
+      exec journalctl -u mitambo -n 100 -f
+    fi
+    tail -n 100 -f "${HOME}/Library/Logs/wolinet/mitambo/stderr.log"
+    ;;
+  doctor)
+    doctor_cmd
+    ;;
+  version|--version|-V)
+    load_env
+    "${MITAMBO_PYTHON}" -c 'import xinference; print("mitambo", xinference.__version__)'
+    ;;
+  help|--help|-h)
+    cat <<'EOF'
+Wolinet Mitambo Inference Engine
+
+Usage: mitambo <command> [args]
+  serve     Run inference daemon in foreground
+  start     Start service (systemd / launchd / foreground)
+  stop      Stop service
+  status    Show service status or /status probe
+  logs      Tail service logs
+  doctor    Verify bundled Python runtime and inference libraries
+  version   Print Mitambo version
+  <other>   Forward arguments to xinference CLI (list, launch, terminate, etc.)
+EOF
+    ;;
+  *)
+    load_env
+    exec "${MITAMBO_PYTHON}" -m xinference.deploy.cmdline "$@"
+    ;;
+esac

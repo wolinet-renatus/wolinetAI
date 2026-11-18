@@ -1,0 +1,27 @@
+[Unit]
+Description=Wolinet Mitambo Sovereign Inference Engine
+Documentation=https://wolinet.ai/docs
+After=network-online.target 1apanel.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mitambo
+Group=mitambo
+EnvironmentFile=-/etc/wolinet/mitambo.env
+Environment=MITAMBO_HOST=127.0.0.1
+Environment=MITAMBO_PORT=9997
+Environment=XINFERENCE_HOME=/var/lib/wolinet/data/mitambo
+ExecStart=/usr/bin/mitambo serve
+Restart=always
+RestartSec=5s
+LimitNOFILE=65535
+LimitMEMLOCK=infinity
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/wolinet/mitambo /var/lib/wolinet/data/mitambo /var/lib/wolinet/models
+
+[Install]
+WantedBy=multi-user.target

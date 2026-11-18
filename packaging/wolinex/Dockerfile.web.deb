@@ -1,0 +1,74 @@
+FROM docker.io/library/node:22-alpine3.20 AS web-builder
+
+WORKDIR /app
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+RUN apk add --no-cache git
+COPY wolinex/package.json wolinex/package-lock.json ./
+RUN ONNXRUNTIME_NODE_INSTALL_CUDA=skip npm ci --force
+COPY wolinex/ ./
+RUN npm run build && find build -type f -name '*.map' -delete
+
+FROM ubuntu:24.04 AS builder
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG PYTHON_VERSION=3.12
+ARG UV_VERSION=0.12.19
+ARG WOLINEX_WEB_VERSION=0.13.2
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    dpkg-dev \
+    libpq5 \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --no-cache-dir --break-system-packages "uv==${UV_VERSION}"
+
+ENV UV_PYTHON_INSTALL_DIR=/opt/wolinet/wolinex-web/python \
+    UV_HTTP_TIMEOUT=300
+
+RUN uv python install "${PYTHON_VERSION}" \
+    && PY_BIN="$(find /opt/wolinet/wolinex-web/python -path '*/bin/python3' | head -n1)" \
+    && uv venv /opt/wolinet/wolinex-web/venv --python "${PY_BIN}"
+
+COPY wolinex/backend /opt/wolinet/wolinex-web/backend
+COPY wolinex/package.json /opt/wolinet/wolinex-web/package.json
+COPY wolinex/CHANGELOG.md /opt/wolinet/wolinex-web/CHANGELOG.md
+COPY --from=web-builder /app/build /opt/wolinet/wolinex-web/frontend
+
+RUN uv pip install --python /opt/wolinet/wolinex-web/venv/bin/python \
+      -r /opt/wolinet/wolinex-web/backend/requirements-slim.txt \
+    && find /opt/wolinet/wolinex-web -type d -name '__pycache__' -prune -exec rm -rf {} + \
+    && find /opt/wolinet/wolinex-web -type d -name 'tests' -prune -exec rm -rf {} +
+
+COPY packaging/wolinex /src/packaging
+
+RUN mkdir -p \
+      /pkg/DEBIAN \
+      /pkg/opt/wolinet/wolinex-web/bin \
+      /pkg/usr/bin \
+      /pkg/lib/systemd/system \
+      /pkg/etc/wolinet \
+      /out \
+    && mv /opt/wolinet/wolinex-web/python /pkg/opt/wolinet/wolinex-web/python \
+    && mv /opt/wolinet/wolinex-web/venv /pkg/opt/wolinet/wolinex-web/venv \
+    && mv /opt/wolinet/wolinex-web/backend /pkg/opt/wolinet/wolinex-web/backend \
+    && mv /opt/wolinet/wolinex-web/frontend /pkg/opt/wolinet/wolinex-web/frontend \
+    && mv /opt/wolinet/wolinex-web/package.json /pkg/opt/wolinet/wolinex-web/package.json \
+    && mv /opt/wolinet/wolinex-web/CHANGELOG.md /pkg/opt/wolinet/wolinex-web/CHANGELOG.md \
+    && cp /src/packaging/wolinex-web /pkg/opt/wolinet/wolinex-web/bin/wolinex-web \
+    && chmod 0755 /pkg/opt/wolinet/wolinex-web/bin/wolinex-web \
+    && ln -sf /opt/wolinet/wolinex-web/bin/wolinex-web /pkg/usr/bin/wolinex-web \
+    && cp /src/packaging/deploy/wolinex-web.service /pkg/lib/systemd/system/wolinex-web.service \
+    && cp /src/packaging/deploy/env.example /pkg/etc/wolinet/wolinex-web.env.example \
+    && chmod 0640 /pkg/etc/wolinet/wolinex-web.env.example \
+    && cp /src/packaging/deploy/debian/postinst /pkg/DEBIAN/postinst \
+    && cp /src/packaging/deploy/debian/prerm /pkg/DEBIAN/prerm \
+    && chmod 0755 /pkg/DEBIAN/postinst /pkg/DEBIAN/prerm \
+    && INSTALLED_KB="$(du -sk /pkg/opt | awk '{print $1}')" \
+    && printf 'Package: wolinex-web\nVersion: %s-1\nSection: web\nPriority: optional\nArchitecture: amd64\nInstalled-Size: %s\nDepends: ca-certificates\nMaintainer: Wolinet AI <engineering@wolinet.com>\nDescription: Wolinet AI Wolinex Web Portal (self-contained runtime)\n Bundled Python 3.12 + Open WebUI runtime, Svelte frontend, and systemd unit.\n' "${WOLINEX_WEB_VERSION}" "${INSTALLED_KB}" > /pkg/DEBIAN/control \
+    && printf '/etc/wolinet/wolinex-web.env.example\n' > /pkg/DEBIAN/conffiles \
+    && dpkg-deb --root-owner-group --build /pkg /out/wolinex-web_amd64.deb \
+    && rm -rf /pkg /opt/wolinet/wolinex-web

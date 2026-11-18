@@ -1,0 +1,26 @@
+[Unit]
+Description=Wolinet Stage 1 DEC 1Panel Agent Daemon
+Documentation=https://wolinet.ai/docs
+After=network-online.target podman.socket
+Wants=network-online.target podman.socket
+
+[Service]
+Type=simple
+User=root
+Group=root
+EnvironmentFile=-/etc/wolinet/1apanel.env
+Environment=PANEL_BASE_DIR=/var/lib/wolinet/data
+Environment=BASE_DIR=/var/lib/wolinet/data/1panel
+Environment=ORIGINAL_PORT=8888
+Environment=ORIGINAL_VERSION=v2.0.0
+Environment=LANGUAGE=en
+ExecStartPre=/usr/bin/install -d -m 0700 -o root -g root /etc/1panel /var/lib/wolinet/data/1panel/db
+ExecStart=/usr/bin/wolinet-orchestrator serve-agent
+Restart=always
+RestartSec=5s
+LimitNOFILE=65535
+LimitNPROC=65535
+TasksMax=infinity
+
+[Install]
+WantedBy=multi-user.target

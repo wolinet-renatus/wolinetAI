@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+
+if ! getent group mitambo >/dev/null 2>&1; then
+    groupadd --system mitambo
+fi
+
+if ! id -u mitambo >/dev/null 2>&1; then
+    useradd --system --gid mitambo --no-create-home --home-dir /var/lib/wolinet/mitambo --shell /usr/sbin/nologin mitambo
+fi
+
+install -d -m 0750 -o mitambo -g mitambo /var/lib/wolinet/mitambo
+install -d -m 0755 -o mitambo -g mitambo /var/lib/wolinet/models
+install -d -m 0750 -o root -g mitambo /etc/wolinet
+
+if [ ! -f /etc/wolinet/mitambo.env ] && [ -f /etc/wolinet/mitambo.env.example ]; then
+    cp /etc/wolinet/mitambo.env.example /etc/wolinet/mitambo.env
+    chown root:mitambo /etc/wolinet/mitambo.env
+    chmod 0640 /etc/wolinet/mitambo.env
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+
+exit 0

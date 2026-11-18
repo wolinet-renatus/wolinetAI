@@ -1,0 +1,21 @@
+#!/bin/sh
+set -e
+
+install -d -m 0700 -o root -g root /etc/wolinet /etc/1panel
+install -d -m 0755 -o root -g root \
+    /var/lib/wolinet/data/1panel/db \
+    /var/lib/wolinet/data/postgres \
+    /var/lib/wolinet/data/redis \
+    /var/lib/wolinet/data/mitambo \
+    /var/lib/wolinet/models
+
+if [ ! -f /etc/wolinet/1apanel.env ] && [ -f /etc/wolinet/1apanel.env.example ]; then
+    cp /etc/wolinet/1apanel.env.example /etc/wolinet/1apanel.env
+    chmod 0600 /etc/wolinet/1apanel.env
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+
+exit 0

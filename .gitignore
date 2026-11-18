@@ -94,6 +94,8 @@ coverage/
 # Preserved Embedded Production Distribution Bundles & Static Exports
 !gateway/litellm/proxy/_experimental/out/
 !gateway/litellm/proxy/_experimental/out/**
+!gateway/ui/litellm-dashboard/out/
+!gateway/ui/litellm-dashboard/out/**
 !inference/xinference/ui/web/dist/
 !inference/xinference/ui/web/dist/**
 !inference/frontend/out/
@@ -106,7 +108,7 @@ coverage/
 # Compiled Binaries & OS Bundles
 *.app/
 *.dSYM/
-xcuserdata/
+xcuser/data/
 DerivedData/
 wolinet-cli
 bin/1apanel
@@ -151,6 +153,11 @@ inference/models/*.wav
 
 # UI and Binaries
 dist/
+**/dist/*.deb
+**/dist/*.tar.gz
+*.deb
+!Dockerfile*.deb
+*.deb.sha256
 release/
 apps/WolinexIde/ui/desktop/out/
 apps/WolinexIde/ui/desktop/.electron-cache/
@@ -163,6 +170,7 @@ openidea-server*
 gtwall*
 *.app/
 *.zip
+!gateway/tests/**/*.zip
 
 # Logs & Runtime Storage
 *.log
@@ -170,6 +178,8 @@ logs/
 backups/
 *.pid
 scratch/
+.crush/
+.ruff_cache/
 .system_generated/
 .tempmediaStorage/
 .litespeed/
@@ -183,8 +193,13 @@ scratch/
 *.db
 .litellm_cache/
 apps/wolinex/data/
-data/
+/data/
 *.pkg
 orchestrator/1apanel/data/
+orchestrator/1apanel/agent/data/
+orchestrator/appstore/apps/**/data/
+orchestrator/appstore/apps/**/1pwaf/
+orchestrator/runtime/**/data/
+gateway/data/
 tools/
 

@@ -1,0 +1,26 @@
+[Unit]
+Description=Wolinet AI Wolinex Web Portal
+Documentation=https://wolinet.ai/docs
+After=network-online.target litellm-gateway.service postgresql.service redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wolinex
+Group=wolinex
+EnvironmentFile=-/etc/wolinet/wolinex-web.env
+Environment=HOST=0.0.0.0
+Environment=PORT=8081
+Environment=DATA_DIR=/var/lib/wolinet/wolinex
+ExecStart=/usr/bin/wolinex-web serve
+Restart=always
+RestartSec=5s
+LimitNOFILE=65536
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/wolinet/wolinex
+
+[Install]
+WantedBy=multi-user.target

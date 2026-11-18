@@ -1,0 +1,447 @@
+#!/usr/bin/env bash
+# Wolinet Sovereign DB Migration & Complete Data Seeding Engine
+# Runs idempotently across PostgreSQL (litellm + webui + wolinex), Mitambo SQLite, and 1Panel SQLite.
+set -euo pipefail
+
+resolve_real_path() {
+  readlink -f "$1" 2>/dev/null \
+    || python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null \
+    || printf '%s\n' "$1"
+}
+
+SELF_PATH="$(resolve_real_path "${BASH_SOURCE[0]}")"
+ORCH_HOME="$(cd "$(dirname "${SELF_PATH}")/.." && pwd)"
+SCHEMA_DIR="${WOLINET_SCHEMA_DIR:-${ORCH_HOME}/schema}"
+
+# Load stage environment files when available
+for env_candidate in \
+  "${WOLINET_ORCH_ENV_FILE:-}" \
+  "/etc/wolinet/1apanel.env" \
+  "/etc/wolinet/mitambo.env" \
+  "/etc/litellm/env" \
+  "/etc/wolinet/wolinex-web.env"; do
+  if [[ -n "${env_candidate}" && -f "${env_candidate}" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "${env_candidate}"
+    set +a
+  fi
+done
+
+PG_HOST="${PGHOST:-127.0.0.1}"
+PG_PORT="${PGPORT:-${POSTGRES_PORT:-5433}}"
+PG_USER="${PGUSER:-${POSTGRES_USER:-postgres}}"
+PG_PASS="${PGPASSWORD:-${POSTGRES_PASSWORD:-}}"
+LITELLM_DB="${POSTGRES_DB:-litellm}"
+WEBUI_DB="webui"
+WOLINEX_DB="wolinex"
+
+PY_BIN="${WOLINET_SEED_PYTHON:-$(command -v python3 || true)}"
+for py_candidate in \
+  /opt/wolinet/mitambo/venv/bin/python3 \
+  /opt/wolinet/wolinex-web/venv/bin/python3; do
+  if [[ -x "${py_candidate}" ]]; then
+    PY_BIN="${py_candidate}"
+    break
+  fi
+done
+[[ -x "${PY_BIN}" ]] || { echo "[migrate-seed] python3 not found" >&2; exit 1; }
+
+run_psql_cmd() {
+  local target_db="$1"
+  shift
+  if command -v psql >/dev/null 2>&1; then
+    PGPASSWORD="${PG_PASS}" psql --host="${PG_HOST}" --port="${PG_PORT}" --username="${PG_USER}" --dbname="${target_db}" "$@"
+  elif command -v podman >/dev/null 2>&1 && podman container exists wolinetai-postgres-1 >/dev/null 2>&1; then
+    podman exec -i -e "PGPASSWORD=${PG_PASS}" wolinetai-postgres-1 psql --username="${PG_USER}" --dbname="${target_db}" "$@"
+  else
+    echo "[migrate-seed] Neither host 'psql' nor Podman container 'wolinetai-postgres-1' available" >&2
+    return 1
+  fi
+}
+
+wait_for_postgres() {
+  local i
+  for ((i = 1; i <= 45; i++)); do
+    if run_psql_cmd "postgres" -tAc "SELECT 1" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+  echo "[migrate-seed] PostgreSQL did not become ready at ${PG_HOST}:${PG_PORT}" >&2
+  return 1
+}
+
+ensure_databases() {
+  echo "[migrate-seed] Ensuring databases (${LITELLM_DB}, ${WEBUI_DB}, ${WOLINEX_DB})..."
+  run_psql_cmd "postgres" -v ON_ERROR_STOP=1 <<EOSQL
+SELECT format('CREATE DATABASE %I OWNER %I', '${LITELLM_DB}', current_user)
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${LITELLM_DB}')
+UNION ALL
+SELECT format('CREATE DATABASE %I OWNER %I', '${WEBUI_DB}', current_user)
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${WEBUI_DB}')
+UNION ALL
+SELECT format('CREATE DATABASE %I OWNER %I', '${WOLINEX_DB}', current_user)
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${WOLINEX_DB}')
+\gexec
+EOSQL
+  for db_name in "${LITELLM_DB}" "${WEBUI_DB}" "${WOLINEX_DB}"; do
+    run_psql_cmd "${db_name}" -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION IF NOT EXISTS "pgcrypto"; CREATE EXTENSION IF NOT EXISTS "uuid-ossp";' >/dev/null
+  done
+}
+
+migrate_litellm_schema() {
+  local has_vtoken
+  has_vtoken="$(run_psql_cmd "${LITELLM_DB}" -tAc "SELECT COALESCE(to_regclass('public.\"LiteLLM_VerificationToken\"')::text, '');" 2>/dev/null || true)"
+  if [[ -z "${has_vtoken}" && -f "${SCHEMA_DIR}/01_litellm_canonical.sql" ]]; then
+    echo "[migrate-seed] Applying canonical LiteLLM 83-table schema to '${LITELLM_DB}'..."
+    run_psql_cmd "${LITELLM_DB}" -v ON_ERROR_STOP=1 < "${SCHEMA_DIR}/01_litellm_canonical.sql" >/dev/null
+  else
+    echo "[migrate-seed] LiteLLM schema already present in '${LITELLM_DB}'"
+  fi
+
+  if [[ -f "${SCHEMA_DIR}/03_indexes.sql" ]]; then
+    run_psql_cmd "${LITELLM_DB}" -v ON_ERROR_STOP=1 < "${SCHEMA_DIR}/03_indexes.sql" >/dev/null 2>&1 || true
+  fi
+}
+
+seed_litellm_data() {
+  local config_file=""
+  for cfg_cand in \
+    "${LITELLM_CONFIG:-}" \
+    "/etc/litellm/config.yaml" \
+    "${ORCH_HOME}/etc/config.yaml.example"; do
+    if [[ -n "${cfg_cand}" && -f "${cfg_cand}" ]]; then
+      config_file="${cfg_cand}"
+      break
+    fi
+  done
+
+  local admin_pw="${ORIGINAL_PASSWORD:-wolinet-admin}"
+  local portal_key="${WOLINEX_PORTAL_API_KEY:-${OPENAI_API_KEY:-}}"
+  local copilot_key="${AI_GATEWAY_KEY:-}"
+
+  echo "[migrate-seed] Seeding admin user, virtual keys, and model catalog into '${LITELLM_DB}'..."
+  "${PY_BIN}" - "${config_file}" "${admin_pw}" "${portal_key}" "${copilot_key}" <<'PY' | run_psql_cmd "${LITELLM_DB}" -v ON_ERROR_STOP=1 >/dev/null
+import hashlib, json, pathlib, re, sys
+
+cfg_path = pathlib.Path(sys.argv[1]) if sys.argv[1] else None
+admin_pw = sys.argv[2]
+portal_key = sys.argv[3]
+copilot_key = sys.argv[4]
+
+admin_hash = hashlib.sha256(admin_pw.encode("utf-8")).hexdigest()
+
+def sql_str(val):
+    if val is None:
+        return "NULL"
+    return "'" + str(val).replace("'", "''") + "'"
+
+stmts = []
+stmts.append(f"""
+INSERT INTO "LiteLLM_UserTable" (user_id, user_email, user_role, password, models)
+VALUES ('admin', 'admin@wolinet.com', 'proxy_admin', {sql_str(admin_hash)}, ARRAY[]::text[])
+ON CONFLICT (user_id) DO UPDATE SET
+  user_email = EXCLUDED.user_email,
+  user_role = EXCLUDED.user_role;
+""")
+
+for alias, name, raw_key in (
+    ("wolinex-portal", "Wolinet Web Portal Virtual Key", portal_key),
+    ("1apanel-copilot", "1Panel DevOps Copilot Virtual Key", copilot_key),
+):
+    if not raw_key or raw_key.startswith("sk-replace"):
+        continue
+    tok_hash = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+    stmts.append(f"""
+INSERT INTO "LiteLLM_VerificationToken" (
+  token, key_name, key_alias, user_id, models, spend, total_spend, created_at, updated_at
+) VALUES (
+  {sql_str(tok_hash)}, {sql_str(name)}, {sql_str(alias)}, 'admin',
+  ARRAY[]::text[], 0.0, 0.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+)
+ON CONFLICT (token) DO UPDATE SET
+  key_name = EXCLUDED.key_name,
+  key_alias = EXCLUDED.key_alias,
+  updated_at = CURRENT_TIMESTAMP;
+""")
+
+# Parse sanitized model_list from config.yaml cleanly (PyYAML if installed, else lightweight parser)
+models = []
+if cfg_path and cfg_path.exists():
+    try:
+        import yaml
+        doc = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+        for item in doc.get("model_list", []) or []:
+            if isinstance(item, dict) and item.get("model_name"):
+                models.append(item)
+    except Exception:
+        cur = None
+        section = None
+        for raw in cfg_path.read_text(encoding="utf-8").splitlines():
+            line = raw.split("#", 1)[0].rstrip()
+            if not line.strip():
+                continue
+            if not raw.startswith((" ", "\t", "-")):
+                if cur is not None:
+                    models.append(cur)
+                    cur = None
+                section = None
+                continue
+            m_new = re.match(r'^\s*-\s*model_name:\s*(.+)$', line)
+            if m_new:
+                if cur is not None:
+                    models.append(cur)
+                val = m_new.group(1).strip().strip('"').strip("'")
+                cur = {"model_name": val, "litellm_params": {}, "model_info": {}}
+                section = None
+                continue
+            if cur is None:
+                continue
+            if re.match(r'^\s+litellm_params:\s*$', line):
+                section = "litellm_params"
+                continue
+            if re.match(r'^\s+model_info:\s*$', line):
+                section = "model_info"
+                continue
+            m_kv = re.match(r'^\s+([A-Za-z0-9_]+):\s*(.+)$', line)
+            if m_kv and section in ("litellm_params", "model_info"):
+                k = m_kv.group(1)
+                v_raw = m_kv.group(2).strip().strip('"').strip("'")
+                if v_raw.lower() == "true":
+                    v = True
+                elif v_raw.lower() == "false":
+                    v = False
+                elif re.fullmatch(r'-?\d+', v_raw):
+                    v = int(v_raw)
+                else:
+                    v = v_raw
+                cur[section][k] = v
+        if cur is not None:
+            models.append(cur)
+
+for idx, item in enumerate(models):
+    m_name = item["model_name"]
+    m_params = item.get("litellm_params", {})
+    m_info = item.get("model_info", {}) or {}
+    m_id = str(m_info.get("id") or f"seed-{re.sub(r'[^a-zA-Z0-9_-]+', '-', m_name).lower()}-{idx}")
+    stmts.append(f"""
+INSERT INTO "LiteLLM_ProxyModelTable" (
+  model_id, model_name, litellm_params, model_info, created_by, updated_by, blocked
+) VALUES (
+  {sql_str(m_id)},
+  {sql_str(m_name)},
+  {sql_str(json.dumps(m_params))}::jsonb,
+  {sql_str(json.dumps(m_info))}::jsonb,
+  'admin', 'admin', false
+)
+ON CONFLICT (model_id) DO UPDATE SET
+  model_name = EXCLUDED.model_name,
+  litellm_params = EXCLUDED.litellm_params,
+  model_info = EXCLUDED.model_info,
+  updated_at = CURRENT_TIMESTAMP;
+""")
+
+print("\n".join(stmts))
+PY
+}
+
+migrate_and_seed_webui() {
+  local has_webui_runtime=0
+  if [[ -x "/opt/wolinet/wolinex-web/venv/bin/python3" && -d "/opt/wolinet/wolinex-web/backend/open_webui/migrations" ]]; then
+    has_webui_runtime=1
+  fi
+
+  for db_name in "${WEBUI_DB}" "${WOLINEX_DB}"; do
+    local has_user
+    has_user="$(run_psql_cmd "${db_name}" -tAc "SELECT COALESCE(to_regclass('public.\"user\"')::text, '');" 2>/dev/null || true)"
+    if [[ -z "${has_user}" && "${db_name}" == "${WEBUI_DB}" && "${has_webui_runtime}" == "1" ]]; then
+      echo "[migrate-seed] Skipping static 02_webui_core.sql on '${db_name}' (bundled Open WebUI Alembic will initialize canonical schema)"
+    elif [[ -z "${has_user}" && -f "${SCHEMA_DIR}/02_webui_core.sql" ]]; then
+      echo "[migrate-seed] Applying canonical WebUI schema to '${db_name}'..."
+      run_psql_cmd "${db_name}" -v ON_ERROR_STOP=1 < "${SCHEMA_DIR}/02_webui_core.sql" >/dev/null
+    fi
+
+    run_psql_cmd "${db_name}" <<'EOSQL' >/dev/null 2>&1 || true
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'model') THEN
+    DELETE FROM model WHERE LOWER(id) LIKE '%tiny-llama%' OR LOWER(id) LIKE '%tinyllama%';
+  END IF;
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'alembic_version') THEN
+    UPDATE alembic_version SET version_num = 'f2a4b6c8d0e1' WHERE version_num = 'd4c1a8e37b62';
+  END IF;
+END $$;
+EOSQL
+  done
+
+  # Run bundled WebUI Alembic upgrade head + SQLAlchemy metadata create_all single-process before workers boot
+  if [[ "${has_webui_runtime}" == "1" ]]; then
+    echo "[migrate-seed] Running Wolinex Web Alembic upgrade head..."
+    (
+      cd /opt/wolinet/wolinex-web/backend/open_webui
+      PYTHONPATH="/opt/wolinet/wolinex-web/backend" \
+      USE_SLIM_DOCKER="true" \
+      VECTOR_DB="pgvector" \
+      DATABASE_URL="postgresql://${PG_USER}:${PG_PASS}@${PG_HOST}:${PG_PORT}/${WEBUI_DB}" \
+      /opt/wolinet/wolinex-web/venv/bin/python3 -c '
+from alembic.config import Config
+from alembic import command
+import open_webui, pathlib
+from open_webui.internal.db import Base, engine
+cfg = Config()
+cfg.set_main_option("script_location", str(pathlib.Path(open_webui.__file__).parent / "migrations"))
+command.upgrade(cfg, "head")
+Base.metadata.create_all(bind=engine)
+'
+    )
+  fi
+}
+
+seed_mitambo_local_state() {
+  local mitambo_data="${XINFERENCE_HOME:-/var/lib/wolinet/data/mitambo}"
+  local models_dir="${MITAMBO_MODELS_DIR:-/var/lib/wolinet/models}"
+  mkdir -p "${mitambo_data}/auth" "${mitambo_data}/model/v2" "${models_dir}"
+
+  local reg_dir=""
+  for cand in "/opt/wolinet/mitambo/models/registrations" "${ORCH_HOME}/models/registrations"; do
+    [[ -d "${cand}" ]] && reg_dir="${cand}" && break
+  done
+
+  if [[ -n "${reg_dir}" ]]; then
+    echo "[migrate-seed] Seeding Mitambo model registrations from ${reg_dir}..."
+    "${PY_BIN}" - "${reg_dir}" "${mitambo_data}/model/v2" <<'PY'
+import json, pathlib, shutil, sys
+src_dir, dst_root = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+for fp in sorted(src_dir.glob("*.json")):
+    try:
+        data = json.loads(fp.read_text(encoding="utf-8"))
+    except Exception:
+        continue
+    name = data.get("model_name")
+    if not name:
+        continue
+    abilities = data.get("model_ability", [])
+    family = data.get("model_family", "")
+    if any(a in abilities for a in ("text2image", "image2image", "inpainting", "ocr", "docanalyze")) or family == "ocr":
+        mtype = "image"
+    elif any(a in abilities for a in ("audio2text", "text2audio", "speech2text")) or family == "whisper":
+        mtype = "audio"
+    elif "dimensions" in data:
+        mtype = "embedding"
+    elif "rerank" in name:
+        mtype = "rerank"
+    else:
+        mtype = "llm"
+    out = dst_root / mtype
+    out.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(fp, out / f"{name}.json")
+PY
+  fi
+
+  # Initialize isolated Mitambo SQLite pools
+  "${PY_BIN}" - "${mitambo_data}" "${XINFERENCE_ADMIN_USER:-admin}" "${XINFERENCE_ADMIN_PASSWORD:-}" "${XINFERENCE_API_KEY:-}" <<'PY'
+import hashlib, pathlib, sqlite3, sys
+
+base = pathlib.Path(sys.argv[1])
+admin_user, admin_pw, api_key = sys.argv[2], sys.argv[3], sys.argv[4]
+
+for db_name in ("launch_history.db", "token_routers.db", "download_tasks.db"):
+    conn = sqlite3.connect(base / db_name)
+    conn.execute("CREATE TABLE IF NOT EXISTS _wolinet_meta (key TEXT PRIMARY KEY, value TEXT)")
+    conn.execute("INSERT OR REPLACE INTO _wolinet_meta (key, value) VALUES ('initialized', 'true')")
+    conn.commit()
+    conn.close()
+
+auth_db = base / "auth" / "auth.db"
+conn = sqlite3.connect(auth_db)
+conn.executescript("""
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'local',
+  enabled INTEGER NOT NULL DEFAULT 1,
+  must_change_password INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS api_keys (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  key_hash TEXT UNIQUE NOT NULL,
+  key_encrypted TEXT NOT NULL DEFAULT '',
+  key_prefix TEXT NOT NULL DEFAULT '',
+  name TEXT NOT NULL DEFAULT '',
+  enabled INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS api_key_model_permissions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  api_key_id INTEGER NOT NULL,
+  permission_type TEXT NOT NULL DEFAULT 'all',
+  permission_value TEXT
+);
+""")
+if admin_pw and not admin_pw.startswith("replace-"):
+    try:
+        import bcrypt
+        pw_hash = bcrypt.hashpw(admin_pw.encode("utf-8")[:72], bcrypt.gensalt()).decode("utf-8")
+    except Exception:
+        pw_hash = hashlib.sha256(admin_pw.encode("utf-8")).hexdigest()
+    conn.execute(
+        "INSERT INTO users (username, password_hash, source, enabled, must_change_password) "
+        "VALUES (?, ?, 'local', 1, 0) "
+        "ON CONFLICT(username) DO UPDATE SET password_hash=excluded.password_hash, enabled=1",
+        (admin_user, pw_hash),
+    )
+    conn.commit()
+
+if api_key and not api_key.startswith("replace-"):
+    row = conn.execute("SELECT id FROM users WHERE username=?", (admin_user,)).fetchone()
+    if row:
+        uid = row[0]
+        khash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+        existing = conn.execute("SELECT id FROM api_keys WHERE key_hash=?", (khash,)).fetchone()
+        if not existing:
+            cur = conn.execute(
+                "INSERT INTO api_keys (user_id, key_hash, key_encrypted, key_prefix, name, enabled) VALUES (?, ?, 'gateway_key_direct', ?, 'lango-gateway', 1)",
+                (uid, khash, api_key[:7]),
+            )
+            conn.execute(
+                "INSERT INTO api_key_model_permissions (api_key_id, permission_type, permission_value) VALUES (?, 'all', NULL)",
+                (cur.lastrowid,),
+            )
+            conn.commit()
+conn.close()
+PY
+
+  if id -u mitambo >/dev/null 2>&1; then
+    chown -R mitambo:mitambo "${mitambo_data}" "${models_dir}"
+  fi
+}
+
+seed_orchestrator_sqlite() {
+  local panel_db_dir="${BASE_DIR:-/var/lib/wolinet/data/1panel}/db"
+  mkdir -p "${panel_db_dir}"
+  "${PY_BIN}" - "${panel_db_dir}" <<'PY'
+import pathlib, sqlite3, sys
+db_dir = pathlib.Path(sys.argv[1])
+conn = sqlite3.connect(db_dir / "wolinet_bootstrap.db")
+conn.execute("CREATE TABLE IF NOT EXISTS bootstrap_state (component TEXT PRIMARY KEY, status TEXT NOT NULL)")
+conn.execute("INSERT OR REPLACE INTO bootstrap_state (component, status) VALUES ('stage1_orchestrator', 'seeded')")
+conn.commit()
+conn.close()
+PY
+}
+
+echo "=== Wolinet Canonical Migration & Data Seeding ==="
+seed_orchestrator_sqlite
+seed_mitambo_local_state
+
+if wait_for_postgres 2>/dev/null; then
+  ensure_databases
+  migrate_litellm_schema
+  seed_litellm_data
+  migrate_and_seed_webui
+  echo "=== Migration & Data Seeding Complete (PostgreSQL + Mitambo SQLite + 1Panel SQLite) ==="
+else
+  echo "[migrate-seed] PostgreSQL not active at ${PG_HOST}:${PG_PORT}; skipped Postgres steps (re-run 'wolinet-orchestrator migrate-seed' once Postgres is running)"
+fi

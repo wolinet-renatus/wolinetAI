@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+# Wolinet Web Portal (Wolinex) CLI & Service Launcher
+set -euo pipefail
+
+resolve_real_path() {
+  python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null \
+    || readlink -f "$1" 2>/dev/null \
+    || printf '%s\n' "$1"
+}
+
+SELF_PATH="$(resolve_real_path "${BASH_SOURCE[0]}")"
+WEB_HOME="$(cd "$(dirname "${SELF_PATH}")/.." && pwd)"
+WEB_PYTHON="${WEB_HOME}/venv/bin/python3"
+
+if [[ ! -x "${WEB_PYTHON}" ]]; then
+  WEB_PYTHON="$(find "${WEB_HOME}/python" -path '*/bin/python3' 2>/dev/null | head -n1 || true)"
+fi
+[[ -x "${WEB_PYTHON}" ]] || { echo "Wolinex Web runtime python3 not found under ${WEB_HOME}" >&2; exit 1; }
+
+DEFAULT_ENV="/etc/wolinet/wolinex-web.env"
+if [[ -f "${WEB_HOME}/etc/wolinex-web.env" ]]; then
+  DEFAULT_ENV="${WEB_HOME}/etc/wolinex-web.env"
+fi
+ENV_FILE="${WOLINEX_WEB_ENV_FILE:-${DEFAULT_ENV}}"
+
+load_env() {
+  if [[ -f "${ENV_FILE}" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "${ENV_FILE}"
+    set +a
+  fi
+  export HOST="${HOST:-0.0.0.0}"
+  export PORT="${PORT:-8081}"
+  export DATA_DIR="${DATA_DIR:-${HOME}/.wolinex-web/data}"
+  export FRONTEND_BUILD_DIR="${FRONTEND_BUILD_DIR:-${WEB_HOME}/frontend}"
+  export STATIC_DIR="${STATIC_DIR:-${DATA_DIR}/static}"
+  export PYTHONPATH="${WEB_HOME}/backend:${PYTHONPATH:-}"
+  export ENABLE_OPENAI_API="${ENABLE_OPENAI_API:-True}"
+  export ENABLE_OLLAMA_API="${ENABLE_OLLAMA_API:-False}"
+  export ENABLE_FORWARD_USER_INFO_HEADERS="${ENABLE_FORWARD_USER_INFO_HEADERS:-True}"
+  export BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL="${BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:-True}"
+  export USE_SLIM_DOCKER="${USE_SLIM_DOCKER:-true}"
+  export VECTOR_DB="${VECTOR_DB:-pgvector}"
+  export WEBUI_NAME="${WEBUI_NAME:-Wolinet AI}"
+  export PATH="${WEB_HOME}/venv/bin:${PATH}"
+}
+
+serve_cmd() {
+  load_env
+  mkdir -p "${DATA_DIR}" "${STATIC_DIR}"
+  if [[ -d "${WEB_HOME}/backend/open_webui/static" ]]; then
+    cp -rn "${WEB_HOME}/backend/open_webui/static/." "${STATIC_DIR}/" 2>/dev/null || true
+  fi
+  cd "${WEB_HOME}/backend"
+  exec "${WEB_PYTHON}" -m uvicorn open_webui.main:app \
+    --host "${HOST}" \
+    --port "${PORT}" \
+    --forwarded-allow-ips="${FORWARDED_ALLOW_IPS:-*}" \
+    "$@"
+}
+
+doctor_cmd() {
+  load_env
+  echo "WEB_HOME=${WEB_HOME}"
+  echo "WEB_PYTHON=${WEB_PYTHON}"
+  echo "DATA_DIR=${DATA_DIR}"
+  echo "FRONTEND_BUILD_DIR=${FRONTEND_BUILD_DIR}"
+  "${WEB_PYTHON}" - <<'PY'
+import sys
+import fastapi
+import uvicorn
+import sqlalchemy
+import pydantic
+print("python:", sys.version.split()[0])
+print("fastapi:", fastapi.__version__)
+print("sqlalchemy:", sqlalchemy.__version__)
+PY
+  [[ -f "${FRONTEND_BUILD_DIR}/index.html" ]] && echo "frontend: present" || echo "frontend: missing"
+}
+
+case "${1:-help}" in
+  serve|run)
+    shift
+    serve_cmd "$@"
+    ;;
+  start)
+    if [[ "$(uname -s)" == "Linux" ]] && command -v systemctl >/dev/null 2>&1 && [[ -d /run/systemd/system ]]; then
+      exec systemctl start wolinex-web
+    fi
+    if [[ "$(uname -s)" == "Darwin" ]] && launchctl print "gui/$(id -u)/com.wolinet.wolinex-web" >/dev/null 2>&1; then
+      exec launchctl kickstart -k "gui/$(id -u)/com.wolinet.wolinex-web"
+    fi
+    shift
+    serve_cmd "$@"
+    ;;
+  stop)
+    if [[ "$(uname -s)" == "Linux" ]] && command -v systemctl >/dev/null 2>&1 && [[ -d /run/systemd/system ]]; then
+      exec systemctl stop wolinex-web
+    fi
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+      exec launchctl bootout "gui/$(id -u)/com.wolinet.wolinex-web"
+    fi
+    pkill -f "uvicorn open_webui.main:app" || true
+    ;;
+  status)
+    if [[ "$(uname -s)" == "Linux" ]] && command -v systemctl >/dev/null 2>&1 && [[ -d /run/systemd/system ]]; then
+      systemctl status wolinex-web --no-pager
+    else
+      load_env
+      curl -fsS "http://127.0.0.1:${PORT}/health" && echo ""
+    fi
+    ;;
+  logs)
+    if [[ "$(uname -s)" == "Linux" ]] && command -v journalctl >/dev/null 2>&1; then
+      exec journalctl -u wolinex-web -n 100 -f
+    fi
+    tail -n 100 -f "${HOME}/Library/Logs/wolinet/wolinex-web/stderr.log"
+    ;;
+  doctor)
+    doctor_cmd
+    ;;
+  version|--version|-V)
+    "${WEB_PYTHON}" -c "import json, pathlib; p=pathlib.Path('${WEB_HOME}/package.json'); print('wolinex-web', json.loads(p.read_text())['version'] if p.exists() else '0.13.2')"
+    ;;
+  help|--help|-h)
+    cat <<'EOF'
+Wolinet Web Portal (Wolinex Web)
+
+Usage: wolinex-web <command> [args]
+  serve     Run Open WebUI server in foreground
+  start     Start service (systemd / launchd / foreground)
+  stop      Stop service
+  status    Show service status or /health probe
+  logs      Tail service logs
+  doctor    Verify Python runtime and frontend bundle
+  version   Print Wolinex Web version
+EOF
+    ;;
+  *)
+    die_msg="Unknown command: $1 (try 'wolinex-web --help')"
+    echo "${die_msg}" >&2
+    exit 1
+    ;;
+esac

@@ -13,10 +13,18 @@
       "ports": [4000],
       "healthcheck": "http://localhost:4000/health/liveliness",
       "build": {
-        "type": "container",
+        "type": "rust_binary",
+        "command": "packaging/lango/build.sh",
         "image": "wolinet-lango:latest",
         "context": "gateway",
-        "dockerfile": "gateway/Dockerfile"
+        "dockerfile": "gateway/litellm-rust/Dockerfile.deb"
+      },
+      "installer": {
+        "role": "server",
+        "boot_stage": 3,
+        "builder": "packaging/lango/build.sh",
+        "script": "scripts/install-lango.sh",
+        "artifacts_dir": "dist/installers/server/lango"
       }
     },
     {
@@ -31,8 +39,16 @@
       "healthcheck": "http://localhost:9997/v1/models",
       "build": {
         "type": "binary_service",
+        "command": "packaging/mitambo/build.sh",
         "script": "inference/start-mitambo.sh",
         "image": "wolinet-mitambo:latest"
+      },
+      "installer": {
+        "role": "server",
+        "boot_stage": 2,
+        "builder": "packaging/mitambo/build.sh",
+        "script": "scripts/install-mitambo.sh",
+        "artifacts_dir": "dist/installers/server/mitambo"
       }
     },
     {
@@ -40,15 +56,23 @@
       "name": "Wolinet Web Client & Chat (Wolinex WebUI)",
       "category": "web_app",
       "deployable_to_server": true,
-      "path": "apps/wolinex-webui",
+      "path": "apps/wolinex",
       "sub_branch": "stack/web-client",
       "description": "Sovereign conversational interface, collaborative workspace, and MCP Hub UI",
       "ports": [8081],
       "healthcheck": "http://localhost:8081/health",
       "build": {
         "type": "node_python",
-        "script": "apps/wolinex-webui/run_webui.sh",
+        "command": "packaging/wolinex/build.sh --components web",
+        "script": "apps/wolinex/run_webui.sh",
         "image": "wolinet-web-client:latest"
+      },
+      "installer": {
+        "role": "server",
+        "boot_stage": 4,
+        "builder": "packaging/wolinex/build.sh --components web",
+        "script": "scripts/install-wolinex-web.sh",
+        "artifacts_dir": "dist/installers/server/wolinex-web"
       }
     },
     {
@@ -106,11 +130,19 @@
       "path": "orchestrator",
       "sub_branch": "stack/orchestrator",
       "description": "DEC sovereign OS control plane (1Panel Go core, AI portal, AppStore, Podman Quadlets)",
-      "ports": [8888],
+      "ports": [8888, 9999, 8089],
+      "healthcheck": "http://localhost:8888/",
       "build": {
         "type": "go_binary",
         "output": "bin/1apanel",
-        "command": "make -C orchestrator/1apanel/core"
+        "command": "packaging/orchestrator/build.sh"
+      },
+      "installer": {
+        "role": "server",
+        "boot_stage": 1,
+        "builder": "packaging/orchestrator/build.sh",
+        "script": "scripts/install-orchestrator.sh",
+        "artifacts_dir": "dist/installers/server/orchestrator"
       }
     },
     {
@@ -140,7 +172,13 @@
       "api_dependency": "Connects via Lango LiteLLM Gateway (:4000/v1 or hosted Lango)",
       "build": {
         "type": "electron_forge",
-        "command": "cd apps/WolinexIde/ui/desktop && pnpm run start-gui"
+        "command": "packaging/wolinex/build.sh --components cli,desktop"
+      },
+      "installer": {
+        "role": "client_download",
+        "builder": "packaging/wolinex/build.sh --components cli,desktop",
+        "script": "scripts/install-wolinex-client.sh",
+        "artifacts_dir": "dist/downloads/desktop"
       }
     },
     {
