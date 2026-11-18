@@ -20,11 +20,18 @@ REPO_URL="${WOLINET_REPO_URL:-https://github.com/wolinet-renatus/wolinetAI.git}"
 REPO_BRANCH="${WOLINET_REPO_BRANCH:-main}"
 REPO_DIR="${WOLINET_REPO_DIR:-/opt/wolinetai}"
 DOMAIN="${WOLINET_DOMAIN:-wolinet.com}"
+PUBLIC_IP="${WOLINET_PUBLIC_IP:-}"
 ORIGIN_CERT="${CLOUDFLARE_ORIGIN_CERT:-}"
 ORIGIN_KEY="${CLOUDFLARE_ORIGIN_KEY:-}"
 CF_TOKEN="${CLOUDFLARE_API_TOKEN:-}"
 ALLOW_DIRECT_HTTP="${ALLOW_DIRECT_HTTP:-0}"
 EXTRA_PORTS="${EXTRA_OPEN_PORTS:-}"
+R2_ACCOUNT_ID="${R2_ACCOUNT_ID:-}"
+R2_ACCESS_KEY_ID="${R2_ACCESS_KEY_ID:-}"
+R2_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY:-}"
+R2_ENDPOINT="${R2_ENDPOINT:-}"
+R2_BACKUP_BUCKET="${R2_BACKUP_BUCKET:-wolinet-backups}"
+R2_STORAGE_BUCKET="${R2_STORAGE_BUCKET:-wolinet-storage}"
 GO_VERSION="1.26.6"
 SKIP_BUILD=0
 
@@ -46,9 +53,16 @@ Options:
   --repo-dir <dir>             Target clone directory (default: /opt/wolinetai)
   --origin-cert <path>         Cloudflare Origin CA PEM cert path on server
   --origin-key <path>          Cloudflare Origin CA key path on server
-  --cloudflare-token <token>   Cloudflare API token for automatic proxied A record upsert
+  --cloudflare-token <token>   Cloudflare API token for automatic proxied A record upsert + Origin CA SSL
+  --public-ip <ipv4>           Server public IPv4 (auto-detected if omitted)
   --allow-direct-http          Allow ports 80/443 from any IP (instead of Cloudflare CIDRs only)
   --extra-open-ports <list>    Comma-separated extra ufw ports (e.g. "9000/tcp,9001/udp")
+  --r2-account-id <id>         Cloudflare R2 Account ID
+  --r2-access-key <key>        Cloudflare R2 S3 Access Key ID
+  --r2-secret-key <secret>     Cloudflare R2 S3 Secret Access Key
+  --r2-endpoint <url>          Cloudflare R2 S3 Endpoint
+  --r2-backup-bucket <name>    R2 bucket for daily DB/config backups (default: wolinet-backups)
+  --r2-storage-bucket <name>   R2 bucket for Wolinex file uploads (default: wolinet-storage)
   --skip-build                 Reuse existing .deb artifacts if already present in dist/
   -h, --help                   Show this help
 EOF
@@ -63,8 +77,15 @@ while [[ $# -gt 0 ]]; do
     --origin-cert)        ORIGIN_CERT="${2:-}"; shift 2 ;;
     --origin-key)         ORIGIN_KEY="${2:-}"; shift 2 ;;
     --cloudflare-token)   CF_TOKEN="${2:-}"; shift 2 ;;
+    --public-ip)          PUBLIC_IP="${2:-}"; shift 2 ;;
     --allow-direct-http)  ALLOW_DIRECT_HTTP=1; shift ;;
     --extra-open-ports)   EXTRA_PORTS="${2:-}"; shift 2 ;;
+    --r2-account-id)      R2_ACCOUNT_ID="${2:-}"; shift 2 ;;
+    --r2-access-key)      R2_ACCESS_KEY_ID="${2:-}"; shift 2 ;;
+    --r2-secret-key)      R2_SECRET_ACCESS_KEY="${2:-}"; shift 2 ;;
+    --r2-endpoint)        R2_ENDPOINT="${2:-}"; shift 2 ;;
+    --r2-backup-bucket)   R2_BACKUP_BUCKET="${2:-wolinet-backups}"; shift 2 ;;
+    --r2-storage-bucket)  R2_STORAGE_BUCKET="${2:-wolinet-storage}"; shift 2 ;;
     --skip-build)         SKIP_BUILD=1; shift ;;
     -h|--help)            usage; exit 0 ;;
     *)                    echo "[bootstrap:error] Unknown option: $1" >&2; exit 1 ;;
@@ -162,13 +183,29 @@ fi
 log "4/6 Installing 4-stage stack, Podman Postgres/Redis, resource tuning & DB seeding..."
 bash "${REPO_DIR}/scripts/install-server-stack.sh" --with-datastore
 
-log "5/6 Configuring Host Nginx, TLS, UFW, systemd-resolved & Cloudflare edge..."
+log "5/6 Configuring Host Nginx, Origin CA SSL, UFW, systemd-resolved & Cloudflare edge..."
 EDGE_ARGS=(--domain "${DOMAIN}")
+[[ -n "${PUBLIC_IP}" ]] && EDGE_ARGS+=(--public-ip "${PUBLIC_IP}")
 [[ -n "${ORIGIN_CERT}" && -n "${ORIGIN_KEY}" ]] && EDGE_ARGS+=(--origin-cert "${ORIGIN_CERT}" --origin-key "${ORIGIN_KEY}")
 [[ "${ALLOW_DIRECT_HTTP}" == "1" ]] && EDGE_ARGS+=(--allow-direct-http)
 [[ -n "${EXTRA_PORTS}" ]] && EDGE_ARGS+=(--extra-open-ports "${EXTRA_PORTS}")
 
 CLOUDFLARE_API_TOKEN="${CF_TOKEN}" bash "${REPO_DIR}/scripts/setup-contabo-edge.sh" "${EDGE_ARGS[@]}"
+
+if [[ -n "${R2_ACCESS_KEY_ID}" && -n "${R2_SECRET_ACCESS_KEY}" ]]; then
+  log "5b/6 Configuring Cloudflare R2 S3 storage & automated daily backup..."
+  R2_ARGS=(
+    --access-key "${R2_ACCESS_KEY_ID}"
+    --secret-key "${R2_SECRET_ACCESS_KEY}"
+    --backup-bucket "${R2_BACKUP_BUCKET}"
+    --storage-bucket "${R2_STORAGE_BUCKET}"
+    --run-now
+  )
+  [[ -n "${R2_ACCOUNT_ID}" ]] && R2_ARGS+=(--account-id "${R2_ACCOUNT_ID}")
+  [[ -n "${R2_ENDPOINT}" ]] && R2_ARGS+=(--endpoint "${R2_ENDPOINT}")
+  [[ -n "${CF_TOKEN}" ]] && R2_ARGS+=(--cloudflare-token "${CF_TOKEN}")
+  bash "${REPO_DIR}/scripts/setup-r2-backup.sh" "${R2_ARGS[@]}"
+fi
 
 log "6/6 Verifying deployed services on loopback and Nginx HTTPS..."
 check_local() {

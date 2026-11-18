@@ -183,13 +183,82 @@ stage_tls_certificates() {
     return 0
   fi
 
-  if [[ -f "${CERT_PEM}" && -f "${KEY_PEM}" ]]; then
+  local need_cert=0
+  if [[ ! -f "${CERT_PEM}" || ! -f "${KEY_PEM}" ]]; then
+    need_cert=1
+  elif ! openssl x509 -in "${CERT_PEM}" -noout -issuer 2>/dev/null | grep -qi "Cloudflare"; then
+    if [[ -n "${CF_TOKEN}" ]]; then
+      need_cert=1
+    fi
+  fi
+
+  if [[ "${need_cert}" == "0" ]]; then
     log_ok "Preserving existing TLS certificate in ${CERT_DIR}"
     return 0
   fi
 
-  command -v openssl >/dev/null 2>&1 || die "openssl is required to generate fallback origin cert when --origin-cert is omitted"
-  log_warn "Generating temporary self-signed origin cert in ${CERT_DIR} (replace with 15-year Cloudflare Origin CA PEM for Full Strict)"
+  command -v openssl >/dev/null 2>&1 || die "openssl is required to provision origin TLS cert"
+
+  if [[ -n "${CF_TOKEN}" ]]; then
+    log_header "Issuing 15-year Cloudflare Origin CA certificate for ${DOMAIN}, *.${DOMAIN}"
+    local tmp_tls
+    tmp_tls="$(mktemp -d)"
+    openssl req -new -newkey rsa:2048 -nodes \
+      -keyout "${tmp_tls}/origin.key" \
+      -out "${tmp_tls}/origin.csr" \
+      -subj "/CN=${DOMAIN}" \
+      -addext "subjectAltName=DNS:${DOMAIN},DNS:*.${DOMAIN}" >/dev/null 2>&1
+
+    if python3 - "${CF_TOKEN}" "${DOMAIN}" "${tmp_tls}/origin.csr" "${tmp_tls}/origin.crt" <<'PY'
+import json, pathlib, sys, urllib.error, urllib.request
+
+token, domain, csr_path, out_path = sys.argv[1:5]
+csr_pem = pathlib.Path(csr_path).read_text(encoding="utf-8")
+payload = json.dumps({
+    "hostnames": [domain, f"*.{domain}"],
+    "requested_validity": 5475,
+    "request_type": "origin-rsa",
+    "csr": csr_pem,
+}).encode("utf-8")
+req = urllib.request.Request(
+    "https://api.cloudflare.com/client/v4/certificates",
+    data=payload,
+    method="POST",
+    headers={
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    },
+)
+try:
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        res = json.loads(resp.read().decode("utf-8"))
+except urllib.error.HTTPError as exc:
+    print(f"Cloudflare Origin CA API error {exc.code}: {exc.read().decode('utf-8', 'ignore')}", file=sys.stderr)
+    sys.exit(1)
+
+if not res.get("success") or not res.get("result", {}).get("certificate"):
+    print(f"Cloudflare Origin CA API failed: {res.get('errors')}", file=sys.stderr)
+    sys.exit(1)
+
+pathlib.Path(out_path).write_text(res["result"]["certificate"], encoding="utf-8")
+PY
+    then
+      run_root install -m 0644 "${tmp_tls}/origin.crt" "${CERT_PEM}"
+      run_root install -m 0600 "${tmp_tls}/origin.key" "${KEY_PEM}"
+      rm -rf "${tmp_tls}"
+      log_ok "Installed 15-year Cloudflare Origin CA certificate in ${CERT_DIR}"
+      return 0
+    fi
+    rm -rf "${tmp_tls}"
+    log_warn "Falling back to self-signed cert (Origin CA issuance requires SSL/Origin CA permission on token)"
+  fi
+
+  if [[ -f "${CERT_PEM}" && -f "${KEY_PEM}" ]]; then
+    log_ok "Keeping existing TLS certificate in ${CERT_DIR}"
+    return 0
+  fi
+
+  log_warn "Generating temporary self-signed origin cert in ${CERT_DIR}"
   run_root openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
     -keyout "${KEY_PEM}" \
     -out "${CERT_PEM}" \
@@ -206,10 +275,46 @@ write_nginx_config() {
   run_root install -d -m 0755 /etc/nginx/conf.d /etc/nginx/snippets /etc/nginx/sites-available /etc/nginx/sites-enabled
 
   run_root tee /etc/nginx/conf.d/00-wolinet-ws.conf >/dev/null <<'EOF'
+server_tokens off;
+
 map $http_upgrade $connection_upgrade {
     default upgrade;
-    ''      close;
+    ''      '';
 }
+
+limit_req_zone $binary_remote_addr zone=wolinet_auth:10m rate=15r/s;
+limit_req_zone $binary_remote_addr zone=wolinet_api:10m rate=120r/s;
+limit_conn_zone $binary_remote_addr zone=wolinet_conn:10m;
+limit_req_status 429;
+limit_conn_status 429;
+
+upstream wolinet_panel_backend {
+    server 127.0.0.1:8888 max_fails=3 fail_timeout=10s;
+    keepalive 32;
+}
+
+upstream wolinet_mitambo_backend {
+    server 127.0.0.1:9997 max_fails=3 fail_timeout=10s;
+    keepalive 32;
+}
+
+upstream wolinet_lango_backend {
+    server 127.0.0.1:4000 max_fails=3 fail_timeout=10s;
+    keepalive 64;
+}
+
+upstream wolinet_wolinex_backend {
+    server 127.0.0.1:8081 max_fails=3 fail_timeout=10s;
+    keepalive 64;
+}
+EOF
+
+  run_root tee /etc/nginx/snippets/wolinet-security.conf >/dev/null <<'EOF'
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 EOF
 
   run_root tee /etc/nginx/snippets/wolinet-cloudflare.conf >/dev/null <<'EOF'
@@ -270,12 +375,17 @@ server {
     ssl_certificate     ${CERT_PEM};
     ssl_certificate_key ${KEY_PEM};
     ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:WolinetSSL:10m;
+    ssl_session_timeout 1d;
 
     client_max_body_size 512m;
+    limit_conn wolinet_conn 64;
+    include /etc/nginx/snippets/wolinet-security.conf;
 
     location / {
         include /etc/nginx/snippets/wolinet-cloudflare.conf;
-        proxy_pass http://127.0.0.1:8888;
+        limit_req zone=wolinet_auth burst=60 nodelay;
+        proxy_pass http://wolinet_panel_backend;
         proxy_buffering off;
         proxy_cache off;
         proxy_connect_timeout 60s;
@@ -293,12 +403,17 @@ server {
     ssl_certificate     ${CERT_PEM};
     ssl_certificate_key ${KEY_PEM};
     ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:WolinetSSL:10m;
+    ssl_session_timeout 1d;
 
     client_max_body_size 1024m;
+    limit_conn wolinet_conn 64;
 
     location / {
         include /etc/nginx/snippets/wolinet-cloudflare.conf;
-        proxy_pass http://127.0.0.1:9997;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        limit_req zone=wolinet_api burst=200 nodelay;
+        proxy_pass http://wolinet_mitambo_backend;
         proxy_buffering off;
         proxy_cache off;
         add_header X-Accel-Buffering no always;
@@ -317,8 +432,11 @@ server {
     ssl_certificate     ${CERT_PEM};
     ssl_certificate_key ${KEY_PEM};
     ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:WolinetSSL:10m;
+    ssl_session_timeout 1d;
 
     client_max_body_size 100m;
+    limit_conn wolinet_conn 128;
 
     location = /ui {
         return 301 /ui/;
@@ -327,12 +445,14 @@ server {
     location ^~ /litellm-asset-prefix/ {
         rewrite ^/litellm-asset-prefix/(.*)\$ /\$1 break;
         root ${TARGET_UI_DIR};
+        include /etc/nginx/snippets/wolinet-security.conf;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
 
     location ^~ /_next/ {
         root ${TARGET_UI_DIR};
+        include /etc/nginx/snippets/wolinet-security.conf;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
@@ -340,12 +460,15 @@ server {
     location ^~ /ui/ {
         rewrite ^/ui/?(.*)\$ /\$1 break;
         root ${TARGET_UI_DIR};
+        include /etc/nginx/snippets/wolinet-security.conf;
         try_files \$uri \$uri/index.html \$uri.html /index.html =404;
     }
 
     location / {
         include /etc/nginx/snippets/wolinet-cloudflare.conf;
-        proxy_pass http://127.0.0.1:4000;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        limit_req zone=wolinet_api burst=300 nodelay;
+        proxy_pass http://wolinet_lango_backend;
         proxy_buffering off;
         proxy_cache off;
         add_header X-Accel-Buffering no always;
@@ -364,13 +487,17 @@ server {
     ssl_certificate     ${CERT_PEM};
     ssl_certificate_key ${KEY_PEM};
     ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:WolinetSSL:10m;
+    ssl_session_timeout 1d;
 
     client_max_body_size 200m;
     keepalive_timeout 600s;
+    limit_conn wolinet_conn 128;
 
     location ^~ /socket.io/ {
         include /etc/nginx/snippets/wolinet-cloudflare.conf;
-        proxy_pass http://127.0.0.1:8081;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        proxy_pass http://wolinet_wolinex_backend;
         proxy_buffering off;
         proxy_cache off;
         chunked_transfer_encoding on;
@@ -382,7 +509,9 @@ server {
 
     location / {
         include /etc/nginx/snippets/wolinet-cloudflare.conf;
-        proxy_pass http://127.0.0.1:8081;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        limit_req zone=wolinet_api burst=250 nodelay;
+        proxy_pass http://wolinet_wolinex_backend;
         proxy_buffering off;
         proxy_cache off;
         add_header X-Accel-Buffering no always;
@@ -468,8 +597,13 @@ upsert_cloudflare_dns() {
   fi
   [[ -n "${PUBLIC_IP}" ]] || die "Unable to detect public IPv4 automatically; pass --public-ip <ipv4>"
 
-  log_header "Upserting Cloudflare A records (${DOMAIN} -> ${PUBLIC_IP}, proxied=${CF_PROXIED})"
-  python3 - "${CF_TOKEN}" "${DOMAIN}" "${CF_ZONE_ID}" "${PUBLIC_IP}" "${CF_PROXIED}" \
+  local ssl_mode="full"
+  if openssl x509 -in "${CERT_PEM}" -noout -issuer 2>/dev/null | grep -qi "Cloudflare"; then
+    ssl_mode="strict"
+  fi
+
+  log_header "Upserting Cloudflare A records (${DOMAIN} -> ${PUBLIC_IP}, proxied=${CF_PROXIED}, ssl=${ssl_mode})"
+  python3 - "${CF_TOKEN}" "${DOMAIN}" "${CF_ZONE_ID}" "${PUBLIC_IP}" "${CF_PROXIED}" "${ssl_mode}" \
     "${PANEL_HOST}" "${MITAMBO_HOST_FQDN}" "${LANGO_HOST_FQDN}" "${WOLINEX_HOST_FQDN}" <<'PY'
 import json
 import sys
@@ -477,7 +611,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-token, domain, zone_id, target_ip, proxied_str, *hosts = sys.argv[1:]
+token, domain, zone_id, target_ip, proxied_str, ssl_mode, *hosts = sys.argv[1:]
 proxied = proxied_str.lower() in ("1", "true", "yes")
 base = "https://api.cloudflare.com/client/v4"
 
@@ -515,6 +649,23 @@ for fqdn in hosts:
     else:
         cf_req("POST", f"/zones/{zone_id}/dns_records", body)
         print(f"  created A {fqdn} -> {target_ip} (proxied={proxied})")
+
+zone_settings = [
+    ("ssl", ssl_mode),
+    ("always_use_https", "on"),
+    ("automatic_https_rewrites", "on"),
+    ("min_tls_version", "1.2"),
+    ("tls_1_3", "zrt"),
+    ("opportunistic_encryption", "on"),
+    ("websockets", "on"),
+    ("http3", "on"),
+]
+for setting, value in zone_settings:
+    try:
+        cf_req("PATCH", f"/zones/{zone_id}/settings/{setting}", {"value": value})
+        print(f"  zone setting {setting} -> {value}")
+    except Exception as exc:
+        print(f"  [warn] skipped zone setting {setting}: {exc}", file=sys.stderr)
 PY
 }
 
