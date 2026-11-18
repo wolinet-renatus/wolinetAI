@@ -148,8 +148,7 @@ install_go_toolchain() {
 install_go_toolchain
 export PATH="/usr/local/go/bin:${PATH}"
 
-configure_podman_registries
-systemctl enable --now podman.socket >/dev/null 2>&1 || true() {
+configure_podman_registries() {
   install -d -m 0755 /etc/containers/registries.conf.d
   cat > /etc/containers/registries.conf.d/99-wolinet-dockerhub.conf <<'EOF'
 unqualified-search-registries = ["docker.io"]
