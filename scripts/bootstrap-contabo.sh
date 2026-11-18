@@ -32,7 +32,8 @@ R2_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY:-}"
 R2_ENDPOINT="${R2_ENDPOINT:-}"
 R2_BACKUP_BUCKET="${R2_BACKUP_BUCKET:-wolinet-backups}"
 R2_STORAGE_BUCKET="${R2_STORAGE_BUCKET:-wolinet-storage}"
-GO_VERSION="1.26.6"
+GO_VERSION="1.27.4"
+GO_SHA256="7226736c2339719cda28fbf3a54d71aa63bcefe376e98cef00034268dab24840"
 SKIP_BUILD=0
 
 usage() {
@@ -130,16 +131,13 @@ install_go_toolchain() {
   fi
 
   log "Installing Go ${GO_VERSION} for linux/amd64..."
-  local tmp_dir tarball sha_file expected_sha
+  local tmp_dir tarball
   tmp_dir="$(mktemp -d)"
   trap 'rm -rf "${tmp_dir:-}"' RETURN
   tarball="${tmp_dir}/go${GO_VERSION}.linux-amd64.tar.gz"
-  sha_file="${tarball}.sha256"
 
-  curl -fsSL -o "${tarball}" "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz"
-  curl -fsSL -o "${sha_file}" "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz.sha256"
-  expected_sha="$(tr -d '[:space:]' < "${sha_file}")"
-  printf '%s  %s\n' "${expected_sha}" "${tarball}" | sha256sum -c -
+  curl -fsSL -o "${tarball}" "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+  printf '%s  %s\n' "${GO_SHA256}" "${tarball}" | sha256sum -c -
 
   rm -rf /usr/local/go
   tar -C /usr/local -xzf "${tarball}"
