@@ -680,6 +680,9 @@ upsert_cloudflare_dns
 if [[ "${SKIP_RESTART}" == "0" ]] && has_systemd; then
   log_header "Restarting Mitambo, Lango & Wolinex Web to apply 127.0.0.1 & GUI env updates"
   run_root systemctl restart mitambo litellm-gateway wolinex-web
+  wait_http_ok "http://127.0.0.1:4000/health/liveliness" 30 >/dev/null 2>&1 || true
+  wait_http_ok "http://127.0.0.1:8081/health" 45 >/dev/null 2>&1 || true
+  wait_http_ok "http://127.0.0.1:9997/status" 45 >/dev/null 2>&1 || true
 fi
 
 log_ok "Contabo edge & Cloudflare routing ready:"

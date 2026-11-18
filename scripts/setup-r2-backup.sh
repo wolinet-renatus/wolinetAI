@@ -513,6 +513,7 @@ if [[ "${SKIP_START}" == "0" ]] && has_systemd; then
   run_root systemctl enable --now wolinet-backup.timer
   if [[ "${CONFIGURE_WOLINEX_S3}" == "1" ]] && systemctl is-enabled wolinex-web.service >/dev/null 2>&1; then
     run_root systemctl restart wolinex-web.service
+    wait_http_ok "http://127.0.0.1:8081/health" 60 >/dev/null 2>&1 || true
   fi
   if [[ "${RUN_NOW}" == "1" ]]; then
     /usr/local/bin/wolinet-backup-r2 || true

@@ -252,10 +252,25 @@ CLOUDFLARE_API_TOKEN="${CF_TOKEN}" \
 apt-get clean >/dev/null 2>&1 || true
 
 echo "[r2-install] Verifying running services, PostgreSQL & cleanup status..."
-curl -fsS --max-time 10 http://127.0.0.1:8888/ >/dev/null && echo "  [OK] 1apanel :8888"
-curl -fsS --max-time 10 http://127.0.0.1:9997/status >/dev/null && echo "  [OK] Mitambo :9997"
-curl -fsS --max-time 10 http://127.0.0.1:4000/health/liveliness >/dev/null && echo "  [OK] Lango :4000"
-curl -fsS --max-time 10 http://127.0.0.1:8081/health >/dev/null && echo "  [OK] Wolinex Web :8081"
+verify_svc() {
+  local name="$1" url="$2" unit="$3" max_wait="$4"
+  local i=0
+  while (( i < max_wait )); do
+    if curl -fsS --max-time 5 "${url}" >/dev/null 2>&1; then
+      echo "  [OK] ${name} (${url})"
+      return 0
+    fi
+    sleep 2
+    i=$((i + 2))
+  done
+  echo "  [WARN] ${name} not yet reachable at ${url} after ${max_wait}s; recent logs:" >&2
+  journalctl -u "${unit}" -n 25 --no-pager >&2 || true
+  return 0
+}
+verify_svc "1apanel :8888" "http://127.0.0.1:8888/" "1apanel" 20
+verify_svc "Lango :4000" "http://127.0.0.1:4000/health/liveliness" "litellm-gateway" 30
+verify_svc "Wolinex Web :8081" "http://127.0.0.1:8081/health" "wolinex-web" 60
+verify_svc "Mitambo :9997" "http://127.0.0.1:9997/status" "mitambo" 60
 PG_PASS="$(awk -F= '/^POSTGRES_PASSWORD=/{print $2; exit}' /etc/wolinet/1apanel.env 2>/dev/null || echo '')"
 if [[ -n "${PG_PASS}" ]] && command -v psql >/dev/null 2>&1; then
   MC="$(PGPASSWORD="${PG_PASS}" psql -h 127.0.0.1 -p 5433 -U postgres -d litellm -tAc 'SELECT count(*) FROM "LiteLLM_ProxyModelTable";' 2>/dev/null || echo '0')"
