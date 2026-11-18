@@ -255,11 +255,40 @@ migrate_and_seed_webui() {
     has_webui_runtime=1
   fi
 
+  # Heal an empty 'webui' DB whose oauth_session lacks user_id (poisoned by legacy 02_webui_core.sql)
+  if [[ "${has_webui_runtime}" == "1" ]]; then
+    local webui_state
+    webui_state="$(run_psql_cmd "${WEBUI_DB}" -tAc "
+      SELECT CASE
+        WHEN to_regclass('public.oauth_session') IS NOT NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM information_schema.columns
+           WHERE table_schema = 'public' AND table_name = 'oauth_session' AND column_name = 'user_id'
+         )
+         AND COALESCE((SELECT count(*) FROM \"user\"), 0) = 0
+        THEN 'reset' ELSE 'ok' END;
+    " 2>/dev/null || true)"
+    if [[ "${webui_state}" == "reset" ]]; then
+      echo "[migrate-seed] Resetting stale static 02_webui_core.sql schema on empty '${WEBUI_DB}' so Alembic initializes cleanly..."
+      run_psql_cmd "${WEBUI_DB}" -v ON_ERROR_STOP=1 <<'EOSQL' >/dev/null
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "vector";
+EOSQL
+    fi
+  fi
+
   for db_name in "${WEBUI_DB}" "${WOLINEX_DB}"; do
     local has_user
     has_user="$(run_psql_cmd "${db_name}" -tAc "SELECT COALESCE(to_regclass('public.\"user\"')::text, '');" 2>/dev/null || true)"
-    if [[ -z "${has_user}" && "${db_name}" == "${WEBUI_DB}" && "${has_webui_runtime}" == "1" ]]; then
-      echo "[migrate-seed] Skipping static 02_webui_core.sql on '${db_name}' (bundled Open WebUI Alembic will initialize canonical schema)"
+    if [[ "${db_name}" == "${WEBUI_DB}" ]]; then
+      if [[ "${has_webui_runtime}" == "0" ]]; then
+        echo "[migrate-seed] Deferring '${db_name}' schema creation until Stage 4 Wolinex Web Alembic runs"
+      elif [[ -z "${has_user}" ]]; then
+        echo "[migrate-seed] '${db_name}' ready for clean Stage 4 Wolinex Web Alembic initialization"
+      fi
     elif [[ -z "${has_user}" && -f "${SCHEMA_DIR}/02_webui_core.sql" ]]; then
       echo "[migrate-seed] Applying canonical WebUI schema to '${db_name}'..."
       run_psql_cmd "${db_name}" -v ON_ERROR_STOP=1 < "${SCHEMA_DIR}/02_webui_core.sql" >/dev/null
