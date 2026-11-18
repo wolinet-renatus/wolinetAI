@@ -72,6 +72,7 @@ fi
 
 if [[ "${SKIP_PRE_CLEAN}" == "0" ]]; then
   echo "[r2-install] 2/5 Cleaning old source trees, compilers, Podman build images & checkpoints..."
+  dpkg --configure -a >/dev/null 2>&1 || true
   rm -rf \
     /opt/wolinetai \
     /opt/wolinet-src \
@@ -132,8 +133,11 @@ fi
 
 echo "[r2-install] 3/5 Installing lightweight runtime dependencies..."
 export DEBIAN_FRONTEND=noninteractive
+dpkg --configure -a >/dev/null 2>&1 || true
 apt-get update -qq
-apt-get install -y -qq podman uidmap slirp4netns nginx ufw curl ca-certificates openssl postgresql-client python3 >/dev/null
+apt-get install -y -qq \
+  podman uidmap slirp4netns nginx ufw curl ca-certificates openssl postgresql-client python3 \
+  libgomp1 libglib2.0-0 libgl1 libpq5 >/dev/null
 
 install -d -m 0755 /etc/containers/registries.conf.d
 cat > /etc/containers/registries.conf.d/99-wolinet-dockerhub.conf <<'EOF'
@@ -223,7 +227,7 @@ for d in orchestrator mitambo lango wolinex-web; do
   (cd "${WORK_DIR}/dist/installers/server/${d}" && sha256sum -c *.deb.sha256)
 done
 
-tar -C "${WORK_DIR}" -xzf "${WORK_DIR}/wolinet-deploy-assets.tar.gz"
+tar --warning=no-unknown-keyword -C "${WORK_DIR}" -xzf "${WORK_DIR}/wolinet-deploy-assets.tar.gz"
 chmod +x "${WORK_DIR}/scripts/"*.sh
 
 echo "[r2-install] 5/5 Installing Stages 1->4, DB migrations/seeding, Cloudflare edge & R2 backup..."

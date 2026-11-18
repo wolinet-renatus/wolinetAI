@@ -96,7 +96,7 @@ cp -R "${ROOT_DIR}/scripts/lib/." "${STAGE_DIR}/bundle/scripts/lib/"
 chmod +x "${STAGE_DIR}/bundle/scripts/"*.sh
 
 ASSETS_TGZ="${STAGE_DIR}/wolinet-deploy-assets.tar.gz"
-tar -C "${STAGE_DIR}/bundle" -czf "${ASSETS_TGZ}" .
+COPYFILE_DISABLE=1 tar -C "${STAGE_DIR}/bundle" -czf "${ASSETS_TGZ}" .
 if command -v sha256sum >/dev/null 2>&1; then
   (cd "${STAGE_DIR}" && sha256sum "wolinet-deploy-assets.tar.gz" > "wolinet-deploy-assets.tar.gz.sha256")
 else
