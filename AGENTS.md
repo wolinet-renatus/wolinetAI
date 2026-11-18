@@ -136,3 +136,22 @@ latest binary's recommended copy:
 Both are idempotent: re-runs replace the block delimited by the ai-memory
 start/end HTML-comment markers, without disturbing the rest of the file.
 <!-- ai-memory:end -->
+
+## Production Deployment & Binary Release Rules
+
+### Never Compile or Leave Source Code on Production Servers
+- Production VPS/server hosts (`Contabo`, etc.) must **never** receive `.git` checkouts, application source trees (`orchestrator/`, `inference/`, `gateway/litellm-rust/`, `apps/wolinex/`), or build toolchains (`go`, `rustc`, `cargo`, `gcc`, `make`) unless every binary delivery alternative is impossible (for example, a new unsupported CPU architecture without cross-compilation).
+- Always compile and package `.deb` installers offline on a workstation or CI (`make package-server`), then ship only verified binary packages + `.sha256` sidecars using one of the two sanctioned binary paths:
+  1. **Cloudflare R2 Binary Release (Preferred for VPS pulls)**: Publish compiled artifacts with `scripts/publish-r2-release.sh` to `s3://<bucket>/releases/latest/`, and provision servers using `scripts/install-from-r2.sh` (downloads `.deb`s + assets into `/tmp`, verifies `sha256sum -c`, removes any `/opt/wolinetai` checkout, and deletes `/tmp` staging on exit).
+  2. **Direct Workstation SSH Stream**: Stream local `.deb` packages directly over SSH via `scripts/deploy-contabo-ssh.sh` (wipes `/opt/wolinet-release` and `/opt/wolinetai` after installation).
+- Keep `scripts/bootstrap-contabo.sh` strictly as an emergency source-build fallback; default to `scripts/install-from-r2.sh` or `scripts/deploy-contabo-ssh.sh` for all routine deployments and upgrades.
+
+### Packaging, Git Hygiene & Secrets
+- **Never commit build artifacts or secrets to Git**: `.deb` files (`mitambo` ~303 MB and `wolinex-web` ~220 MB exceed GitHub's 100 MB push limit), `dist/` archives, API keys, Cloudflare tokens, and R2 S3 secrets must never enter commits. Pass credentials at runtime into server-only env files (`0600`/`0640` under `/etc/wolinet/` and `/etc/litellm/`).
+- **APFS case-insensitive `.gitignore` safety**: Never add unanchored directory globs like `env/`, `tools/`, or `build/` without explicit negations (`!orchestrator/1apanel/**/env/`, `!apps/wolinex/src/**/Tools/`) because macOS APFS hides mixed-case tracked source folders (`Tools/`, `utils/env/`) from clean Linux clones. Verify builds from a clean `git archive` export before pushing build-system edits.
+
+### Sovereign Runtime Architecture & Data Recovery
+- Keep all inter-service hops strictly on `127.0.0.1` across the 4-stage boot order: Stage 1 (`1apanel` `:8888` isolated SQLite + `docker.io/pgvector/pgvector:pg16` `:5433` + `redis:7-alpine` `:6379`) -> Stage 2 (`mitambo` `:9997`) -> Stage 3 (`lango` `:4000`) -> Stage 4 (`wolinex-web` `:8081`).
+- Terminate external HTTPS on Host Nginx with a Cloudflare Origin CA certificate (`Full (Strict)`), rate/connection limiting keyed by `CF-Connecting-IP`, and UFW restricted on `80/443` to Cloudflare CIDRs + SSH `22/tcp`.
+- Store user file uploads in Cloudflare R2 (`STORAGE_PROVIDER=s3` under `wolinex-uploads/`), keep live PostgreSQL on local NVMe, and run 6-hourly R2 snapshots (`wolinet-backup.timer` -> `/usr/local/bin/wolinet-backup-r2`) paired with `/usr/local/bin/wolinet-restore-r2` for full disaster recovery.
+

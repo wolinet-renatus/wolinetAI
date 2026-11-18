@@ -136,3 +136,6 @@ latest binary's recommended copy:
 Both are idempotent: re-runs replace the block delimited by the ai-memory
 start/end HTML-comment markers, without disturbing the rest of the file.
 <!-- ai-memory:end -->
+
+Read @/Users/apple/Documents/wolinetai/AGENTS.md for all project deployment, binary-release, and security rules.
+

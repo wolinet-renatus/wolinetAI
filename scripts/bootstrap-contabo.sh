@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# Single-command automatic bootstrap for Contabo Ubuntu 24.04 servers:
-# 1. Installs Ubuntu 24.04 OS prerequisites, Podman registry config, and Go 1.26.6 (SHA-256 verified)
+# LAST-RESORT SOURCE-BUILD FALLBACK ONLY.
+# Policy (see AGENTS.md): Never compile or leave source code on production servers when binary delivery is possible.
+# Prefer binary-only deployment via:
+#   - scripts/install-from-r2.sh   (pull pre-built .debs from Cloudflare R2)
+#   - scripts/deploy-contabo-ssh.sh (stream pre-built .debs from workstation over SSH)
+# Use this script only when pre-built binaries for the target server are unavailable:
+# 1. Installs Ubuntu 24.04 OS prerequisites, Podman registry config, and Go 1.27.4 (SHA-256 verified)
 # 2. Clones or updates WolinetAI from Git main into /opt/wolinetai
 # 3. Builds the 4 Linux amd64 .deb installers (Stages 1 -> 4)
 # 4. Runs install-server-stack.sh --with-datastore (auto-secrets, DB migration & seeding, resource tuning)
