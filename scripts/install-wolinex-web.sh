@@ -19,6 +19,8 @@ GATEWAY_KEY="${OPENAI_API_KEY:-}"
 DATABASE_URL_ARG="${DATABASE_URL:-}"
 REDIS_URL_ARG="${REDIS_URL:-}"
 WEBUI_SECRET="${WEBUI_SECRET_KEY:-}"
+ADMIN_EMAIL_ARG="${WEBUI_ADMIN_EMAIL:-}"
+ADMIN_PASS_ARG="${WEBUI_ADMIN_PASSWORD:-}"
 
 usage() {
   cat <<'EOF'
@@ -54,6 +56,8 @@ while [[ $# -gt 0 ]]; do
     --gateway-key)  GATEWAY_KEY="${2:-}"; shift 2 ;;
     --database-url) DATABASE_URL_ARG="${2:-}"; shift 2 ;;
     --redis-url)    REDIS_URL_ARG="${2:-}"; shift 2 ;;
+    --admin-email)  ADMIN_EMAIL_ARG="${2:-}"; shift 2 ;;
+    --admin-password) ADMIN_PASS_ARG="${2:-}"; shift 2 ;;
     --no-start)     NO_START=1; shift ;;
     --uninstall)    UNINSTALL=1; shift ;;
     -h|--help)      usage; exit 0 ;;
@@ -122,6 +126,11 @@ configure_wolinex_web_env() {
   upsert_env_var "${tmp_env}" "OLLAMA_BASE_URLS" ""
   upsert_env_var "${tmp_env}" "ENABLE_COMMUNITY_SHARING" "false"
   upsert_env_var "${tmp_env}" "ENABLE_VERSION_UPDATE_CHECK" "false"
+  [[ -n "${ADMIN_EMAIL_ARG}" ]] && upsert_env_var "${tmp_env}" "WEBUI_ADMIN_EMAIL" "${ADMIN_EMAIL_ARG}"
+  [[ -n "${ADMIN_PASS_ARG}" ]] && upsert_env_var "${tmp_env}" "WEBUI_ADMIN_PASSWORD" "${ADMIN_PASS_ARG}"
+  local existing_cors
+  existing_cors="$(get_env_var "${tmp_env}" "CORS_ALLOW_ORIGIN")"
+  [[ -n "${existing_cors}" ]] && upsert_env_var "${tmp_env}" "CORS_ALLOW_ORIGIN" "${existing_cors}"
 
   if [[ "${use_root}" == "1" ]]; then
     run_root install -d -m 0750 /etc/wolinet

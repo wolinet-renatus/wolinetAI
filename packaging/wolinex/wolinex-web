@@ -25,10 +25,20 @@ ENV_FILE="${WOLINEX_WEB_ENV_FILE:-${DEFAULT_ENV}}"
 
 load_env() {
   if [[ -f "${ENV_FILE}" ]]; then
-    set -a
-    # shellcheck disable=SC1090
-    source "${ENV_FILE}"
-    set +a
+    local line key val
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+      [[ -z "${line}" || "${line}" =~ ^[[:space:]]*# ]] && continue
+      [[ "${line}" == *=* ]] || continue
+      key="${line%%=*}"
+      val="${line#*=}"
+      key="${key#"${key%%[![:space:]]*}"}"
+      key="${key%"${key##*[![:space:]]}"}"
+      [[ "${key}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+      if [[ "${val}" =~ ^\".*\"$ || "${val}" =~ ^\'.*\'$ ]]; then
+        val="${val:1:${#val}-2}"
+      fi
+      export "${key}=${val}"
+    done < "${ENV_FILE}"
   fi
   export HOST="${HOST:-0.0.0.0}"
   export PORT="${PORT:-8081}"

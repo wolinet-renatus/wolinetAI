@@ -159,6 +159,8 @@ if has_stage 3; then
   log_header "[Stage 3/4] Lango AI Gateway (:4000)"
   "${SCRIPT_DIR}/install-lango.sh" ${STAGE_INSTALL_ARGS[@]+"${STAGE_INSTALL_ARGS[@]}"} \
     --master-key "${SHARED_MASTER_KEY}" \
+    --ui-username "admin" \
+    --ui-password "${SHARED_ADMIN_PASS}" \
     --xinference-key "${SHARED_XINF_KEY}" \
     --database-url "${LITELLM_DB_URL}" \
     --redis-url "${SHARED_REDIS_URL}"
@@ -168,6 +170,8 @@ if has_stage 4; then
   "${SCRIPT_DIR}/install-wolinex-web.sh" ${STAGE_INSTALL_ARGS[@]+"${STAGE_INSTALL_ARGS[@]}"} ${WEB_ONLY_ARGS[@]+"${WEB_ONLY_ARGS[@]}"} \
     --gateway-url "http://127.0.0.1:4000" \
     --gateway-key "${SHARED_PORTAL_KEY}" \
+    --admin-email "admin@${WOLINET_DOMAIN:-wolinet.com}" \
+    --admin-password "${SHARED_ADMIN_PASS}" \
     --database-url "${WEBUI_DB_URL}" \
     --redis-url "${SHARED_REDIS_URL}"
 fi
@@ -181,6 +185,8 @@ if [[ -x "${ORCH_BIN}" ]]; then
   XINFERENCE_API_KEY="${SHARED_XINF_KEY}" \
   XINFERENCE_ADMIN_USER="admin" \
   XINFERENCE_ADMIN_PASSWORD="${SHARED_ADMIN_PASS}" \
+  WEBUI_ADMIN_EMAIL="admin@${WOLINET_DOMAIN:-wolinet.com}" \
+  WEBUI_ADMIN_PASSWORD="${SHARED_ADMIN_PASS}" \
   LITELLM_MASTER_KEY="${SHARED_MASTER_KEY}" \
   WOLINEX_PORTAL_API_KEY="${SHARED_PORTAL_KEY}" \
   AI_GATEWAY_KEY="${SHARED_COPILOT_KEY}" \

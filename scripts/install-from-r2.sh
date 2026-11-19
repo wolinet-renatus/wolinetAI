@@ -259,7 +259,7 @@ tar --warning=no-unknown-keyword -C "${WORK_DIR}" -xzf "${WORK_DIR}/wolinet-depl
 chmod +x "${WORK_DIR}/scripts/"*.sh
 
 echo "[r2-install] 5/5 Installing Stages 1->4, DB migrations/seeding, Cloudflare edge & R2 backup..."
-bash "${WORK_DIR}/scripts/install-server-stack.sh" --with-datastore
+WOLINET_DOMAIN="${DOMAIN}" bash "${WORK_DIR}/scripts/install-server-stack.sh" --with-datastore
 
 EDGE_ARGS=(--domain "${DOMAIN}")
 [[ -n "${PUBLIC_IP}" ]] && EDGE_ARGS+=(--public-ip "${PUBLIC_IP}")
@@ -307,10 +307,34 @@ if [[ -n "${PG_PASS}" ]] && command -v psql >/dev/null 2>&1; then
 fi
 df -h / | tail -n 1
 echo "[r2-install] Domain endpoints:"
-echo "  ai.${DOMAIN}      -> Product showcase"
-echo "  wolinex.${DOMAIN} -> Web chat UI (:8081 -> Lango :4000, shared PG :5433)"
-echo "  lango.${DOMAIN}   -> Gateway API & /ui Admin Dashboard (:4000)"
-echo "  mitambo.${DOMAIN} -> Inference engine (:9997)"
-echo "  wcp.${DOMAIN}     -> 1Panel Control Panel (:8888)"
-echo "  docs.${DOMAIN}    -> Developer documentation & Scalar API Ref"
-echo "  dev.${DOMAIN}     -> Developer studio, key gen & AI assistant"
+echo "  https://ai.${DOMAIN}      -> Product showcase"
+echo "  https://wolinex.${DOMAIN} -> Web chat UI (:8081 -> Lango :4000, shared PG :5433)"
+echo "  https://lango.${DOMAIN}   -> Gateway API & /ui Admin Dashboard (:4000)"
+echo "  https://mitambo.${DOMAIN} -> Inference engine (:9997)"
+echo "  https://wcp.${DOMAIN}     -> Wolinet Control Panel (:8888)"
+echo "  https://docs.${DOMAIN}    -> Developer documentation & Scalar API Ref"
+echo "  https://dev.${DOMAIN}     -> Developer studio, key gen & AI assistant"
+read_saved_env() {
+  local fp="$1" key="$2" raw=""
+  [[ -r "${fp}" ]] || return 0
+  raw="$(awk -F= -v k="${key}" '$1 == k { sub(/^[^=]*=/, ""); print; exit }' "${fp}")"
+  if [[ "${raw}" =~ ^\".*\"$ || "${raw}" =~ ^\'.*\'$ ]]; then
+    raw="${raw:1:${#raw}-2}"
+  fi
+  printf '%s' "${raw}"
+}
+WCP_USER="$(read_saved_env /etc/wolinet/1apanel.env ORIGINAL_USERNAME)"
+WCP_PASS="$(read_saved_env /etc/wolinet/1apanel.env ORIGINAL_PASSWORD)"
+MIT_USER="$(read_saved_env /etc/wolinet/mitambo.env XINFERENCE_ADMIN_USER)"
+MIT_PASS="$(read_saved_env /etc/wolinet/mitambo.env XINFERENCE_ADMIN_PASSWORD)"
+LANGO_USER="$(read_saved_env /etc/litellm/env UI_USERNAME)"
+LANGO_PASS="$(read_saved_env /etc/litellm/env UI_PASSWORD)"
+LANGO_MASTER="$(read_saved_env /etc/litellm/env LITELLM_MASTER_KEY)"
+WEB_EMAIL="$(read_saved_env /etc/wolinet/wolinex-web.env WEBUI_ADMIN_EMAIL)"
+WEB_PASS="$(read_saved_env /etc/wolinet/wolinex-web.env WEBUI_ADMIN_PASSWORD)"
+echo "[r2-install] Portal login credentials (saved in /etc/wolinet/* & /etc/litellm/env):"
+echo "  https://wcp.${DOMAIN}        username=${WCP_USER:-admin}  password=${WCP_PASS:-<see /etc/wolinet/1apanel.env>}"
+echo "  https://mitambo.${DOMAIN}    username=${MIT_USER:-admin}  password=${MIT_PASS:-${WCP_PASS:-<see /etc/wolinet/mitambo.env>}}"
+echo "  https://lango.${DOMAIN}/ui/  username=${LANGO_USER:-admin}  password=${LANGO_PASS:-${LANGO_MASTER:-<see /etc/litellm/env>}}"
+echo "  https://wolinex.${DOMAIN}    email=${WEB_EMAIL:-admin@${DOMAIN}}  password=${WEB_PASS:-${WCP_PASS:-<see /etc/wolinet/wolinex-web.env>}}"
+echo "  https://dev.${DOMAIN}        (signs in via wolinex.${DOMAIN} SSO cookie on .${DOMAIN})"

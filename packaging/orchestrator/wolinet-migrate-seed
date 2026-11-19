@@ -13,7 +13,7 @@ SELF_PATH="$(resolve_real_path "${BASH_SOURCE[0]}")"
 ORCH_HOME="$(cd "$(dirname "${SELF_PATH}")/.." && pwd)"
 SCHEMA_DIR="${WOLINET_SCHEMA_DIR:-${ORCH_HOME}/schema}"
 
-# Load stage environment files when available
+# Load stage environment files safely (tolerant of unquoted values containing ';')
 for env_candidate in \
   "${WOLINET_ORCH_ENV_FILE:-}" \
   "/etc/wolinet/1apanel.env" \
@@ -21,10 +21,19 @@ for env_candidate in \
   "/etc/litellm/env" \
   "/etc/wolinet/wolinex-web.env"; do
   if [[ -n "${env_candidate}" && -f "${env_candidate}" ]]; then
-    set -a
-    # shellcheck disable=SC1090
-    source "${env_candidate}"
-    set +a
+    while IFS= read -r _line || [[ -n "${_line}" ]]; do
+      [[ -z "${_line}" || "${_line}" =~ ^[[:space:]]*# ]] && continue
+      [[ "${_line}" == *=* ]] || continue
+      _k="${_line%%=*}"
+      _v="${_line#*=}"
+      _k="${_k#"${_k%%[![:space:]]*}"}"
+      _k="${_k%"${_k##*[![:space:]]}"}"
+      [[ "${_k}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+      if [[ "${_v}" =~ ^\".*\"$ || "${_v}" =~ ^\'.*\'$ ]]; then
+        _v="${_v:1:${#_v}-2}"
+      fi
+      export "${_k}=${_v}"
+    done < "${env_candidate}"
   fi
 done
 
@@ -325,20 +334,72 @@ EOSQL
     echo "[migrate-seed] Running Wolinex Web Alembic upgrade head..."
     (
       cd /opt/wolinet/wolinex-web/backend/open_webui
+      local web_admin_email="${WEBUI_ADMIN_EMAIL:-admin@wolinet.com}"
+      local web_admin_pass="${WEBUI_ADMIN_PASSWORD:-${ORIGINAL_PASSWORD:-}}"
       PYTHONPATH="/opt/wolinet/wolinex-web/backend" \
       USE_SLIM_DOCKER="true" \
       VECTOR_DB="pgvector" \
+      WEBUI_SECRET_KEY="${WEBUI_SECRET_KEY:-wolinet-migrate-seed-key}" \
+      DATA_DIR="${DATA_DIR:-/var/lib/wolinet/wolinex}" \
       DATABASE_URL="postgresql://${PG_USER}:${PG_PASS}@${PG_HOST}:${PG_PORT}/${WEBUI_DB}" \
-      /opt/wolinet/wolinex-web/venv/bin/python3 -c '
+      /opt/wolinet/wolinex-web/venv/bin/python3 - "${web_admin_email}" "${web_admin_pass}" <<'PY'
+import asyncio, pathlib, sys, uuid
 from alembic.config import Config
 from alembic import command
-import open_webui, pathlib
-from open_webui.internal.db import Base, engine
+import open_webui
+from open_webui.internal.db import Base, engine, get_async_db_context
+from open_webui.models.auths import Auth, Auths
+from open_webui.models.users import User, Users
+from open_webui.utils.auth import get_password_hash
+
 cfg = Config()
 cfg.set_main_option("script_location", str(pathlib.Path(open_webui.__file__).parent / "migrations"))
 command.upgrade(cfg, "head")
 Base.metadata.create_all(bind=engine)
-'
+
+admin_email = (sys.argv[1] or "admin@wolinet.com").strip().lower()
+admin_pass = (sys.argv[2] or "").strip()
+
+async def ensure_admin():
+    if not admin_pass or admin_pass.startswith("replace-"):
+        return
+    hashed = await get_password_hash(admin_pass)
+    existing = await Users.get_user_by_email(admin_email)
+    if not existing:
+        await Auths.insert_new_auth(
+            email=admin_email,
+            password=hashed,
+            name="Admin",
+            role="admin",
+        )
+        print(f"[migrate-seed] Seeded Wolinex Web admin user: {admin_email}")
+        return
+    async with get_async_db_context() as session:
+        user_row = await session.get(User, existing.id)
+        if user_row and user_row.role != "admin":
+            user_row.role = "admin"
+        cred = await session.get(Auth, existing.id)
+        if cred:
+            cred.email = admin_email
+            cred.password = hashed
+            cred.active = True
+            if not cred.session_stamp:
+                cred.session_stamp = str(uuid.uuid4())
+        else:
+            session.add(
+                Auth(
+                    id=existing.id,
+                    email=admin_email,
+                    password=hashed,
+                    active=True,
+                    session_stamp=str(uuid.uuid4()),
+                )
+            )
+        await session.commit()
+    print(f"[migrate-seed] Synced Wolinex Web admin user credentials: {admin_email}")
+
+asyncio.run(ensure_admin())
+PY
     )
   fi
 }

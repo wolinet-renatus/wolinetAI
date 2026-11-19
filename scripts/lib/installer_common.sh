@@ -121,7 +121,13 @@ upsert_env_var() {
   local value="$3"
   local formatted_value tmp_file
 
-  if [[ "${value}" =~ [[:space:]] && ! "${value}" =~ ^\".*\"$ ]]; then
+  if [[ "${value}" =~ ^\".*\"$ ]]; then
+    value="${value:1:${#value}-2}"
+  elif [[ "${value}" =~ ^\'.*\'$ ]]; then
+    value="${value:1:${#value}-2}"
+  fi
+
+  if [[ "${value}" == *$'\n'* || "${value}" =~ [[:space:]\;\&\|\$\`\<\>\(\)] ]]; then
     formatted_value="\"${value//\"/\\\"}\""
   else
     formatted_value="${value}"
@@ -155,7 +161,12 @@ get_env_var() {
   if [[ ! -f "${env_file}" ]]; then
     return 0
   fi
-  awk -F= -v k="${key}" '$1 == k { sub(/^[^=]*=/, ""); print; exit }' "${env_file}"
+  local raw
+  raw="$(awk -F= -v k="${key}" '$1 == k { sub(/^[^=]*=/, ""); print; exit }' "${env_file}")"
+  if [[ "${raw}" =~ ^\".*\"$ || "${raw}" =~ ^\'.*\'$ ]]; then
+    raw="${raw:1:${#raw}-2}"
+  fi
+  printf '%s\n' "${raw}"
 }
 
 resolve_product_artifact() {

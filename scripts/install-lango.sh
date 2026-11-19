@@ -15,6 +15,8 @@ PREFIX=""
 PORT="${PORT:-4000}"
 HOST="${HOST:-0.0.0.0}"
 MASTER_KEY="${LITELLM_MASTER_KEY:-}"
+UI_USER_ARG="${UI_USERNAME:-}"
+UI_PASS_ARG="${UI_PASSWORD:-}"
 DATABASE_URL_ARG="${DATABASE_URL:-}"
 REDIS_URL_ARG="${REDIS_URL:-}"
 XINFERENCE_API_KEY_ARG="${XINFERENCE_API_KEY:-}"
@@ -50,6 +52,8 @@ while [[ $# -gt 0 ]]; do
     --port)            PORT="${2:-4000}"; shift 2 ;;
     --host)            HOST="${2:-0.0.0.0}"; shift 2 ;;
     --master-key)      MASTER_KEY="${2:-}"; shift 2 ;;
+    --ui-username)     UI_USER_ARG="${2:-}"; shift 2 ;;
+    --ui-password)     UI_PASS_ARG="${2:-}"; shift 2 ;;
     --database-url)    DATABASE_URL_ARG="${2:-}"; shift 2 ;;
     --redis-url)       REDIS_URL_ARG="${2:-}"; shift 2 ;;
     --xinference-key)  XINFERENCE_API_KEY_ARG="${2:-}"; shift 2 ;;
@@ -168,6 +172,10 @@ configure_lango_env() {
     log_ok "Generated new LITELLM_MASTER_KEY in ${env_file}"
   fi
 
+  upsert_env_var "${tmp_env}" "UI_USERNAME" "${UI_USER_ARG:-$(get_env_var "${tmp_env}" "UI_USERNAME" | grep -E '.+' || echo 'admin')}"
+  if [[ -n "${UI_PASS_ARG}" ]]; then
+    upsert_env_var "${tmp_env}" "UI_PASSWORD" "${UI_PASS_ARG}"
+  fi
   upsert_env_var "${tmp_env}" "HOST" "${HOST}"
   upsert_env_var "${tmp_env}" "PORT" "${PORT}"
   upsert_env_var "${tmp_env}" "LITELLM_CONFIG" "${config_path}"
