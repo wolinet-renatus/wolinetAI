@@ -15,6 +15,12 @@ if [[ "${EUID}" -ne 0 ]]; then
   exit 1
 fi
 
+exec 9>/run/wolinet-install.lock
+if ! flock -n 9; then
+  echo "[r2-install] Waiting for existing installer instance to finish (up to 30s)..." >&2
+  flock -w 30 9 || { echo "[r2-install:error] Another installer run holds /run/wolinet-install.lock" >&2; exit 1; }
+fi
+
 DOMAIN="${WOLINET_DOMAIN:-wolinet.com}"
 PUBLIC_IP="${WOLINET_PUBLIC_IP:-}"
 CF_TOKEN="${CLOUDFLARE_API_TOKEN:-}"
@@ -168,15 +174,42 @@ RUNTIME_PKGS=(
 )
 MISSING_PKGS=()
 for pkg in "${RUNTIME_PKGS[@]}"; do
-  if ! dpkg -s "${pkg}" >/dev/null 2>&1; then
+  if [[ "${pkg}" == "nginx" ]] && command -v nginx >/dev/null 2>&1; then
+    continue
+  fi
+  if ! dpkg-query -W -f='${Status}\n' "${pkg}" 2>/dev/null | grep -q '^install ok installed$'; then
     MISSING_PKGS+=("${pkg}")
   fi
 done
 if (( ${#MISSING_PKGS[@]} > 0 )); then
-  rm -rf /var/lib/apt/lists/*
-  apt-get update -o Acquire::Retries=4 -o Acquire::ForceIPv4=true -qq
-  apt-get install -y -qq -o Acquire::Retries=4 -o Acquire::ForceIPv4=true --fix-missing \
-    "${MISSING_PKGS[@]}" >/dev/null
+  mkdir -p /var/lib/apt/lists/partial
+  chmod 755 /var/lib/apt/lists/partial
+  APT_OPTS=(
+    -o DPkg::Lock::Timeout=120
+    -o Acquire::Retries=4
+    -o Acquire::ForceIPv4=true
+    -o Acquire::http::No-Cache=true
+  )
+  if ! apt-get install -y -qq "${APT_OPTS[@]}" --no-upgrade "${MISSING_PKGS[@]}" >/dev/null 2>&1; then
+    find /var/lib/apt/lists -maxdepth 1 -type f -delete 2>/dev/null || true
+    rm -rf /var/lib/apt/lists/partial/* 2>/dev/null || true
+    mkdir -p /var/lib/apt/lists/partial
+    if apt-get update "${APT_OPTS[@]}" -qq && \
+       apt-get install -y -qq "${APT_OPTS[@]}" --fix-missing --no-upgrade "${MISSING_PKGS[@]}" >/dev/null; then
+      :
+    else
+      echo "[r2-install] Retrying missing packages against archive.ubuntu.com (bypassing stale security mirror)..."
+      tmp_sources="$(mktemp /tmp/wolinet-apt-XXXXXX.list)"
+      cat > "${tmp_sources}" <<'APTEOF'
+deb http://archive.ubuntu.com/ubuntu noble main universe
+deb http://archive.ubuntu.com/ubuntu noble-updates main universe
+APTEOF
+      APT_ARCHIVE_OPTS=("${APT_OPTS[@]}" -o "Dir::Etc::sourcelist=${tmp_sources}" -o "Dir::Etc::sourceparts=-")
+      apt-get update "${APT_ARCHIVE_OPTS[@]}" -qq
+      apt-get install -y -qq "${APT_ARCHIVE_OPTS[@]}" --fix-missing --no-upgrade "${MISSING_PKGS[@]}" >/dev/null
+      rm -f "${tmp_sources}"
+    fi
+  fi
 fi
 
 install -d -m 0755 /etc/containers/registries.conf.d
