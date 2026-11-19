@@ -18,6 +18,7 @@
 	export let saveHandler: Function;
 
 	let webSearchEngines = [
+		'obscura',
 		'ollama_cloud',
 		'perplexity_search',
 		'searxng',
@@ -51,6 +52,7 @@
 		'openserp'
 	];
 	let webLoaderEngines = [
+		'obscura',
 		'playwright',
 		'firecrawl',
 		'tavily',

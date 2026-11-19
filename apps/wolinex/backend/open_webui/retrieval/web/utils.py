@@ -1258,6 +1258,11 @@ def get_web_loader(
         web_loader_args['external_url'] = cfg('web.loader.external_web_loader_url')
         web_loader_args['external_api_key'] = cfg('web.loader.external_web_loader_api_key')
 
+    if engine == 'obscura':
+        from open_webui.retrieval.web.obscura import SafeObscuraLoader
+
+        WebLoaderClass = SafeObscuraLoader
+
     if WebLoaderClass:
         web_loader = WebLoaderClass(**web_loader_args)
 
@@ -1271,5 +1276,5 @@ def get_web_loader(
     else:
         raise ValueError(
             f'Invalid WEB_LOADER_ENGINE: {engine}. '
-            "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', 'exa', 'external', or 'microsoft_web_iq'."
+            "Please set it to 'obscura', 'safe_web', 'playwright', 'firecrawl', 'tavily', 'exa', 'external', or 'microsoft_web_iq'."
         )

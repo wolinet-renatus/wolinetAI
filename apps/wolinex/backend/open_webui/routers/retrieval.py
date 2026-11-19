@@ -102,6 +102,7 @@ from open_webui.retrieval.web.main import SearchResult
 from open_webui.retrieval.web.microsoft_web_iq import search_microsoft_web_iq
 from open_webui.retrieval.web.mojeek import search_mojeek
 from open_webui.retrieval.web.ollama import search_ollama_cloud
+from open_webui.retrieval.web.obscura import search_obscura
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.perplexity_search import search_perplexity_search
 from open_webui.retrieval.web.searchapi import search_searchapi
@@ -2618,6 +2619,12 @@ async def search_web(
         return await asyncio.to_thread(
             search_youcom,
             config['web.search.youcom_api_key'],
+            query,
+            config['web.search.result_count'],
+            config['web.search.domain.filter_list'],
+        )
+    elif engine == 'obscura':
+        return await search_obscura(
             query,
             config['web.search.result_count'],
             config['web.search.domain.filter_list'],
