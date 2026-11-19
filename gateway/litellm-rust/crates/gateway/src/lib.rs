@@ -7,11 +7,11 @@ use std::{
 use axum::{
     Extension, Json, Router,
     body::{Body, Bytes},
-    extract::{Path, Request},
-    http::{StatusCode, header},
+    extract::{Path, Request, State},
+    http::{HeaderMap, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Redirect, Response},
-    routing::get,
+    routing::{get, post},
 };
 use http_body_util::BodyExt;
 
@@ -20,10 +20,10 @@ use litellm_core::resources::CoreResources;
 pub use litellm_gateway_auth::GatewayAuth;
 use litellm_gateway_auth::{
     Auth, AuthContext, RequireMasterKey, SpendEvent, UiState, authenticate_middleware,
-    management_router, ui_router,
+    management_router, require_master, ui_router,
 };
 use litellm_gateway_inference::{
-    AuthMetadata, Gateway, ModelList, PassThroughRoute, UsageRecord, UsageSink,
+    AuthMetadata, Gateway, ModelList, PassThroughRoute, UsageRecord, UsageSink, test_connection,
 };
 use litellm_http::{
     ClientVariant, HttpClientPool, HttpSettings, Resolution, media::PublicDnsResolver,
@@ -147,6 +147,7 @@ pub async fn build_router_with_auth(
     let spend_logger = gateway_auth.spend_logger().clone();
     let mgmt_router = management_router(gateway_auth.clone());
     let ui_routes = ui_router(UiState::from_config(gateway_auth.clone(), config));
+    let test_conn_state = (gateway_auth.clone(), inference.clone());
 
     let usage_sink: UsageSink = Arc::new(move |rec: UsageRecord| {
         let auth = rec.auth.unwrap_or_default();
@@ -210,6 +211,20 @@ pub async fn build_router_with_auth(
                     "models": model_count
                 }))
             }),
+        )
+        .route(
+            "/health/test_connection",
+            post(
+                |State((auth, gw)): State<(GatewayAuth, Arc<Gateway>)>,
+                 headers: HeaderMap,
+                 Json(payload): Json<serde_json::Value>| async move {
+                    if let Err(err) = require_master(&auth, &headers).await {
+                        return err.into_response();
+                    }
+                    Json(test_connection(&gw, payload).await).into_response()
+                },
+            )
+            .with_state(test_conn_state),
         )
         .merge(ui_routes)
         .merge(mgmt_router)

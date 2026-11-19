@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     Json, Router,
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, HeaderValue, StatusCode, header::SET_COOKIE},
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -13,6 +13,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
+use uuid::Uuid;
 
 use crate::{Error, GatewayAuth, management::require_master};
 
@@ -32,6 +33,7 @@ pub struct UiState {
     pub models: Arc<Vec<UiModelSummary>>,
     pub db_configured: bool,
     pub redis_configured: bool,
+    pub store_model_in_db: bool,
     pub disable_env_credential_login: bool,
     pub hide_default_credentials_hint: bool,
 }
@@ -61,6 +63,7 @@ impl UiState {
             redis_configured: auth.is_redis_configured(),
             auth,
             models: Arc::new(models),
+            store_model_in_db: config.general_settings.store_model_in_db.unwrap_or(false),
             disable_env_credential_login: config
                 .general_settings
                 .disable_env_credential_login
@@ -87,11 +90,16 @@ pub fn ui_router(state: UiState) -> Router {
         .route("/get_model_cost_map", get(empty_object))
         .route("/public/model_hub", get(public_model_hub))
         .route("/public/model_hub/info", get(public_model_hub))
+        .route("/public/providers/fields", get(public_provider_fields))
         .route("/health/readiness/details", get(health_readiness_details))
         .route("/health/license", get(empty_object))
         .route("/get/latest_release_info", get(latest_release_info))
         .route("/get/user_banner", get(user_banner))
         .route("/api/plugins", get(empty_array))
+        .route("/config/list", get(config_list))
+        .route("/credentials", get(credentials_list))
+        .route("/credentials/by_model/{*model_id}", get(credential_by_model))
+        .route("/credentials/by_name/{*credential_name}", get(credential_by_name))
         .route("/user/info", get(user_info))
         .route("/v2/user/info", get(user_info_v2))
         .route("/user/available_roles", get(available_roles))
@@ -99,8 +107,15 @@ pub fn ui_router(state: UiState) -> Router {
         .route("/key/list", get(key_list))
         .route("/key/aliases", get(key_aliases))
         .route("/model/info", get(model_info))
+        .route("/v1/model/info", get(model_info))
         .route("/v2/model/info", get(model_info))
         .route("/model_group/info", get(model_group_info))
+        .route("/claude-code/plugins", get(claude_code_plugins_list).post(claude_code_plugins_create))
+        .route("/claude-code/plugins/{name}", get(claude_code_plugin_get).delete(claude_code_plugin_delete))
+        .route("/claude-code/plugins/{name}/enable", post(claude_code_plugin_enable))
+        .route("/claude-code/plugins/{name}/disable", post(claude_code_plugin_disable))
+        .route("/v1/memory", get(memory_list).post(memory_create))
+        .route("/v1/memory/{*key}", get(memory_get).put(memory_upsert).delete(memory_delete))
         .route("/v2/team/list", get(team_list_v2))
         .route("/team/list", get(team_list))
         .route("/team/metadata_schema", get(team_metadata_schema))
@@ -719,14 +734,34 @@ async fn public_model_hub(State(state): State<UiState>) -> Json<Value> {
     Json(json!({ "data": data }))
 }
 
-async fn model_info(State(state): State<UiState>, headers: HeaderMap) -> Result<Json<Value>, Error> {
+#[derive(Deserialize, Default)]
+struct ModelInfoQuery {
+    #[serde(default)]
+    litellm_model_id: Option<String>,
+}
+
+async fn model_info(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Query(q): Query<ModelInfoQuery>,
+) -> Result<Json<Value>, Error> {
     require_master(&state.auth, &headers).await?;
+    let filter_id = q
+        .litellm_model_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
     let data: Vec<Value> = state
         .models
         .iter()
+        .filter(|m| match filter_id {
+            Some(target) => m.model_id == target || m.model_name == target,
+            None => true,
+        })
         .map(|m| {
             json!({
                 "model_name": m.model_name,
+                "litellm_model_name": m.model_name,
                 "litellm_params": {
                     "model": m.provider_model,
                     "api_base": m.api_base,
@@ -734,6 +769,7 @@ async fn model_info(State(state): State<UiState>, headers: HeaderMap) -> Result<
                 },
                 "model_info": {
                     "id": m.model_id,
+                    "key": m.model_name,
                     "db_model": false,
                     "mode": m.mode.as_deref().unwrap_or("chat"),
                 },
@@ -1019,6 +1055,726 @@ async fn global_spend(
     })))
 }
 
+#[derive(Deserialize, Default)]
+struct ConfigListQuery {
+    #[serde(default)]
+    config_type: Option<String>,
+}
+
+async fn config_list(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Query(q): Query<ConfigListQuery>,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let kind = q.config_type.as_deref().unwrap_or("general_settings");
+    if kind != "general_settings" {
+        return Ok(Json(json!([])));
+    }
+    Ok(Json(json!([
+        {
+            "field_name": "store_model_in_db",
+            "field_type": "bool",
+            "field_description": "Allow models added via API/UI to persist in PostgreSQL",
+            "field_value": state.store_model_in_db,
+            "stored_in_db": false,
+            "field_default_value": false,
+            "premium_field": false,
+            "nested_fields": null,
+            "source": "config",
+            "editable": false,
+        },
+        {
+            "field_name": "disable_env_credential_login",
+            "field_type": "bool",
+            "field_description": "Disable Admin UI login using UI_USERNAME/UI_PASSWORD env credentials",
+            "field_value": state.disable_env_credential_login,
+            "stored_in_db": false,
+            "field_default_value": false,
+            "premium_field": false,
+            "nested_fields": null,
+            "source": "config",
+            "editable": false,
+        },
+        {
+            "field_name": "hide_default_credentials_hint",
+            "field_type": "bool",
+            "field_description": "Hide default UI credentials hint on login page",
+            "field_value": state.hide_default_credentials_hint,
+            "stored_in_db": false,
+            "field_default_value": true,
+            "premium_field": false,
+            "nested_fields": null,
+            "source": "config",
+            "editable": false,
+        },
+        {
+            "field_name": "maximum_spend_logs_retention_period",
+            "field_type": "str",
+            "field_description": "Retention window for gateway spend logs",
+            "field_value": "30d",
+            "stored_in_db": state.db_configured,
+            "field_default_value": "30d",
+            "premium_field": false,
+            "nested_fields": null,
+            "source": "config",
+            "editable": false,
+        }
+    ])))
+}
+
+fn build_credential_item(m: &UiModelSummary) -> Value {
+    let provider = m
+        .custom_llm_provider
+        .as_deref()
+        .or_else(|| m.provider_model.split('/').next())
+        .unwrap_or("openai");
+    json!({
+        "credential_name": format!("{}-credential-{}", m.model_name, m.model_id),
+        "credential_values": {
+            "api_base": m.api_base,
+            "model": m.provider_model,
+        },
+        "credential_info": {
+            "custom_llm_provider": provider,
+            "description": format!("Configured deployment credential for {}", m.model_name),
+            "model_id": m.model_id,
+        },
+    })
+}
+
+async fn credentials_list(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let credentials: Vec<Value> = state.models.iter().map(build_credential_item).collect();
+    Ok(Json(json!({ "credentials": credentials })))
+}
+
+async fn credential_by_model(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Path(model_id): Path<String>,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let target = model_id.trim();
+    let matched = state
+        .models
+        .iter()
+        .find(|m| m.model_id == target || m.model_name == target)
+        .ok_or_else(|| Error::NotFound(format!("Model credential not found for `{target}`")))?;
+    Ok(Json(build_credential_item(matched)))
+}
+
+async fn credential_by_name(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Path(credential_name): Path<String>,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let target = credential_name.trim();
+    let matched = state
+        .models
+        .iter()
+        .find(|m| format!("{}-credential-{}", m.model_name, m.model_id) == target)
+        .ok_or_else(|| Error::NotFound(format!("Credential `{target}` not found")))?;
+    Ok(Json(build_credential_item(matched)))
+}
+
+async fn public_provider_fields() -> Json<Value> {
+    Json(json!([
+        {
+            "provider": "Wolinet_AI",
+            "provider_display_name": "Wolinet AI (Mitambo)",
+            "litellm_provider": "openai",
+            "credential_fields": [
+                {
+                    "key": "api_base",
+                    "label": "API Base",
+                    "placeholder": "http://127.0.0.1:9997/v1",
+                    "tooltip": "Mitambo local inference OpenAI-compatible base URL.",
+                    "required": false,
+                    "field_type": "text",
+                    "options": null,
+                    "default_value": "http://127.0.0.1:9997/v1",
+                },
+                {
+                    "key": "api_key",
+                    "label": "API Key",
+                    "placeholder": "Enter Mitambo API key",
+                    "tooltip": "Mitambo bearer key or os.environ/XINFERENCE_API_KEY.",
+                    "required": false,
+                    "field_type": "password",
+                    "options": null,
+                    "default_value": null,
+                }
+            ],
+            "default_model_placeholder": "Wolinet Coder",
+        },
+        {
+            "provider": "OpenAI",
+            "provider_display_name": "OpenAI",
+            "litellm_provider": "openai",
+            "credential_fields": [
+                {
+                    "key": "api_key",
+                    "label": "OpenAI API Key",
+                    "placeholder": "sk-...",
+                    "tooltip": "OpenAI API key.",
+                    "required": true,
+                    "field_type": "password",
+                    "options": null,
+                    "default_value": null,
+                }
+            ],
+            "default_model_placeholder": "gpt-4o",
+        },
+        {
+            "provider": "Anthropic",
+            "provider_display_name": "Anthropic",
+            "litellm_provider": "anthropic",
+            "credential_fields": [
+                {
+                    "key": "api_key",
+                    "label": "Anthropic API Key",
+                    "placeholder": "sk-ant-...",
+                    "tooltip": "Anthropic Messages API key.",
+                    "required": true,
+                    "field_type": "password",
+                    "options": null,
+                    "default_value": null,
+                }
+            ],
+            "default_model_placeholder": "claude-sonnet-4-5",
+        },
+        {
+            "provider": "DeepSeek",
+            "provider_display_name": "DeepSeek",
+            "litellm_provider": "deepseek",
+            "credential_fields": [
+                {
+                    "key": "api_key",
+                    "label": "DeepSeek API Key",
+                    "placeholder": "sk-...",
+                    "tooltip": "DeepSeek API key.",
+                    "required": true,
+                    "field_type": "password",
+                    "options": null,
+                    "default_value": null,
+                }
+            ],
+            "default_model_placeholder": "deepseek/deepseek-chat",
+        },
+        {
+            "provider": "Google_Gemini",
+            "provider_display_name": "Google Gemini",
+            "litellm_provider": "gemini",
+            "credential_fields": [
+                {
+                    "key": "api_key",
+                    "label": "Gemini API Key",
+                    "placeholder": "AIza...",
+                    "tooltip": "Google AI Studio Gemini API key.",
+                    "required": true,
+                    "field_type": "password",
+                    "options": null,
+                    "default_value": null,
+                }
+            ],
+            "default_model_placeholder": "gemini/gemini-2.5-flash",
+        }
+    ]))
+}
+
+#[derive(Deserialize, Default)]
+struct PluginListQuery {
+    #[serde(default)]
+    enabled_only: Option<bool>,
+}
+
+fn row_to_plugin_json(row: &tokio_postgres::Row) -> Value {
+    let manifest_raw: Option<String> = row.get("manifest_json");
+    let manifest: Value = manifest_raw
+        .as_deref()
+        .and_then(|s| serde_json::from_str::<Value>(s).ok())
+        .unwrap_or_else(|| json!({}));
+    let created_at = row
+        .try_get::<_, Option<chrono::NaiveDateTime>>("created_at")
+        .ok()
+        .flatten()
+        .map(|dt| dt.and_utc().to_rfc3339());
+    let updated_at = row
+        .try_get::<_, Option<chrono::NaiveDateTime>>("updated_at")
+        .ok()
+        .flatten()
+        .map(|dt| dt.and_utc().to_rfc3339());
+    json!({
+        "id": row.get::<_, String>("id"),
+        "name": row.get::<_, String>("name"),
+        "version": row.get::<_, Option<String>>("version"),
+        "description": row.get::<_, Option<String>>("description"),
+        "source": manifest.get("source").cloned().unwrap_or_else(|| json!({"source": "github", "repo": "wolinet-renatus/wolinetAI"})),
+        "author": manifest.get("author").cloned(),
+        "homepage": manifest.get("homepage").cloned(),
+        "keywords": manifest.get("keywords").cloned(),
+        "category": manifest.get("category").cloned(),
+        "domain": manifest.get("domain").cloned(),
+        "namespace": manifest.get("namespace").cloned(),
+        "enabled": row.get::<_, bool>("enabled"),
+        "created_at": created_at,
+        "updated_at": updated_at,
+        "created_by": row.get::<_, Option<String>>("created_by"),
+    })
+}
+
+async fn claude_code_plugins_list(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Query(q): Query<PluginListQuery>,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let Some(pool) = state.auth.pg_pool.as_ref() else {
+        return Ok(Json(json!({ "plugins": [], "count": 0 })));
+    };
+    let client = pool.get().await.map_err(|_| Error::Store)?;
+    let enabled_only = q.enabled_only.unwrap_or(false);
+    let rows = client
+        .query(
+            r#"
+            SELECT id, name, version, description, manifest_json, enabled, created_at, updated_at, created_by
+            FROM "LiteLLM_ClaudeCodePluginTable"
+            WHERE ($1::boolean IS FALSE OR enabled = true)
+            ORDER BY created_at DESC NULLS LAST, name ASC
+            "#,
+            &[&enabled_only],
+        )
+        .await
+        .map_err(|err| {
+            tracing::error!("postgres query failed in /claude-code/plugins: {err}");
+            Error::Store
+        })?;
+    let plugins: Vec<Value> = rows.iter().map(row_to_plugin_json).collect();
+    let count = plugins.len();
+    Ok(Json(json!({ "plugins": plugins, "count": count })))
+}
+
+#[derive(Deserialize)]
+struct RegisterPluginBody {
+    name: String,
+    #[serde(default)]
+    version: Option<String>,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    source: Option<Value>,
+    #[serde(default)]
+    author: Option<Value>,
+    #[serde(default)]
+    homepage: Option<String>,
+    #[serde(default)]
+    keywords: Option<Value>,
+    #[serde(default)]
+    category: Option<String>,
+    #[serde(default)]
+    domain: Option<String>,
+    #[serde(default)]
+    namespace: Option<String>,
+}
+
+async fn claude_code_plugins_create(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Json(body): Json<RegisterPluginBody>,
+) -> Result<(StatusCode, Json<Value>), Error> {
+    require_master(&state.auth, &headers).await?;
+    let name = body.name.trim().to_owned();
+    if name.is_empty() {
+        return Err(Error::InvalidRequest("plugin name is required".into()));
+    }
+    let pool = state
+        .auth
+        .pg_pool
+        .as_ref()
+        .ok_or_else(|| Error::InvalidRequest("DATABASE_URL is not configured".into()))?;
+    let client = pool.get().await.map_err(|_| Error::Store)?;
+    let id = Uuid::new_v4().to_string();
+    let version = body.version.clone().unwrap_or_else(|| "1.0.0".to_owned());
+    let manifest_json = serde_json::to_string(&json!({
+        "source": body.source.clone().unwrap_or_else(|| json!({"source": "github", "repo": "wolinet-renatus/wolinetAI"})),
+        "author": body.author,
+        "homepage": body.homepage,
+        "keywords": body.keywords,
+        "category": body.category,
+        "domain": body.domain,
+        "namespace": body.namespace,
+    }))
+    .unwrap_or_else(|_| "{}".to_owned());
+
+    let row = client
+        .query_opt(
+            r#"
+            INSERT INTO "LiteLLM_ClaudeCodePluginTable" (
+                id, name, version, description, manifest_json, files_json, enabled, created_by, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, '{}', true, 'admin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (name) DO NOTHING
+            RETURNING id, name, version, description, manifest_json, enabled, created_at, updated_at, created_by
+            "#,
+            &[&id, &name, &version, &body.description, &manifest_json],
+        )
+        .await
+        .map_err(|_| Error::Store)?;
+
+    let Some(row) = row else {
+        return Err(Error::Conflict(format!("Plugin `{name}` already exists")));
+    };
+    Ok((StatusCode::CREATED, Json(row_to_plugin_json(&row))))
+}
+
+async fn claude_code_plugin_get(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Path(name): Path<String>,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let pool = state
+        .auth
+        .pg_pool
+        .as_ref()
+        .ok_or_else(|| Error::NotFound(format!("Plugin `{name}` not found")))?;
+    let client = pool.get().await.map_err(|_| Error::Store)?;
+    let row = client
+        .query_opt(
+            r#"
+            SELECT id, name, version, description, manifest_json, enabled, created_at, updated_at, created_by
+            FROM "LiteLLM_ClaudeCodePluginTable"
+            WHERE name = $1
+            "#,
+            &[&name],
+        )
+        .await
+        .map_err(|_| Error::Store)?
+        .ok_or_else(|| Error::NotFound(format!("Plugin `{name}` not found")))?;
+    Ok(Json(row_to_plugin_json(&row)))
+}
+
+async fn set_plugin_enabled(
+    state: &UiState,
+    name: &str,
+    enabled: bool,
+) -> Result<Json<Value>, Error> {
+    let pool = state
+        .auth
+        .pg_pool
+        .as_ref()
+        .ok_or_else(|| Error::InvalidRequest("DATABASE_URL is not configured".into()))?;
+    let client = pool.get().await.map_err(|_| Error::Store)?;
+    let row = client
+        .query_opt(
+            r#"
+            UPDATE "LiteLLM_ClaudeCodePluginTable"
+            SET enabled = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE name = $2
+            RETURNING id, name, version, description, manifest_json, enabled, created_at, updated_at, created_by
+            "#,
+            &[&enabled, &name],
+        )
+        .await
+        .map_err(|_| Error::Store)?
+        .ok_or_else(|| Error::NotFound(format!("Plugin `{name}` not found")))?;
+    Ok(Json(row_to_plugin_json(&row)))
+}
+
+async fn claude_code_plugin_enable(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Path(name): Path<String>,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    set_plugin_enabled(&state, &name, true).await
+}
+
+async fn claude_code_plugin_disable(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Path(name): Path<String>,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    set_plugin_enabled(&state, &name, false).await
+}
+
+async fn claude_code_plugin_delete(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Path(name): Path<String>,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let pool = state
+        .auth
+        .pg_pool
+        .as_ref()
+        .ok_or_else(|| Error::InvalidRequest("DATABASE_URL is not configured".into()))?;
+    let client = pool.get().await.map_err(|_| Error::Store)?;
+    let deleted = client
+        .execute(
+            r#"DELETE FROM "LiteLLM_ClaudeCodePluginTable" WHERE name = $1"#,
+            &[&name],
+        )
+        .await
+        .map_err(|_| Error::Store)?;
+    if deleted == 0 {
+        return Err(Error::NotFound(format!("Plugin `{name}` not found")));
+    }
+    Ok(Json(json!({ "status": "deleted", "name": name })))
+}
+
+#[derive(Deserialize, Default)]
+struct MemoryListQuery {
+    #[serde(default)]
+    key: Option<String>,
+    #[serde(default)]
+    key_prefix: Option<String>,
+    #[serde(default)]
+    search: Option<String>,
+    #[serde(default)]
+    page: Option<i64>,
+    #[serde(default)]
+    page_size: Option<i64>,
+}
+
+fn row_to_memory_json(row: &tokio_postgres::Row) -> Value {
+    let created_at = row
+        .try_get::<_, Option<chrono::NaiveDateTime>>("created_at")
+        .ok()
+        .flatten()
+        .map(|dt| dt.and_utc().to_rfc3339());
+    let updated_at = row
+        .try_get::<_, Option<chrono::NaiveDateTime>>("updated_at")
+        .ok()
+        .flatten()
+        .map(|dt| dt.and_utc().to_rfc3339());
+    json!({
+        "memory_id": row.get::<_, String>("memory_id"),
+        "key": row.get::<_, String>("key"),
+        "value": row.get::<_, String>("value"),
+        "metadata": row.get::<_, Option<Value>>("metadata"),
+        "user_id": row.get::<_, Option<String>>("user_id"),
+        "team_id": row.get::<_, Option<String>>("team_id"),
+        "created_at": created_at,
+        "created_by": row.get::<_, Option<String>>("created_by"),
+        "updated_at": updated_at,
+        "updated_by": row.get::<_, Option<String>>("updated_by"),
+    })
+}
+
+async fn memory_list(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Query(q): Query<MemoryListQuery>,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let Some(pool) = state.auth.pg_pool.as_ref() else {
+        return Ok(Json(json!({ "memories": [], "total": 0 })));
+    };
+    let page = q.page.unwrap_or(1).max(1);
+    let page_size = q.page_size.unwrap_or(50).clamp(1, 500);
+    let offset = (page - 1) * page_size;
+    let search = q.search.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let key_prefix = q.key_prefix.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let exact_key = q.key.as_deref().map(str::trim).filter(|s| !s.is_empty());
+
+    let client = pool.get().await.map_err(|_| Error::Store)?;
+    let total: i64 = client
+        .query_one(
+            r#"
+            SELECT COUNT(*)::bigint
+            FROM "LiteLLM_MemoryTable"
+            WHERE ($1::text IS NULL OR key ILIKE $1 || '%' OR memory_id = $1)
+              AND ($2::text IS NULL OR $1::text IS NOT NULL OR key LIKE $2 || '%')
+              AND ($3::text IS NULL OR $1::text IS NOT NULL OR $2::text IS NOT NULL OR key = $3)
+            "#,
+            &[&search, &key_prefix, &exact_key],
+        )
+        .await
+        .map_err(|err| {
+            tracing::error!("postgres count failed in /v1/memory: {err}");
+            Error::Store
+        })?
+        .get(0);
+
+    let rows = client
+        .query(
+            r#"
+            SELECT memory_id, key, value, metadata, user_id, team_id, created_at, created_by, updated_at, updated_by
+            FROM "LiteLLM_MemoryTable"
+            WHERE ($1::text IS NULL OR key ILIKE $1 || '%' OR memory_id = $1)
+              AND ($2::text IS NULL OR $1::text IS NOT NULL OR key LIKE $2 || '%')
+              AND ($3::text IS NULL OR $1::text IS NOT NULL OR $2::text IS NOT NULL OR key = $3)
+            ORDER BY updated_at DESC NULLS LAST, key ASC
+            LIMIT $4 OFFSET $5
+            "#,
+            &[&search, &key_prefix, &exact_key, &page_size, &offset],
+        )
+        .await
+        .map_err(|err| {
+            tracing::error!("postgres query failed in /v1/memory: {err}");
+            Error::Store
+        })?;
+
+    let memories: Vec<Value> = rows.iter().map(row_to_memory_json).collect();
+    Ok(Json(json!({ "memories": memories, "total": total })))
+}
+
+#[derive(Deserialize)]
+struct MemoryCreateBody {
+    key: String,
+    value: String,
+    #[serde(default)]
+    metadata: Option<Value>,
+    #[serde(default)]
+    user_id: Option<String>,
+    #[serde(default)]
+    team_id: Option<String>,
+}
+
+async fn memory_create(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Json(body): Json<MemoryCreateBody>,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let key = body.key.trim().to_owned();
+    if key.is_empty() {
+        return Err(Error::InvalidRequest("memory key is required".into()));
+    }
+    let pool = state
+        .auth
+        .pg_pool
+        .as_ref()
+        .ok_or_else(|| Error::InvalidRequest("DATABASE_URL is not configured".into()))?;
+    let client = pool.get().await.map_err(|_| Error::Store)?;
+    let memory_id = format!("mem-{}", Uuid::new_v4().simple());
+    let uid = body.user_id.or_else(|| Some("admin".to_owned()));
+
+    let row = client
+        .query_opt(
+            r#"
+            INSERT INTO "LiteLLM_MemoryTable" (
+                memory_id, key, value, metadata, user_id, team_id, created_by, updated_by, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, 'admin', 'admin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (key) DO NOTHING
+            RETURNING memory_id, key, value, metadata, user_id, team_id, created_at, created_by, updated_at, updated_by
+            "#,
+            &[&memory_id, &key, &body.value, &body.metadata, &uid, &body.team_id],
+        )
+        .await
+        .map_err(|_| Error::Store)?;
+    let Some(row) = row else {
+        return Err(Error::Conflict(format!("Memory with key `{key}` already exists")));
+    };
+    Ok(Json(row_to_memory_json(&row)))
+}
+
+async fn memory_get(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Path(key): Path<String>,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let pool = state
+        .auth
+        .pg_pool
+        .as_ref()
+        .ok_or_else(|| Error::NotFound(format!("Memory `{key}` not found")))?;
+    let client = pool.get().await.map_err(|_| Error::Store)?;
+    let row = client
+        .query_opt(
+            r#"
+            SELECT memory_id, key, value, metadata, user_id, team_id, created_at, created_by, updated_at, updated_by
+            FROM "LiteLLM_MemoryTable"
+            WHERE key = $1
+            "#,
+            &[&key],
+        )
+        .await
+        .map_err(|_| Error::Store)?
+        .ok_or_else(|| Error::NotFound(format!("Memory `{key}` not found")))?;
+    Ok(Json(row_to_memory_json(&row)))
+}
+
+#[derive(Deserialize)]
+struct MemoryUpdateBody {
+    #[serde(default)]
+    value: Option<String>,
+    #[serde(default)]
+    metadata: Option<Value>,
+}
+
+async fn memory_upsert(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Path(key): Path<String>,
+    Json(body): Json<MemoryUpdateBody>,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let trimmed_key = key.trim().to_owned();
+    if trimmed_key.is_empty() {
+        return Err(Error::InvalidRequest("memory key is required".into()));
+    }
+    let pool = state
+        .auth
+        .pg_pool
+        .as_ref()
+        .ok_or_else(|| Error::InvalidRequest("DATABASE_URL is not configured".into()))?;
+    let client = pool.get().await.map_err(|_| Error::Store)?;
+    let memory_id = format!("mem-{}", Uuid::new_v4().simple());
+    let default_value = body.value.clone().unwrap_or_default();
+
+    let row = client
+        .query_one(
+            r#"
+            INSERT INTO "LiteLLM_MemoryTable" (
+                memory_id, key, value, metadata, user_id, created_by, updated_by, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, 'admin', 'admin', 'admin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (key) DO UPDATE SET
+                value = COALESCE($5, "LiteLLM_MemoryTable".value),
+                metadata = COALESCE($4, "LiteLLM_MemoryTable".metadata),
+                updated_by = 'admin',
+                updated_at = CURRENT_TIMESTAMP
+            RETURNING memory_id, key, value, metadata, user_id, team_id, created_at, created_by, updated_at, updated_by
+            "#,
+            &[&memory_id, &trimmed_key, &default_value, &body.metadata, &body.value],
+        )
+        .await
+        .map_err(|_| Error::Store)?;
+    Ok(Json(row_to_memory_json(&row)))
+}
+
+async fn memory_delete(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+    Path(key): Path<String>,
+) -> Result<StatusCode, Error> {
+    require_master(&state.auth, &headers).await?;
+    let pool = state
+        .auth
+        .pg_pool
+        .as_ref()
+        .ok_or_else(|| Error::InvalidRequest("DATABASE_URL is not configured".into()))?;
+    let client = pool.get().await.map_err(|_| Error::Store)?;
+    let deleted = client
+        .execute(
+            r#"DELETE FROM "LiteLLM_MemoryTable" WHERE key = $1"#,
+            &[&key],
+        )
+        .await
+        .map_err(|_| Error::Store)?;
+    if deleted == 0 {
+        return Err(Error::NotFound(format!("Memory `{key}` not found")));
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
 #[cfg(test)]
 mod tests {
     use axum::{
@@ -1089,6 +1845,7 @@ mod tests {
         assert!(ok_login.headers().contains_key(SET_COOKIE));
 
         let models_resp = app
+            .clone()
             .oneshot(
                 Request::get("/v2/model/info")
                     .header(AUTHORIZATION, "Bearer sk-master-test")
@@ -1098,5 +1855,76 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(models_resp.status(), StatusCode::OK);
+
+        let model_v1_resp = app
+            .clone()
+            .oneshot(
+                Request::get("/v1/model/info?litellm_model_id=wolinet-model")
+                    .header(AUTHORIZATION, "Bearer sk-master-test")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(model_v1_resp.status(), StatusCode::OK);
+
+        let config_resp = app
+            .clone()
+            .oneshot(
+                Request::get("/config/list?config_type=general_settings")
+                    .header(AUTHORIZATION, "Bearer sk-master-test")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(config_resp.status(), StatusCode::OK);
+
+        let creds_resp = app
+            .clone()
+            .oneshot(
+                Request::get("/credentials")
+                    .header(AUTHORIZATION, "Bearer sk-master-test")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(creds_resp.status(), StatusCode::OK);
+
+        let cred_by_model_resp = app
+            .clone()
+            .oneshot(
+                Request::get("/credentials/by_model/wolinet-model")
+                    .header(AUTHORIZATION, "Bearer sk-master-test")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(cred_by_model_resp.status(), StatusCode::OK);
+
+        let plugins_resp = app
+            .clone()
+            .oneshot(
+                Request::get("/claude-code/plugins?enabled_only=false")
+                    .header(AUTHORIZATION, "Bearer sk-master-test")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(plugins_resp.status(), StatusCode::OK);
+
+        let memory_resp = app
+            .oneshot(
+                Request::get("/v1/memory")
+                    .header(AUTHORIZATION, "Bearer sk-master-test")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(memory_resp.status(), StatusCode::OK);
     }
 }

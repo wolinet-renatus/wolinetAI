@@ -32,6 +32,7 @@ use litellm_secrets::source::SecretSource;
 pub use error::Error;
 pub use litellm_router::{Deployment, ModelDeployment, Router as ModelList};
 pub use passthrough::PassThroughRoute;
+pub use providers::test_connection;
 pub use usage::{AuthMetadata, UsageRecord, UsageSink};
 
 pub struct Gateway {

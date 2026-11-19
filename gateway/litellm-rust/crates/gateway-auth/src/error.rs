@@ -24,6 +24,8 @@ pub enum Error {
     #[error("invalid management request: {0}")]
     InvalidRequest(String),
     #[error("{0}")]
+    Conflict(String),
+    #[error("{0}")]
     NotFound(String),
     #[error("gateway authentication unavailable")]
     Secret(#[from] litellm_secrets::Error),
@@ -39,6 +41,7 @@ impl IntoResponse for Error {
             Self::BudgetExceeded => StatusCode::PAYMENT_REQUIRED,
             Self::RateLimitExceeded(_) => StatusCode::TOO_MANY_REQUESTS,
             Self::InvalidRequest(_) => StatusCode::BAD_REQUEST,
+            Self::Conflict(_) => StatusCode::CONFLICT,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::Unconfigured | Self::Secret(_) | Self::Store => StatusCode::INTERNAL_SERVER_ERROR,
         };

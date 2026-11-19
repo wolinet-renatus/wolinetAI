@@ -626,3 +626,221 @@ pub(crate) async fn execute_chat_candidate(
     );
     Ok(Json(response).into_response())
 }
+
+pub async fn test_connection(gateway: &Gateway, req: Value) -> Value {
+    let params = req.get("litellm_params").and_then(Value::as_object);
+    let model_info = req.get("model_info").and_then(Value::as_object);
+    let mode = req
+        .get("mode")
+        .and_then(Value::as_str)
+        .unwrap_or("chat")
+        .to_owned();
+
+    if let Some(map) = params {
+        for (k, v) in map {
+            if let Some(s) = v.as_str()
+                && s.trim_start().starts_with(ENV_PREFIX)
+            {
+                return serde_json::json!({
+                    "status": "error",
+                    "message": format!("Invalid request: `{k}` cannot contain client-supplied os.environ/ references"),
+                    "error_type": "BadRequestError",
+                });
+            }
+        }
+    }
+
+    let req_model_id = model_info
+        .and_then(|m| m.get("id"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let req_model = params
+        .and_then(|m| m.get("model"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    let mut matched_candidate: Option<ModelDeployment> = None;
+    if let Some(model_name) = req_model {
+        let candidates = gateway.models.candidates(model_name);
+        if let Some(target_id) = req_model_id {
+            matched_candidate = candidates
+                .iter()
+                .find(|c| c.id.as_deref() == Some(target_id))
+                .map(|c| (*c).clone());
+        }
+        if matched_candidate.is_none() {
+            matched_candidate = candidates.first().map(|c| (*c).clone());
+        }
+    }
+    if matched_candidate.is_none()
+        && let Some(target_id) = req_model_id
+    {
+        for name in gateway.models.model_names() {
+            let candidates = gateway.models.candidates(name);
+            if let Some(c) = candidates
+                .iter()
+                .find(|c| c.id.as_deref() == Some(target_id) || c.model_name == target_id)
+            {
+                matched_candidate = Some((*c).clone());
+                break;
+            }
+        }
+    }
+
+    let mut deployment = match matched_candidate {
+        Some(cand) => cand,
+        None => {
+            let Some(model_str) = req_model else {
+                return serde_json::json!({
+                    "status": "error",
+                    "message": "Model not found in gateway config and no `litellm_params.model` was provided",
+                    "error_type": "NotFoundError",
+                });
+            };
+            ModelDeployment {
+                deployment_id: "test-connection".to_owned(),
+                model_name: model_str.to_owned(),
+                deployment: litellm_router::Deployment {
+                    model: model_str.to_owned(),
+                    api_key: None,
+                    api_base: None,
+                    custom_llm_provider: None,
+                    timeout: Some(Duration::from_secs(15)),
+                    shaping: Default::default(),
+                },
+                ..Default::default()
+            }
+        }
+    };
+
+    if let Some(map) = params {
+        if let Some(api_base) = map
+            .get("api_base")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            deployment.deployment.api_base = Some(api_base.to_owned());
+        }
+        if let Some(api_key) = map
+            .get("api_key")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            deployment.deployment.api_key = Some(api_key.to_owned());
+        }
+        if let Some(provider) = map
+            .get("custom_llm_provider")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            deployment.deployment.custom_llm_provider = Some(provider.to_owned());
+        }
+    }
+
+    let probe_model = deployment.model_name.clone();
+    if mode != "chat" && mode != "completion" && mode != "responses" {
+        let base_opt = match resolve_secret_str(
+            gateway.secrets.as_ref(),
+            deployment.deployment.api_base.as_deref(),
+        )
+        .await
+        {
+            Ok(val) => val,
+            Err(err) => {
+                return serde_json::json!({
+                    "status": "error",
+                    "message": err.to_string(),
+                    "error_type": "ConfigurationError",
+                });
+            }
+        };
+        if let Some(base) = base_opt {
+            let probe_url = format!("{}/models", base.trim_end_matches('/'));
+            let Ok(client) = gateway
+                .resources
+                .pool
+                .client(&gateway.http, ClientVariant::Provider)
+            else {
+                return serde_json::json!({
+                    "status": "error",
+                    "message": "Failed to initialize HTTP client",
+                    "error_type": "ConnectionError",
+                });
+            };
+            let api_key = resolve_secret_str(
+                gateway.secrets.as_ref(),
+                deployment.deployment.api_key.as_deref(),
+            )
+            .await
+            .ok()
+            .flatten();
+            let mut req_builder = client.get(&probe_url).timeout(Duration::from_secs(10));
+            if let Some(key) = api_key {
+                req_builder = req_builder.header("Authorization", format!("Bearer {key}"));
+            }
+            return match req_builder.send().await {
+                Ok(resp) if resp.status().is_success() => serde_json::json!({
+                    "status": "success",
+                    "message": "Successfully connected to model endpoint",
+                    "result": { "model": probe_model, "mode": mode },
+                }),
+                Ok(resp) => serde_json::json!({
+                    "status": "error",
+                    "message": format!("Endpoint returned HTTP {}", resp.status().as_u16()),
+                    "error_type": "ConnectionError",
+                }),
+                Err(err) => serde_json::json!({
+                    "status": "error",
+                    "message": err.to_string(),
+                    "error_type": "ConnectionError",
+                }),
+            };
+        }
+    }
+
+    let mut probe_body = Map::new();
+    probe_body.insert("model".to_owned(), Value::String(probe_model.clone()));
+    probe_body.insert(
+        "messages".to_owned(),
+        serde_json::json!([{ "role": "user", "content": "Hello" }]),
+    );
+    probe_body.insert("max_tokens".to_owned(), serde_json::json!(5));
+
+    let request_id = format!("test-conn-{}", uuid::Uuid::new_v4().simple());
+    match execute_chat_candidate(
+        gateway,
+        ChatExecutionRequest {
+            candidate: &deployment,
+            requested_model: &probe_model,
+            body: &probe_body,
+            stream: false,
+            sink: None,
+            auth: None,
+            request_id,
+            start_time_ms: now_millis(),
+        },
+    )
+    .await
+    {
+        Ok(resp) if resp.status().is_success() => serde_json::json!({
+            "status": "success",
+            "message": "Successfully connected to model",
+            "result": { "model": probe_model, "mode": mode },
+        }),
+        Ok(resp) => serde_json::json!({
+            "status": "error",
+            "message": format!("Model returned HTTP {}", resp.status().as_u16()),
+            "error_type": "ConnectionError",
+        }),
+        Err(err) => serde_json::json!({
+            "status": "error",
+            "message": err.to_string(),
+            "error_type": "ConnectionError",
+        }),
+    }
+}

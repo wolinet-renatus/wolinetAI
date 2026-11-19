@@ -20,7 +20,7 @@ pub fn management_router(auth: GatewayAuth) -> Router {
         .with_state(auth)
 }
 
-pub(crate) async fn require_master(auth: &GatewayAuth, headers: &HeaderMap) -> Result<(), Error> {
+pub async fn require_master(auth: &GatewayAuth, headers: &HeaderMap) -> Result<(), Error> {
     let provided = headers
         .get(AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
