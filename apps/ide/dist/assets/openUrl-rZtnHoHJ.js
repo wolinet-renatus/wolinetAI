@@ -1,3 +1,0 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/dist-js-Bsb-IXCS.js","assets/tauriCore-D62mIRrC.js","assets/core-BDLQIKQw.js"])))=>i.map(i=>d[i]);
-import{nt as e}from"./keymap-D2-SJ0ji.js";import{t}from"./preload-helper-BLdHbfdN.js";async function n(n){if(!e()){window.open(n,`_blank`,`noopener`);return}let{openUrl:r}=await t(async()=>{let{openUrl:e}=await import(`./dist-js-Bsb-IXCS.js`);return{openUrl:e}},__vite__mapDeps([0,1,2]));await r(n)}export{n as t};
-//# sourceMappingURL=openUrl-rZtnHoHJ.js.map

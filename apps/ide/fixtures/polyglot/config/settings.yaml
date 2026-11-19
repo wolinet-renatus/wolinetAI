@@ -1,8 +1,0 @@
-logging:
-  level: info
-  format: json
-queues:
-  - name: email
-    concurrency: 4
-  - name: report
-    concurrency: 1

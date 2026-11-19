@@ -117,6 +117,7 @@ DerivedData/
 wolinet-cli
 bin/1apanel
 bin/1panel-agent
+bin/local-darwin/
 target/
 **/target/
 orchestrator/1apanel/agent/bin/
@@ -178,7 +179,7 @@ gtwall*
 
 # Logs & Runtime Storage
 *.log
-logs/
+/logs/
 backups/
 *.pid
 scratch/

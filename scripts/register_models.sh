@@ -10,7 +10,11 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 echo "=== Registering Wolinet AI Models from Hugging Face Sources ==="
 
-REG_DIR="${ROOT_DIR}/models/registrations"
+if [ -d "${ROOT_DIR}/inference/models/registrations" ]; then
+    REG_DIR="${ROOT_DIR}/inference/models/registrations"
+else
+    REG_DIR="${ROOT_DIR}/models/registrations"
+fi
 
 if [ ! -d "${REG_DIR}" ]; then
     echo "Error: Registrations directory '${REG_DIR}' not found."

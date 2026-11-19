@@ -186,13 +186,13 @@
       "name": "Wolinex Code (Sovereign Rust Full-Stack IDE)",
       "category": "client_desktop",
       "deployable_to_server": false,
-      "path": "apps/ide",
+      "path": "apps/WolinexIde",
       "sub_branch": "stack/wolinex-code",
-      "description": "High-performance Rust IDE engine (OpenIDEA) featuring Tree-sitter AST, LSP for 60+ languages, DAP debugging, integrated terminal, and ACP agent pairing",
+      "description": "High-performance Rust IDE engine (Goose + ACP) featuring workspace automation, LSP support, integrated terminal, and autonomous agent pairing",
       "api_dependency": "Connects via Lango LiteLLM Gateway (:4000/v1) and local Goose ACP",
       "build": {
         "type": "rust_vite",
-        "command": "cd apps/ide && pnpm run build"
+        "command": "cd apps/WolinexIde && cargo build --release"
       }
     },
     {
