@@ -162,10 +162,22 @@ fi
 echo "[r2-install] 3/5 Installing lightweight runtime dependencies..."
 export DEBIAN_FRONTEND=noninteractive
 dpkg --configure -a >/dev/null 2>&1 || true
-apt-get update -qq
-apt-get install -y -qq \
-  podman uidmap slirp4netns nginx ufw curl ca-certificates openssl postgresql-client python3 \
-  libgomp1 libglib2.0-0 libgl1 libpq5 >/dev/null
+RUNTIME_PKGS=(
+  podman uidmap slirp4netns nginx ufw curl ca-certificates openssl postgresql-client python3
+  libgomp1 libglib2.0-0 libgl1 libpq5
+)
+MISSING_PKGS=()
+for pkg in "${RUNTIME_PKGS[@]}"; do
+  if ! dpkg -s "${pkg}" >/dev/null 2>&1; then
+    MISSING_PKGS+=("${pkg}")
+  fi
+done
+if (( ${#MISSING_PKGS[@]} > 0 )); then
+  rm -rf /var/lib/apt/lists/*
+  apt-get update -o Acquire::Retries=4 -o Acquire::ForceIPv4=true -qq
+  apt-get install -y -qq -o Acquire::Retries=4 -o Acquire::ForceIPv4=true --fix-missing \
+    "${MISSING_PKGS[@]}" >/dev/null
+fi
 
 install -d -m 0755 /etc/containers/registries.conf.d
 cat > /etc/containers/registries.conf.d/99-wolinet-dockerhub.conf <<'EOF'

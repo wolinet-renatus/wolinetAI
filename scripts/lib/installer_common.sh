@@ -329,8 +329,8 @@ install_deb_file() {
     return 0
   fi
   log_info "Resolving missing Debian dependencies via apt..."
-  run_root env DEBIAN_FRONTEND=noninteractive apt-get update -qq
-  run_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -f
+  run_root env DEBIAN_FRONTEND=noninteractive apt-get update -o Acquire::Retries=4 -o Acquire::ForceIPv4=true -qq
+  run_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -o Acquire::Retries=4 -o Acquire::ForceIPv4=true --fix-missing -f
   run_root dpkg -i "${deb_path}"
 }
 
