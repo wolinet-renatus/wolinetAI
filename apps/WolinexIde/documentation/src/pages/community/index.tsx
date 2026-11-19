@@ -17,7 +17,7 @@ import november2025Data from "./data/november-2025.json";
 import communityContentData from "./data/community-content.json";
 
 // Create a data map for easy access
-const communityDataMap = {
+const communityDataMap: Record<string, any> = {
   "april-2025": april2025Data,
   "may-2025": may2025Data,
   "june-2025": june2025Data,
@@ -97,7 +97,7 @@ function CommunityAllStarsSection() {
 
       {/* Community All-Stars Cards */}
       <div className="flex flex-wrap justify-center gap-4 w-full px-4">
-        {currentData.communityStars.map((contributor, index) => (
+        {currentData?.communityStars?.map((contributor: any, index: number) => (
           <StarsCard key={index} contributor={contributor} />
         ))}
       </div>
@@ -260,7 +260,7 @@ function CommunityContentSpotlightSection() {
   );
 }
 
-function ContentCard({ content }): ReactNode {
+function ContentCard({ content }: { content: any }): ReactNode {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'blog': return '📝';
@@ -324,7 +324,7 @@ function ContentCard({ content }): ReactNode {
   );
 }
 
-export function StarsCard({contributor}): ReactNode {
+export function StarsCard({ contributor }: { contributor: any }): ReactNode {
   return (
     <div className="w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(33.333%-0.67rem)] lg:w-[calc(20%-0.8rem)] max-w-[280px]">
       <div 

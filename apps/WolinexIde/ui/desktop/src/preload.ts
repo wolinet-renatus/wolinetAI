@@ -128,22 +128,6 @@ type ElectronAPI = {
   readDirTree: (dirPath: string) => Promise<Array<{ name: string; path: string; isDirectory: boolean }>>;
   readTownWall: () => Promise<string[]>;
   postTownWall: (message: string) => Promise<boolean>;
-  openidea: {
-    init: () => Promise<unknown>;
-    openProject: (projectPath: string) => Promise<unknown>;
-    getProject: () => Promise<unknown>;
-    readDir: (dirPath: string) => Promise<Array<{ name: string; path: string; kind: 'dir' | 'file'; size: number }>>;
-    docOpen: (filePath: string) => Promise<{ text: string; mtimeMs: number; language: string }>;
-    docSave: (filePath: string, content?: string) => Promise<boolean>;
-    createFile: (filePath: string) => Promise<boolean>;
-    createDir: (dirPath: string) => Promise<boolean>;
-    delete: (targetPath: string) => Promise<boolean>;
-    rename: (fromPath: string, toPath: string) => Promise<boolean>;
-    gitStatus: () => Promise<Record<string, unknown>>;
-    invoke: <T = unknown>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
-    checkInstalled: () => Promise<{ installed: boolean; isApp: boolean; path: string }>;
-    launchStandalone: (projectPath?: string, sessionId?: string) => Promise<{ success: boolean; mode: string; projectPath: string; sessionId: string }>;
-  };
   terminal: {
     exec: (command: string, cwd?: string) => Promise<{ output: string; exitCode: number; cwd: string }>;
     getDefaultCwd: () => Promise<string>;
@@ -268,22 +252,6 @@ const electronAPI: ElectronAPI = {
   readDirTree: (dirPath: string) => ipcRenderer.invoke('read-dir-tree', dirPath),
   readTownWall: () => ipcRenderer.invoke('read-town-wall'),
   postTownWall: (message: string) => ipcRenderer.invoke('post-town-wall', message),
-  openidea: {
-    init: () => ipcRenderer.invoke('openidea:init'),
-    openProject: (projectPath: string) => ipcRenderer.invoke('openidea:open-project', projectPath),
-    getProject: () => ipcRenderer.invoke('openidea:get-project'),
-    readDir: (dirPath: string) => ipcRenderer.invoke('openidea:read-dir', dirPath),
-    docOpen: (filePath: string) => ipcRenderer.invoke('openidea:doc-open', filePath),
-    docSave: (filePath: string, content?: string) => ipcRenderer.invoke('openidea:doc-save', filePath, content),
-    createFile: (filePath: string) => ipcRenderer.invoke('openidea:create-file', filePath),
-    createDir: (dirPath: string) => ipcRenderer.invoke('openidea:create-dir', dirPath),
-    delete: (targetPath: string) => ipcRenderer.invoke('openidea:delete', targetPath),
-    rename: (fromPath: string, toPath: string) => ipcRenderer.invoke('openidea:rename', fromPath, toPath),
-    gitStatus: () => ipcRenderer.invoke('openidea:git-status'),
-    invoke: (cmd: string, args: Record<string, unknown> = {}) => ipcRenderer.invoke('openidea:invoke', cmd, args),
-    checkInstalled: () => ipcRenderer.invoke('openidea:check-installed'),
-    launchStandalone: (projectPath?: string, sessionId?: string) => ipcRenderer.invoke('openidea:launch-standalone', projectPath, sessionId),
-  },
   terminal: {
     exec: (command: string, cwd?: string) => ipcRenderer.invoke('terminal:exec', command, cwd),
     getDefaultCwd: () => ipcRenderer.invoke('terminal:get-default-cwd'),

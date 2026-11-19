@@ -117,6 +117,7 @@ export default function DeeplinkGenerator() {
           urlParams.getAll('header').forEach(header => {
             const separatorIndex = header.indexOf('=');
             if (separatorIndex > 0) {
+              server.headers = server.headers || [];
               server.headers.push({
                 name: header.slice(0, separatorIndex),
                 description: header.slice(separatorIndex + 1),
@@ -170,8 +171,8 @@ export default function DeeplinkGenerator() {
 
         const link = generateDeeplink(server);
         handleGeneratedLink(link, true);
-      } catch (error) {
-        setError(error.message);
+      } catch (error: any) {
+        setError(error?.message || String(error));
       }
     }
   }, []);
@@ -201,8 +202,8 @@ export default function DeeplinkGenerator() {
         `type=streamable_http`,
         `url=${encodeURIComponent(server.url || '')}`,
         `id=${encodeURIComponent(server.id)}`,
-        `name=${encodeURIComponent(server.name)}`,
-        `description=${encodeURIComponent(server.description)}`,
+        `name=${encodeURIComponent(server.name || '')}`,
+        `description=${encodeURIComponent(server.description || '')}`,
         ...(server.environmentVariables || [])
           .filter((env) => env.required)
           .map(
@@ -218,15 +219,15 @@ export default function DeeplinkGenerator() {
       return `goose://extension?${queryParams}`;
     }
 
-    const parts = server.command.split(" ");
-    const baseCmd = parts[0];
+    const parts = (server.command || '').split(" ");
+    const baseCmd = parts[0] || '';
     const args = parts.slice(1);
     const queryParams = [
       `cmd=${encodeURIComponent(baseCmd)}`,
       ...args.map((arg) => `arg=${encodeURIComponent(arg)}`),
       `id=${encodeURIComponent(server.id)}`,
-      `name=${encodeURIComponent(server.name)}`,
-      `description=${encodeURIComponent(server.description)}`,
+      `name=${encodeURIComponent(server.name || '')}`,
+      `description=${encodeURIComponent(server.description || '')}`,
       ...(server.environmentVariables || [])
         .filter((env) => env.required)
         .map(
@@ -254,8 +255,8 @@ export default function DeeplinkGenerator() {
     try {
       const link = generateDeeplink(server);
       handleGeneratedLink(link);
-    } catch (error) {
-      setError(error.message);
+    } catch (error: any) {
+      setError(error?.message || String(error));
     }
   }, [isBuiltin, extensionType, id, name, description, command, endpointUrl, envVars, headers]);
 
@@ -264,8 +265,8 @@ export default function DeeplinkGenerator() {
       const server = JSON.parse(jsonInput);
       const link = generateDeeplink(server);
       handleGeneratedLink(link);
-    } catch (error) {
-      setError('Invalid JSON: ' + error.message);
+    } catch (error: any) {
+      setError('Invalid JSON: ' + (error?.message || String(error)));
     }
   }, [jsonInput]);
 

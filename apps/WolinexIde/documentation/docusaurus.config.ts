@@ -31,12 +31,7 @@ const config: Config = {
   projectName: "goose", // Usually your repo name.
 
   onBrokenLinks: "throw",
-
-  markdown: {
-    hooks: {
-      onBrokenMarkdownLinks: "warn",
-    },
-  },
+  onBrokenMarkdownLinks: "warn",
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -97,12 +92,14 @@ const config: Config = {
             ) => {
               for (const item of sidebarItems) {
                 if (item.type === "category" && item.label === categoryLabel) {
+                  item.items = item.items || [];
                   item.items.push(...extraItems);
                   return true;
                 }
 
                 if (
                   item.type === "category" &&
+                  item.items &&
                   addItemsToCategory(item.items, categoryLabel, extraItems)
                 ) {
                   return true;
@@ -119,8 +116,10 @@ const config: Config = {
         },
         blog: {
           showReadingTime: true,
-          readingTime: ({ content, frontMatter, defaultReadingTime }) =>
-            frontMatter.reading_time ?? defaultReadingTime({ content }),
+          readingTime: ({ content, frontMatter, defaultReadingTime, locale }) =>
+            typeof frontMatter.reading_time === "number"
+              ? frontMatter.reading_time
+              : defaultReadingTime({ content, locale }),
           feedOptions: {
             type: ["rss", "atom"],
             xslt: true,
@@ -145,7 +144,7 @@ const config: Config = {
                 trackingID: "G-ZS5D6SB4ZJ",
                 anonymizeIP: true,
               }
-            : false,
+            : undefined,
       } satisfies Preset.Options,
     ],
   ],

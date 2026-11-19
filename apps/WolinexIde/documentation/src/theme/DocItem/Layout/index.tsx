@@ -82,7 +82,7 @@ function CopyPageButton(): ReactNode {
 
       // Add custom rule for video embeds (iframes and video tags)
       turndownService.addRule('videoEmbeds', {
-        filter: function (node) {
+        filter: function (node: any) {
           if (node.nodeName === 'IFRAME') {
             const src = (node as HTMLElement).getAttribute('src') || '';
             // Check if it's a video embed (YouTube, Vimeo, etc.)
@@ -93,7 +93,7 @@ function CopyPageButton(): ReactNode {
           }
           return false;
         },
-        replacement: function (content, node) {
+        replacement: function (content: string, node: any) {
           const element = node as HTMLElement;
           const title = element.getAttribute('title') || 'Video';
           const src = element.getAttribute('src') || '';
@@ -113,13 +113,13 @@ function CopyPageButton(): ReactNode {
 
       // Add custom rule for VideoCarousel component
       turndownService.addRule('videoCarousel', {
-        filter: function (node) {
+        filter: function (node: any) {
           if (node.nodeName !== 'DIV') return false;
           const element = node as HTMLElement;
           // Check if this is a carousel container
           return element.classList.contains('carousel-container');
         },
-        replacement: function (content, node) {
+        replacement: function (content: string, node: any) {
           const carouselElement = node as HTMLElement;
           let markdown = '\n\n';
           
@@ -165,13 +165,13 @@ function CopyPageButton(): ReactNode {
 
       // Add custom rule for category sections with card grids
       turndownService.addRule('categorySections', {
-        filter: function (node) {
+        filter: function (node: any) {
           if (node.nodeName !== 'DIV') return false;
           const element = node as HTMLElement;
           const classList = Array.from(element.classList);
           return classList.some(className => className.includes('categorySection'));
         },
-        replacement: function (content, node) {
+        replacement: function (content: string, node: any) {
           const sectionElement = node as HTMLElement;
           let markdown = '\n\n';
           
@@ -206,14 +206,14 @@ function CopyPageButton(): ReactNode {
 
       // Add custom rule for Card components to convert them to cleaner markdown
       turndownService.addRule('cardComponents', {
-        filter: function (node) {
+        filter: function (node: any) {
           if (node.nodeName !== 'A') return false;
           const element = node as HTMLElement;
           // Check if this is a card by looking for card-related classes
           const classList = Array.from(element.classList);
           return classList.some(className => className.includes('card'));
         },
-        replacement: function (content, node) {
+        replacement: function (content: string, node: any) {
           const cardElement = node as HTMLElement;
           const href = cardElement.getAttribute('href') || '';
           
@@ -238,13 +238,13 @@ function CopyPageButton(): ReactNode {
 
       // Add custom rule for tabs to convert them to sections
       turndownService.addRule('tabsToSections', {
-        filter: function (node) {
+        filter: function (node: any) {
           return (
             node.nodeName === 'DIV' &&
             (node as HTMLElement).classList.contains('tabs-container')
           );
         },
-        replacement: function (content, node) {
+        replacement: function (content: string, node: any) {
           const tabsContainer = node as HTMLElement;
           let markdown = '\n\n';
           
@@ -275,14 +275,14 @@ function CopyPageButton(): ReactNode {
 
       // Add custom rule for code blocks to preserve language
       turndownService.addRule('fencedCodeBlock', {
-        filter: function (node) {
+        filter: function (node: any) {
           return (
             node.nodeName === 'PRE' &&
             node.firstChild &&
             node.firstChild.nodeName === 'CODE'
           );
         },
-        replacement: function (content, node) {
+        replacement: function (content: string, node: any) {
           const codeElement = node.firstChild as HTMLElement;
           const className = codeElement.className || '';
           const language = className.match(/language-(\w+)/)?.[1] || '';
@@ -463,7 +463,7 @@ function useShouldShowCopyButton(): boolean {
   
   const isNotCategoryPage = !metadata?.permalink?.includes('/category/');
   
-  return hasSource && isNotCategoryPage;
+  return Boolean(hasSource && isNotCategoryPage);
 }
 
 /**

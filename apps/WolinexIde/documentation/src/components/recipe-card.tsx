@@ -7,7 +7,7 @@ export type Recipe = {
   id: string;
   title: string;
   description: string;
-  extensions: string[];
+  extensions: (string | { name: string })[];
   activities: string[];
   recipeUrl: string;
   action?: string;
@@ -16,6 +16,11 @@ export type Recipe = {
   };
   persona?: string;
   parameters?: { key: string; requirement: string; value?: string }[];
+  localPath?: string;
+  prompt?: string;
+  instructions?: string;
+  version?: string;
+  tags?: string[];
 };
 
 export function RecipeCard({ recipe }: { recipe: Recipe }) {

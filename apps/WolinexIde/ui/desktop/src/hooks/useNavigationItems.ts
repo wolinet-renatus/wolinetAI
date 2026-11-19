@@ -1,7 +1,6 @@
 import {
   AppWindow,
   Clock,
-  Code2,
   FileText,
   History,
   MessageSquarePlus,
@@ -39,7 +38,6 @@ export const NAV_GROUPS: NavGroup[] = [
 export const NAV_ITEMS: NavItem[] = [
   // Workspace (Core Pairing & In-Editor Coding)
   { id: 'home', path: '/', label: 'New Chat', icon: MessageSquarePlus, group: 'workspace' },
-  { id: 'code', path: '/code', label: 'Code', icon: Code2, group: 'workspace' },
   { id: 'sessions', path: '/sessions', label: 'Session History', icon: History, group: 'workspace' },
 
   // Agents (Swarm Orchestration, Skills & Recipes)
@@ -68,10 +66,6 @@ const navItemMessages = defineMessages({
   home: {
     id: 'navigation.itemHome',
     defaultMessage: 'New Chat',
-  },
-  code: {
-    id: 'navigation.itemCode',
-    defaultMessage: 'Code',
   },
   sessions: {
     id: 'navigation.itemSessions',

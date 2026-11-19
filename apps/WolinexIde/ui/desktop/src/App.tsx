@@ -46,7 +46,6 @@ import ExtensionsView, { ExtensionsViewOptions } from './components/extensions/E
 import RecipesView from './components/recipes/RecipesView';
 import SkillsView from './components/skills/SkillsView';
 import AppsView from './components/apps/AppsView';
-import { CodeView } from './components/code/CodeView';
 import { SwarmView } from './components/swarm/SwarmView';
 import StandaloneAppView from './components/apps/StandaloneAppView';
 import { View, ViewOptions } from './utils/navigationUtils';
@@ -674,7 +673,6 @@ export function AppInner() {
                   </ChatProvider>
                 }
               />
-              <Route path="code" element={<CodeView />} />
               <Route path="swarm" element={<SwarmView />} />
               <Route path="apps" element={<AppsView />} />
               <Route path="sessions" element={<SessionsRoute />} />

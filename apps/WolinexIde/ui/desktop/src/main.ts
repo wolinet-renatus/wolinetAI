@@ -31,7 +31,6 @@ import { connectRemoteBackend } from './remoteBackends';
 import { installBackendCertificateVerifiers } from './backendCertificateVerifier';
 import { configureProxy } from './proxy';
 import { startGooseServe } from './gooseServe';
-import { OpenIdeaService } from './openideaService';
 import { getLoginShellPath } from './loginShellPath';
 import { GooseServeLeaseRegistry, type GooseServeLease } from './gooseServeLeaseRegistry';
 import { normalizeAcpHttpBaseUrl } from './acp/url';
@@ -2415,93 +2414,6 @@ ipcMain.handle('post-town-wall', async (_event, message: string) => {
   }
 });
 
-// OpenIDEA native Rust backend integration
-ipcMain.handle('openidea:check-installed', async () => {
-  const appPath = '/Applications/WolinexCode.app';
-  const installed = fsSync.existsSync(appPath);
-  return {
-    installed,
-    isApp: installed,
-    path: installed ? appPath : path.join(process.cwd(), 'apps', 'ide'),
-  };
-});
-
-ipcMain.handle('openidea:launch-standalone', async (_event, projectPath?: string, sessionId?: string) => {
-  const root = projectPath || process.cwd();
-  const session = sessionId || '';
-  
-  // Persist shared state in ~/.wolinex
-  const wolinexDir = path.join(os.homedir(), '.wolinex');
-  const stateFile = path.join(wolinexDir, 'active_state.json');
-  try {
-    await fs.mkdir(wolinexDir, { recursive: true });
-    let current: Record<string, unknown> = {};
-    if (fsSync.existsSync(stateFile)) {
-      current = JSON.parse(await fs.readFile(stateFile, 'utf-8'));
-    }
-    current.active_project = root;
-    current.active_session = session;
-    current.gateway_url = process.env.LITELLM_HOST || 'http://127.0.0.1:4000';
-    current.updated_at = new Date().toISOString();
-    await fs.writeFile(stateFile, JSON.stringify(current, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('[OpenIDEA] Failed to write active state:', err);
-  }
-
-  // Launch via app or shell protocol
-  const appPath = '/Applications/WolinexCode.app';
-  if (fsSync.existsSync(appPath)) {
-    const { exec } = await import('node:child_process');
-    exec(`open -a "${appPath}" --args --project "${root}" --session "${session}"`);
-    return { success: true, mode: 'app', projectPath: root, sessionId: session };
-  } else {
-    // Fallback: deep-link url
-    const deepLink = `wolinex-code://open?project=${encodeURIComponent(root)}&session=${encodeURIComponent(session)}`;
-    shell.openExternal(deepLink);
-    return { success: true, mode: 'protocol', projectPath: root, sessionId: session };
-  }
-});
-
-ipcMain.handle('openidea:init', async () => {
-  return await OpenIdeaService.getInstance().start();
-});
-
-ipcMain.handle('openidea:open-project', async (_event, projectPath: string) => {
-  return await OpenIdeaService.getInstance().openProject(projectPath);
-});
-
-ipcMain.handle('openidea:get-project', async () => {
-  return await OpenIdeaService.getInstance().getCurrentProject();
-});
-
-ipcMain.handle('openidea:read-dir', async (_event, dirPath: string) => {
-  return await OpenIdeaService.getInstance().listFiles(dirPath);
-});
-
-ipcMain.handle('openidea:doc-open', async (_event, filePath: string) => {
-  return await OpenIdeaService.getInstance().openDocument(filePath);
-});
-
-ipcMain.handle('openidea:doc-save', async (_event, filePath: string, content?: string) => {
-  return await OpenIdeaService.getInstance().saveDocument(filePath, content);
-});
-
-ipcMain.handle('openidea:create-file', async (_event, filePath: string) => {
-  return await OpenIdeaService.getInstance().createFile(filePath);
-});
-
-ipcMain.handle('openidea:create-dir', async (_event, dirPath: string) => {
-  return await OpenIdeaService.getInstance().createDir(dirPath);
-});
-
-ipcMain.handle('openidea:delete', async (_event, targetPath: string) => {
-  return await OpenIdeaService.getInstance().deletePath(targetPath);
-});
-
-ipcMain.handle('openidea:rename', async (_event, fromPath: string, toPath: string) => {
-  return await OpenIdeaService.getInstance().renamePath(fromPath, toPath);
-});
-
 ipcMain.handle('terminal:exec', async (_event, command: string, cwd?: string) => {
   return new Promise((resolve) => {
     const workDir = cwd || path.join(os.homedir(), 'Documents', 'wolinetai', 'apps', 'WolinexIde');
@@ -2531,8 +2443,7 @@ ipcMain.handle('terminal:exec', async (_event, command: string, cwd?: string) =>
 });
 
 ipcMain.handle('terminal:get-default-cwd', async () => {
-  const currentProj = await OpenIdeaService.getInstance().getCurrentProject().catch(() => null);
-  return currentProj?.root || path.join(os.homedir(), 'Documents', 'wolinetai', 'apps', 'WolinexIde');
+  return path.join(os.homedir(), 'Documents', 'wolinetai', 'apps', 'WolinexIde');
 });
 
 // Production DevServerManager for Mobile & Metro Development
@@ -2585,8 +2496,7 @@ class DevServerManager {
       await this.stop();
     }
 
-    const currentProj = await OpenIdeaService.getInstance().getCurrentProject().catch(() => null);
-    const workDir = cwd || currentProj?.root || path.join(os.homedir(), 'Documents', 'wolinetai', 'apps', 'WolinexIde');
+    const workDir = cwd || path.join(os.homedir(), 'Documents', 'wolinetai', 'apps', 'WolinexIde');
 
     this.broadcastLog('status', `▶ Starting Mobile Dev Server: [${command}] in ${workDir}`);
 
@@ -2787,14 +2697,6 @@ ipcMain.handle('database:exec-sql', async (_event, sql: string, dbPath?: string)
       }
     });
   });
-});
-
-ipcMain.handle('openidea:git-status', async () => {
-  return await OpenIdeaService.getInstance().getGitStatus();
-});
-
-ipcMain.handle('openidea:invoke', async (_event, cmd: string, args: Record<string, unknown>) => {
-  return await OpenIdeaService.getInstance().invoke(cmd, args);
 });
 
 ipcMain.handle('show-message-box', async (_event, options) => {

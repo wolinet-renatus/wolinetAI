@@ -7,7 +7,7 @@
 import React from 'react';
 import Head from '@docusaurus/Head';
 import {useBlogListPageStructuredData} from '@docusaurus/plugin-content-blog/client';
-export default function BlogListPageStructuredData(props) {
+export default function BlogListPageStructuredData(props: any): React.JSX.Element {
   const structuredData = useBlogListPageStructuredData(props);
   return (
     <Head>

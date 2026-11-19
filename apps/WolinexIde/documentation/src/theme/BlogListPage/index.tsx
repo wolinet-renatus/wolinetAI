@@ -146,7 +146,7 @@ function BlogListPageContent(props: Props): ReactNode {
   );
 
   const featuredPosts = isFirstPage
-    ? validItems.filter(item => item.content.frontMatter.featured === true)
+    ? validItems.filter(item => (item.content.frontMatter as Record<string, unknown>).featured === true)
     : [];
 
   const regularPosts = isFirstPage
