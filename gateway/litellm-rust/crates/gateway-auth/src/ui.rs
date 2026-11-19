@@ -79,26 +79,40 @@ pub fn ui_router(state: UiState) -> Router {
         .route("/litellm/.well-known/litellm-ui-config", get(ui_config))
         .route("/openapi.json", get(openapi_spec))
         .route("/get/ui_theme_settings", get(ui_theme_settings))
+        .route("/get/ui_settings", get(ui_settings))
+        .route("/sso/get/ui_settings", get(sso_ui_settings))
         .route("/v2/login", post(login_v2))
         .route("/public/litellm_model_cost_map", get(empty_object))
+        .route("/public/litellm_blog_posts", get(blog_posts))
         .route("/get_model_cost_map", get(empty_object))
         .route("/public/model_hub", get(public_model_hub))
         .route("/public/model_hub/info", get(public_model_hub))
         .route("/health/readiness/details", get(health_readiness_details))
         .route("/health/license", get(empty_object))
+        .route("/get/latest_release_info", get(latest_release_info))
         .route("/get/user_banner", get(user_banner))
         .route("/api/plugins", get(empty_array))
         .route("/user/info", get(user_info))
         .route("/v2/user/info", get(user_info_v2))
+        .route("/user/available_roles", get(available_roles))
+        .route("/user/available_users", get(available_users))
         .route("/key/list", get(key_list))
         .route("/key/aliases", get(key_aliases))
         .route("/model/info", get(model_info))
         .route("/v2/model/info", get(model_info))
         .route("/model_group/info", get(model_group_info))
-        .route("/v2/team/list", get(team_list))
+        .route("/v2/team/list", get(team_list_v2))
         .route("/team/list", get(team_list))
+        .route("/team/metadata_schema", get(team_metadata_schema))
         .route("/organization/list", get(organization_list))
         .route("/user/list", get(user_list))
+        .route("/project/list", get(auth_empty_array))
+        .route("/tag/list", get(auth_empty_object))
+        .route("/v1/agents", get(auth_empty_array))
+        .route("/v2/guardrails/list", get(guardrails_list))
+        .route("/guardrails/list", get(guardrails_list))
+        .route("/prompts/list", get(prompts_list))
+        .route("/policies/list", get(policies_list))
         .route("/spend/logs", get(spend_logs_list))
         .route("/spend/logs/v2", get(spend_logs_paginated))
         .route("/global/spend/logs", get(spend_logs_list))
@@ -198,6 +212,120 @@ async fn empty_object() -> Json<Value> {
 
 async fn empty_array() -> Json<Value> {
     Json(json!([]))
+}
+
+async fn blog_posts() -> Json<Value> {
+    Json(json!({ "posts": [] }))
+}
+
+async fn ui_settings() -> Json<Value> {
+    Json(json!({
+        "values": {
+            "disable_model_health_check_ui": false,
+            "enable_ptu_cost_attribution": false,
+            "apply_user_budget_to_team_keys": false,
+        },
+        "field_schema": {},
+        "source": {},
+    }))
+}
+
+async fn sso_ui_settings(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    Ok(Json(json!({
+        "PROXY_BASE_URL": null,
+        "PROXY_LOGOUT_URL": null,
+        "LITELLM_UI_API_DOC_BASE_URL": "https://docs.wolinet.com",
+        "DEFAULT_TEAM_DISABLED": false,
+        "SSO_ENABLED": false,
+        "NUM_SPEND_LOGS_ROWS": 0,
+        "DISABLE_EXPENSIVE_DB_QUERIES": false,
+    })))
+}
+
+async fn latest_release_info(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    Ok(Json(json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "new_features": 0,
+        "bug_fixes": 0,
+        "other_updates": 0,
+        "release_url": "https://github.com/wolinet-renatus/wolinetAI",
+    })))
+}
+
+async fn available_roles(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    Ok(Json(json!({
+        "proxy_admin": { "description": "Proxy Admin role", "ui_label": "Admin" },
+        "proxy_admin_viewer": { "description": "Proxy Admin Viewer role", "ui_label": "Admin Viewer" },
+        "internal_user": { "description": "Internal User role", "ui_label": "Internal User" },
+        "internal_user_viewer": { "description": "Internal User Viewer role", "ui_label": "Internal User Viewer" },
+    })))
+}
+
+async fn available_users(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    Ok(Json(json!({
+        "total_users": null,
+        "total_users_used": 1,
+        "total_users_remaining": null,
+        "total_teams": null,
+        "total_teams_used": 0,
+        "total_teams_remaining": null,
+    })))
+}
+
+async fn auth_empty_array(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    Ok(Json(json!([])))
+}
+
+async fn auth_empty_object(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    Ok(Json(json!({})))
+}
+
+async fn guardrails_list(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    Ok(Json(json!({ "guardrails": [] })))
+}
+
+async fn prompts_list(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    Ok(Json(json!({ "prompts": [] })))
+}
+
+async fn policies_list(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    Ok(Json(json!({ "policies": [], "total_count": 0 })))
 }
 
 async fn openapi_spec(State(state): State<UiState>) -> Json<Value> {
@@ -640,16 +768,9 @@ async fn model_group_info(
     Ok(Json(json!({ "data": data })))
 }
 
-async fn team_list(State(state): State<UiState>, headers: HeaderMap) -> Result<Json<Value>, Error> {
-    require_master(&state.auth, &headers).await?;
+async fn query_teams(state: &UiState) -> Result<Vec<Value>, Error> {
     let Some(pool) = state.auth.pg_pool.as_ref() else {
-        return Ok(Json(json!({
-            "teams": [],
-            "total": 0,
-            "page": 1,
-            "page_size": 100,
-            "total_pages": 1,
-        })));
+        return Ok(Vec::new());
     };
     let client = pool.get().await.map_err(|_| Error::Store)?;
     let rows = client
@@ -668,7 +789,7 @@ async fn team_list(State(state): State<UiState>, headers: HeaderMap) -> Result<J
         )
         .await
         .map_err(|_| Error::Store)?;
-    let teams: Vec<Value> = rows
+    Ok(rows
         .into_iter()
         .map(|r| {
             json!({
@@ -679,9 +800,24 @@ async fn team_list(State(state): State<UiState>, headers: HeaderMap) -> Result<J
                 "max_budget": r.get::<_, Option<f64>>("max_budget"),
                 "models": r.get::<_, Vec<String>>("models"),
                 "blocked": r.get::<_, bool>("blocked"),
+                "members_with_roles": [],
             })
         })
-        .collect();
+        .collect())
+}
+
+async fn team_list(State(state): State<UiState>, headers: HeaderMap) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let teams = query_teams(&state).await?;
+    Ok(Json(json!(teams)))
+}
+
+async fn team_list_v2(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    let teams = query_teams(&state).await?;
     let total = teams.len();
     Ok(Json(json!({
         "teams": teams,
@@ -690,6 +826,14 @@ async fn team_list(State(state): State<UiState>, headers: HeaderMap) -> Result<J
         "page_size": 100,
         "total_pages": 1,
     })))
+}
+
+async fn team_metadata_schema(
+    State(state): State<UiState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Error> {
+    require_master(&state.auth, &headers).await?;
+    Ok(Json(json!({ "fields": [] })))
 }
 
 async fn organization_list(

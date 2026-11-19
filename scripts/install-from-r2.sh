@@ -52,7 +52,8 @@ done
 
 reject_placeholder() {
   local name="$1" val="$2"
-  if [[ -n "${val}" && ( "${val}" == \<*\> || "${val}" == *"<your-"* ) ]]; then
+  local upper="${val^^}"
+  if [[ -n "${val}" && ( "${val}" == \<*\> || "${val}" == *"<your-"* || "${upper}" == PASTE_* || "${upper}" == YOUR_* || "${upper}" == CHANGE_ME* || "${upper}" == REPLACE_WITH* ) ]]; then
     echo "[r2-install:error] ${name} is set to a placeholder (${val}). Pass the real value or unset R2_* to reuse /etc/wolinet/r2.env." >&2
     exit 1
   fi

@@ -300,11 +300,24 @@ BEGIN
   IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'model') THEN
     DELETE FROM model WHERE LOWER(id) LIKE '%tiny-llama%' OR LOWER(id) LIKE '%tinyllama%';
   END IF;
-  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'alembic_version') THEN
-    UPDATE alembic_version SET version_num = 'f2a4b6c8d0e1' WHERE version_num = 'd4c1a8e37b62';
+END $$;
+EOSQL
+    if [[ "${db_name}" == "${WEBUI_DB}" ]]; then
+      run_psql_cmd "${db_name}" <<'EOSQL' >/dev/null 2>&1 || true
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'alembic_version')
+     AND EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'config')
+     AND NOT EXISTS (
+       SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'config' AND column_name = 'key'
+     ) THEN
+    UPDATE alembic_version SET version_num = '3c9b0ca343fd'
+    WHERE version_num IN ('d4c1a8e37b62', 'f2a4b6c8d0e1');
   END IF;
 END $$;
 EOSQL
+    fi
   done
 
   # Run bundled WebUI Alembic upgrade head + SQLAlchemy metadata create_all single-process before workers boot

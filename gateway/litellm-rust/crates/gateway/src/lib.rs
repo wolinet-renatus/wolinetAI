@@ -1,12 +1,16 @@
-use std::{sync::Arc, time::Instant};
+use std::{
+    path::{Path as FsPath, PathBuf},
+    sync::Arc,
+    time::Instant,
+};
 
 use axum::{
     Extension, Json, Router,
     body::{Body, Bytes},
-    extract::Request,
+    extract::{Path, Request},
     http::{StatusCode, header},
     middleware::{self, Next},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
     routing::get,
 };
 use http_body_util::BodyExt;
@@ -182,7 +186,7 @@ pub async fn build_router_with_auth(
                 authenticate_middleware,
             ));
 
-    Router::new()
+    let mut app = Router::new()
         .route("/get_image", get(serve_wolinet_logo))
         .route("/health/liveliness", get(|| async { Json("I'm alive!") }))
         .route(
@@ -209,8 +213,13 @@ pub async fn build_router_with_auth(
         )
         .merge(ui_routes)
         .merge(mgmt_router)
-        .merge(inference_router)
-        .layer(middleware::from_fn(log_request))
+        .merge(inference_router);
+
+    if let Some(ui_dir) = resolve_ui_dir() {
+        app = app.merge(static_ui_router(ui_dir));
+    }
+
+    app.layer(middleware::from_fn(log_request))
 }
 
 async fn serve_wolinet_logo() -> impl IntoResponse {
@@ -222,6 +231,128 @@ async fn serve_wolinet_logo() -> impl IntoResponse {
         ],
         include_bytes!("../assets/wolinet_64.png").as_slice(),
     )
+}
+
+fn resolve_ui_dir() -> Option<PathBuf> {
+    if let Ok(custom) = std::env::var("LITELLM_UI_DIR") {
+        let trimmed = custom.trim();
+        if !trimmed.is_empty() {
+            let candidate = PathBuf::from(trimmed);
+            if candidate.join("index.html").is_file() {
+                return candidate.canonicalize().ok();
+            }
+        }
+    }
+    let default_dir = FsPath::new("/opt/wolinet/lango/ui");
+    if default_dir.join("index.html").is_file() {
+        return default_dir.canonicalize().ok();
+    }
+    None
+}
+
+fn content_type_for_path(path: &FsPath) -> &'static str {
+    match path.extension().and_then(|e| e.to_str()).unwrap_or_default() {
+        "html" => "text/html; charset=utf-8",
+        "js" | "mjs" => "application/javascript; charset=utf-8",
+        "css" => "text/css; charset=utf-8",
+        "json" | "map" => "application/json; charset=utf-8",
+        "txt" => "text/plain; charset=utf-8",
+        "svg" => "image/svg+xml",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "ico" => "image/x-icon",
+        "woff" => "font/woff",
+        "woff2" => "font/woff2",
+        "ttf" => "font/ttf",
+        _ => "application/octet-stream",
+    }
+}
+
+async fn serve_ui_rel(root: &FsPath, rel: &str, spa_fallback: bool) -> Response {
+    let trimmed = rel.trim_start_matches('/');
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    if trimmed.is_empty() {
+        candidates.push(root.join("index.html"));
+    } else {
+        candidates.push(root.join(trimmed));
+        candidates.push(root.join(trimmed).join("index.html"));
+        candidates.push(root.join(format!("{trimmed}.html")));
+    }
+    if spa_fallback {
+        candidates.push(root.join("index.html"));
+    }
+
+    for candidate in candidates {
+        if let Ok(canon) = candidate.canonicalize()
+            && canon.starts_with(root)
+            && canon.is_file()
+            && let Ok(bytes) = tokio::fs::read(&canon).await
+        {
+            return (
+                StatusCode::OK,
+                [(header::CONTENT_TYPE, content_type_for_path(&canon))],
+                bytes,
+            )
+                .into_response();
+        }
+    }
+    StatusCode::NOT_FOUND.into_response()
+}
+
+fn static_ui_router(ui_dir: PathBuf) -> Router {
+    let ui_dir = Arc::new(ui_dir);
+    let root_ui = ui_dir.clone();
+    let ui_sub = ui_dir.clone();
+    let next_sub = ui_dir.clone();
+    let assets_sub = ui_dir.clone();
+    let prefix_sub = ui_dir.clone();
+    let favicon_dir = ui_dir;
+
+    Router::new()
+        .route("/", get(|| async { Redirect::temporary("/ui/") }))
+        .route("/ui", get(|| async { Redirect::permanent("/ui/") }))
+        .route(
+            "/ui/",
+            get(move || {
+                let dir = root_ui.clone();
+                async move { serve_ui_rel(&dir, "index.html", true).await }
+            }),
+        )
+        .route(
+            "/ui/{*path}",
+            get(move |Path(path): Path<String>| {
+                let dir = ui_sub.clone();
+                async move { serve_ui_rel(&dir, &path, true).await }
+            }),
+        )
+        .route(
+            "/_next/{*path}",
+            get(move |Path(path): Path<String>| {
+                let dir = next_sub.clone();
+                async move { serve_ui_rel(&dir, &format!("_next/{path}"), false).await }
+            }),
+        )
+        .route(
+            "/assets/{*path}",
+            get(move |Path(path): Path<String>| {
+                let dir = assets_sub.clone();
+                async move { serve_ui_rel(&dir, &format!("assets/{path}"), false).await }
+            }),
+        )
+        .route(
+            "/litellm-asset-prefix/{*path}",
+            get(move |Path(path): Path<String>| {
+                let dir = prefix_sub.clone();
+                async move { serve_ui_rel(&dir, &path, false).await }
+            }),
+        )
+        .route(
+            "/favicon.ico",
+            get(move || {
+                let dir = favicon_dir.clone();
+                async move { serve_ui_rel(&dir, "favicon.ico", false).await }
+            }),
+        )
 }
 
 async fn bridge_auth_context(mut request: Request, next: Next) -> Response {

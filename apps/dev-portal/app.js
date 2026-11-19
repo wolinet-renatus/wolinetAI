@@ -30,7 +30,7 @@
 client = OpenAI(
     base_url="${gatewayApiBase}",
     api_key="${key}"
-)`,Target:
+)
 
 response = client.chat.completions.create(
     model="Wolinet Pro",

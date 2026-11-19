@@ -12,6 +12,8 @@ EnvironmentFile=-/etc/wolinet/mitambo.env
 Environment=MITAMBO_HOST=127.0.0.1
 Environment=MITAMBO_PORT=9997
 Environment=XINFERENCE_HOME=/var/lib/wolinet/data/mitambo
+Environment=XINFERENCE_HEALTH_CHECK_TIMEOUT=60
+Environment=XINFERENCE_HEALTH_CHECK_FAILURE_THRESHOLD=30
 ExecStart=/usr/bin/mitambo serve
 Restart=always
 RestartSec=5s
