@@ -2,11 +2,11 @@
     <div class="footer" :class="{ 'footer--mobile': isMobile }">
         <div class="footer-content">
             <div class="footer-copyright">
-                <a v-if="!isIntl && !isFxplay" href="https://fit2cloud.com/" target="_blank">
-                    Copyright © 2014-{{ year }} {{ $t('commons.fit2cloud') }}
+                <a v-if="!isIntl && !isFxplay" href="https://ai.wolinet.com/" target="_blank">
+                    Copyright © 2024-{{ year }} {{ $t('commons.fit2cloud') }}
                 </a>
-                <a v-else href="https://1panel.pro/" target="_blank">
-                    Copyright © {{ year }} {{ $t('commons.lingxia') }}
+                <a v-else href="https://ai.wolinet.com/" target="_blank">
+                    Copyright © 2024-{{ year }} {{ $t('commons.lingxia') }}
                 </a>
             </div>
             <FooterNavigation class="footer-navigation-panel" />

@@ -343,26 +343,19 @@ class CORSStaticFiles(StaticFiles):
 
 if LOG_FORMAT != 'json':
     banner = rf"""
- ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
-██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
-██║   ██║██████╔╝█████╗  ██╔██╗ ██║    ██║ █╗ ██║█████╗  ██████╔╝██║   ██║██║
-██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║    ██║███╗██║██╔══╝  ██╔══██╗██║   ██║██║
-╚██████╔╝██║     ███████╗██║ ╚████║    ╚███╔███╔╝███████╗██████╔╝╚██████╔╝██║
- ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝     ╚══╝╚══╝ ╚══════╝╚═════╝  ╚═════╝ ╚═╝
+ __        __   _ _            _        _    ___
+ \ \      / /__| (_)_ __   ___| |_     / \  |_ _|
+  \ \ /\ / / _ \ | | '_ \ / _ \ __|   / _ \  | |
+   \ V  V / (_) | | | | | |  __/ |_   / ___ \ | |
+    \_/\_/ \___/|_|_|_| |_|\___|\__| /_/   \_\___|
 
-
-v{VERSION} - building the best AI user interface.
-{f'Commit: {WEBUI_BUILD_HASH}' if WEBUI_BUILD_HASH != 'dev-build' else ''}
-https://github.com/open-webui/open-webui
+Wolinet AI Web Portal (Engine {VERSION})
+https://ai.wolinet.com
 """
     try:
         print(banner)
     except UnicodeEncodeError:
-        # Stdout can't encode the box-drawing banner (Windows cp1252, redirected/headless stdout); fall back to ASCII.
-        # LICENSE covers this Open WebUI CLI identifier.
-        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
-        # https://docs.openwebui.com/license.
-        print(f'Open WebUI v{VERSION} - building the best AI user interface.\nhttps://github.com/open-webui/open-webui')
+        print(f'Wolinet AI Web Portal (Engine {VERSION})\nhttps://ai.wolinet.com')
 
 
 @asynccontextmanager

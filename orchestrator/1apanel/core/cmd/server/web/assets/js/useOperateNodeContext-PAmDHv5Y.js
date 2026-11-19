@@ -1,0 +1,1 @@
+import{Or as e,Vr as t,vr as n}from"./vendor-element-plus-CX_fRINc.js";import{b as r,x as i}from"./useGlobalStore-D9O_48bV.js";n();var a=n=>{let a=``,o=t(n,e=>{a=e||``,i(a)},{immediate:!0});e(()=>{o(),r(a)})};export{a as t};

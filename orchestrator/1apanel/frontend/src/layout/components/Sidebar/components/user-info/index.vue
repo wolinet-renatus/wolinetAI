@@ -386,7 +386,7 @@ const form = reactive({
     mfaInterval: 30,
 });
 const mfaForm = reactive({
-    title: '1Panel',
+    title: 'Wolinet Control Panel',
     code: '',
     secret: '',
     interval: 30,
@@ -512,7 +512,7 @@ function validateFieldCallback(error: any) {
 
 const startMfaBinding = async () => {
     mfaForm.interval = form.mfaInterval || 30;
-    mfaForm.title = '1Panel-' + form.name;
+    mfaForm.title = 'WolinetCP-' + form.name;
     mfaForm.code = '';
     await loadMfaCode();
     mfaDialogOpen.value = true;

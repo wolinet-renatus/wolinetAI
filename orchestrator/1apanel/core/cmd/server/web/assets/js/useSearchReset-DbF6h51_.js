@@ -1,1 +1,0 @@
-import{Cr as e,Er as t,vr as n}from"./vendor-element-plus-CX_fRINc.js";import{Yn as r,a as i,rr as a}from"./useGlobalStore-BmHClieu.js";n();var o=(n,o)=>{let{currentNode:s}=a(r()),c=i(o.scope?[s,o.scope]:[s],n),l=!1;t(()=>{l=!0}),e(()=>{if(l)return l=!1,c(),o.onRevisit()})};export{o as t};

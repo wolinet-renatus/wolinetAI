@@ -25,11 +25,11 @@ export interface FooterNavigationSettingEditor {
 export const createDefaultFooterNavigationLinks = (isIntl: boolean, docsUrl: string): FooterNavigationLinks => ({
     learnMore: {
         visible: true,
-        url: isIntl ? 'https://1panel.pro/pricing' : 'https://1panel.cn/versions.html',
+        url: 'https://ai.wolinet.com',
     },
     forum: {
         visible: true,
-        url: isIntl ? 'https://github.com/1Panel-dev/1Panel/discussions' : 'https://bbs.fit2cloud.com/c/1p/7',
+        url: 'https://dev.wolinet.com',
     },
     documentation: {
         visible: true,
@@ -37,7 +37,7 @@ export const createDefaultFooterNavigationLinks = (isIntl: boolean, docsUrl: str
     },
     project: {
         visible: true,
-        url: 'https://github.com/1Panel-dev/1Panel',
+        url: 'https://github.com/wolinet-renatus/wolinetAI',
     },
 });
 

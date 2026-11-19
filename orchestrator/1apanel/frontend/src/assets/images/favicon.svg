@@ -1,9 +1,115 @@
-<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-<path d="M11.1451 18.8875L5.66228 15.7224V8.40336L3.5376 7.1759V16.9488L9.02038 20.114L11.1451 18.8875Z" />
-<path d="M18.3397 15.7224L12.0005 19.3819L9.87683 20.6083L12.0005 21.8348L20.4644 16.9488L18.3397 15.7224Z" />
-<path d="M12.0015 4.74388L14.1252 3.5174L12.0005 2.28995L3.5376 7.17591L5.66228 8.40337L12.0005 4.74388H12.0015Z" />
-<path d="M14.9816 4.01077L12.8569 5.23723L18.3397 8.40336V15.7224L20.4634 16.9488V7.1759L14.9816 4.01077Z" />
-<path d="M11.9995 1.02569L21.5576 6.54428V17.5795L11.9995 23.0971L2.44343 17.5795V6.54428L11.9995 1.02569ZM11.9995 0.72728L2.18182 6.39707V17.7366L11.9995 23.4064L21.8182 17.7366V6.39707L11.9995 0.72728Z" />
-<path d="M12.3079 6.78001L12.9564 7.16695V17.105L12.3079 17.48V6.78001Z" />
-<path d="M12.3078 6.78001L9.10889 8.6222V9.86954H10.2359V16.2854L12.3059 17.481L12.3078 6.78001Z" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#090d16"/>
+      <stop offset="100%" stop-color="#020408"/>
+    </linearGradient>
+    
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.4"/>
+      <stop offset="50%" stop-color="#1e293b" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.3"/>
+    </linearGradient>
+
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#30a2ff" stop-opacity="0.25"/>
+      <stop offset="60%" stop-color="#fdb515" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Mitambo Gold Slant Gradient -->
+    <linearGradient id="goldGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="45%" stop-color="#fdb515"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+
+    <!-- Mitambo Azure Blue Slant Gradient -->
+    <linearGradient id="blueGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#5ec2ff"/>
+      <stop offset="45%" stop-color="#30a2ff"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+
+    <!-- Bevel Highlights -->
+    <linearGradient id="specularGold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="specularBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Soft Drop Shadows -->
+    <filter id="shadowFilter" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16.384" stdDeviation="24.576" flood-color="#000000" flood-opacity="0.75"/>
+    </filter>
+
+    <filter id="neonGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="20.48" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="225.28" fill="url(#bgGrad)" stroke="url(#borderGrad)" stroke-width="15.36"/>
+    <circle cx="512.0" cy="491.52" r="389.12" fill="url(#coreGlow)" opacity="0.65"/>
+    
+
+  <!-- Emblem Group: Dynamic W Architecture -->
+  <g transform="translate(512.0, 501.76) scale(1.0)" filter="url(#shadowFilter)">
+    
+    <!-- Outer Cyan/Blue Wing (Right Facet) -->
+    <path d="M 120 -280 
+             L 290 -280 
+             C 320 -280 345 -260 335 -225 
+             L 140 270 
+             C 125 310 85 325 50 310 
+             L -20 280 
+             L 75 40 
+             Z" 
+          fill="url(#blueGrad)" />
+
+    <!-- Specular Highlight for Blue Wing -->
+    <path d="M 120 -280 L 150 -280 L 100 290 L 70 290 Z" 
+          fill="url(#specularBlue)" opacity="0.45" />
+
+    <!-- Left Amber/Gold Wing (Left Facet) -->
+    <path d="M -290 -100 
+             L -130 -100 
+             C -100 -100 -80 -80 -90 -50 
+             L -210 270 
+             C -225 310 -265 325 -300 310 
+             L -340 285 
+             C -365 260 -360 220 -345 180 
+             Z" 
+          fill="url(#goldGrad)" />
+
+    <!-- Center Intermeshing Neural Apex / Chevron (Cyan-to-Gold Fusion) -->
+    <path d="M -110 -280 
+             L 50 -280 
+             C 75 -280 90 -260 80 -235 
+             L -60 130 
+             C -75 165 -110 180 -140 165 
+             L -190 140 
+             L -75 -160 
+             Z" 
+          fill="url(#cyanGrad)" opacity="0.95" />
+
+    <!-- High-tech Accent Dot / Sovereign Core Gem -->
+    <circle cx="160" cy="-210" r="22" fill="#ffffff" filter="url(#neonGlow)"/>
+    <circle cx="-160" cy="-30" r="16" fill="#fde047" filter="url(#neonGlow)"/>
+    <circle cx="0" cy="220" r="14" fill="#5ec2ff" filter="url(#neonGlow)"/>
+  </g>
 </svg>

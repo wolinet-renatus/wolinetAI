@@ -81,7 +81,7 @@ const Navbar: React.FC<NavbarProps> = ({
               <Link href={uiHref("")} className="flex items-center">
                 <div className="relative">
                   <div className="flex h-10 max-w-48 items-center justify-center overflow-hidden">
-                    <img src={imageUrl} alt="LiteLLM Brand" className={cn(NAV_LOGO_CLASS_NAME, "dark:hidden")} />
+                    <img src={imageUrl} alt="Wolinet Lango" className={cn(NAV_LOGO_CLASS_NAME, "dark:hidden")} />
                     <img
                       src={darkImageUrl}
                       alt=""
@@ -97,14 +97,14 @@ const Navbar: React.FC<NavbarProps> = ({
                     <span
                       className="absolute -left-2 -top-1 animate-bounce text-lg"
                       style={{ animationDuration: "2s" }}
-                      title="Thanks for using LiteLLM!"
+                      title="Wolinet Lango Gateway"
                     >
                       🌑
                     </span>
                   )}
                   <Badge variant="outline" className="relative z-raised cursor-pointer text-xs font-medium">
                     <a
-                      href="https://docs.litellm.ai/release_notes"
+                      href="https://docs.wolinet.com"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="shrink-0"

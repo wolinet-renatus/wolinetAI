@@ -67,7 +67,7 @@ var InitSetting = &gormigrate.Migration{
 		if err := tx.Create(&model.Setting{Key: "MenuAccordion", Value: constant.StatusDisable}).Error; err != nil {
 			return err
 		}
-		if err := tx.Create(&model.Setting{Key: "PanelName", Value: "1Panel"}).Error; err != nil {
+		if err := tx.Create(&model.Setting{Key: "PanelName", Value: "Wolinet Control Panel"}).Error; err != nil {
 			return err
 		}
 		if err := tx.Create(&model.Setting{Key: "Edition", Value: global.CONF.Base.Edition}).Error; err != nil {

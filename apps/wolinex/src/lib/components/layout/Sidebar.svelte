@@ -487,6 +487,13 @@
 	};
 
 	const initChannels = async () => {
+		if (
+			!$config?.features?.enable_channels ||
+			!($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))
+		) {
+			return;
+		}
+
 		const res = await getChannels(localStorage.token).catch((error) => {
 			return null;
 		});

@@ -159,7 +159,14 @@
 	};
 
 	const ensureChannels = async () => {
-		if (channelsLoaded || ($channels ?? []).length > 0) return;
+		if (
+			channelsLoaded ||
+			($channels ?? []).length > 0 ||
+			!$config?.features?.enable_channels
+		) {
+			channelsLoaded = true;
+			return;
+		}
 		const res = await getChannels(localStorage.token).catch(() => null);
 		if (res) channels.set(res);
 		channelsLoaded = true;

@@ -63,7 +63,7 @@ function ConfiguredLiteAdmin({ session }: { session: ManagementSession }) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger render={<Button className="fixed right-5 bottom-5 z-floating rounded-full shadow-lg" />}>
         <Sparkles className="size-4" />
-        LiteAdmin
+        Lango Assistant
       </PopoverTrigger>
       <Destination
         key={target?.baseUrl ?? "unavailable"}

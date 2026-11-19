@@ -19,7 +19,7 @@
                         v-show="imgLoaded"
                         :src="loadImage('loginImage')"
                         class="max-w-full max-h-full object-cover bg-cover bg-center"
-                        alt="1panel"
+                        alt="Wolinet Control Panel"
                         @load="onImgLoad"
                         @error="onImgError"
                     />

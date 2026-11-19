@@ -60,8 +60,8 @@ const message = {
         false: 'False',
         colon: ': ',
         example: 'e.g., ',
-        fit2cloud: 'FIT2CLOUD',
-        lingxia: 'LXware',
+        fit2cloud: 'Wolinet AI',
+        lingxia: 'Wolinet AI',
         button: {
             run: 'Run',
             prev: 'Previous',

@@ -206,12 +206,12 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ onLogout, variant = "navbar
       </div>
       {canUseLiteAdmin && (
         <div className="flex w-full items-center justify-between gap-2">
-          <span className="text-muted-foreground">Hide LiteAdmin</span>
+          <span className="text-muted-foreground">Hide Lango Assistant</span>
           <Switch
             size="sm"
             checked={disableLiteAdmin}
             onCheckedChange={setDisableLiteAdmin}
-            aria-label="Toggle hide LiteAdmin"
+            aria-label="Toggle hide Lango Assistant"
           />
         </div>
       )}

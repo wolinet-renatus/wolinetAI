@@ -2,7 +2,7 @@ import { NAV_PRODUCT_LINK_CLASS } from "@/components/Navbar/navProductLinkClass"
 import { ChevronDown } from "lucide-react";
 import React from "react";
 
-export const DOCS_URL = "https://dev.wolinet.com";
+export const DOCS_URL = "https://docs.wolinet.com";
 
 const ChevronWidthSpacer: React.FC = () => (
   <ChevronDown className="pointer-events-none size-2.5 opacity-0" aria-hidden />
