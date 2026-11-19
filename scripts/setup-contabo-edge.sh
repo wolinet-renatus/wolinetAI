@@ -892,8 +892,12 @@ def cf_req(method, path, payload=None):
             "Content-Type": "application/json",
         },
     )
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        parsed = json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            parsed = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        err_body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Cloudflare API HTTP {exc.code} for {method} {path}: {err_body}") from exc
     if not parsed.get("success"):
         raise RuntimeError(f"Cloudflare API failed for {path}: {parsed.get('errors')}")
     return parsed["result"]
@@ -905,13 +909,23 @@ if not zone_id:
     zone_id = zones[0]["id"]
 
 for fqdn in hosts:
-    q = urllib.parse.urlencode({"type": "A", "name": fqdn})
-    existing = cf_req("GET", f"/zones/{zone_id}/dns_records?{q}")
+    q = urllib.parse.urlencode({"name": fqdn})
+    all_recs = [r for r in cf_req("GET", f"/zones/{zone_id}/dns_records?{q}") if r.get("type") in ("A", "AAAA", "CNAME")]
+    existing_a = [r for r in all_recs if r.get("type") == "A"]
+    conflicts = [r for r in all_recs if r.get("type") in ("CNAME", "AAAA")]
     body = {"type": "A", "name": fqdn, "content": target_ip, "ttl": 1, "proxied": proxied}
-    if existing:
-        rec_id = existing[0]["id"]
+    if existing_a:
+        for extra in conflicts:
+            cf_req("DELETE", f"/zones/{zone_id}/dns_records/{extra['id']}")
+        rec_id = existing_a[0]["id"]
         cf_req("PUT", f"/zones/{zone_id}/dns_records/{rec_id}", body)
         print(f"  updated A {fqdn} -> {target_ip} (proxied={proxied})")
+    elif conflicts:
+        rec_id = conflicts[0]["id"]
+        for extra in conflicts[1:]:
+            cf_req("DELETE", f"/zones/{zone_id}/dns_records/{extra['id']}")
+        cf_req("PUT", f"/zones/{zone_id}/dns_records/{rec_id}", body)
+        print(f"  replaced {conflicts[0]['type']} with A {fqdn} -> {target_ip} (proxied={proxied})")
     else:
         cf_req("POST", f"/zones/{zone_id}/dns_records", body)
         print(f"  created A {fqdn} -> {target_ip} (proxied={proxied})")
