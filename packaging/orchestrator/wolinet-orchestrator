@@ -43,6 +43,17 @@ load_env() {
   if [[ -n "${CONTAINER_HOST:-}" ]]; then
     export DOCKER_HOST="${DOCKER_HOST:-${CONTAINER_HOST}}"
   fi
+  if [[ "$(uname -s)" == "Linux" && "$(id -u)" == "0" ]]; then
+    if ! command -v docker >/dev/null 2>&1 && command -v podman >/dev/null 2>&1; then
+      printf '#!/bin/sh\nexec /usr/bin/podman "$@"\n' > /usr/local/bin/docker
+      chmod 0755 /usr/local/bin/docker
+      mkdir -p /etc/containers
+      touch /etc/containers/nodocker
+    fi
+    if [[ -S "/run/podman/podman.sock" && ! -e "/var/run/docker.sock" ]]; then
+      ln -sfn /run/podman/podman.sock /var/run/docker.sock || true
+    fi
+  fi
 }
 
 datastore_up() {

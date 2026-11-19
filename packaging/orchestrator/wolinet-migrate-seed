@@ -132,15 +132,23 @@ seed_litellm_data() {
   local admin_pw="${ORIGINAL_PASSWORD:-wolinet-admin}"
   local portal_key="${WOLINEX_PORTAL_API_KEY:-${OPENAI_API_KEY:-}}"
   local copilot_key="${AI_GATEWAY_KEY:-}"
+  local skills_seed=""
+  for sk_cand in "${ORCH_HOME}/etc/skills_seed.json" "/opt/wolinet/orchestrator/etc/skills_seed.json"; do
+    if [[ -f "${sk_cand}" ]]; then
+      skills_seed="${sk_cand}"
+      break
+    fi
+  done
 
-  echo "[migrate-seed] Seeding admin user, virtual keys, and model catalog into '${LITELLM_DB}'..."
-  "${PY_BIN}" - "${config_file}" "${admin_pw}" "${portal_key}" "${copilot_key}" <<'PY' | run_psql_cmd "${LITELLM_DB}" -v ON_ERROR_STOP=1 >/dev/null
-import hashlib, json, pathlib, re, sys
+  echo "[migrate-seed] Seeding admin user, virtual keys, model catalog, skills, and memories into '${LITELLM_DB}'..."
+  "${PY_BIN}" - "${config_file}" "${admin_pw}" "${portal_key}" "${copilot_key}" "${skills_seed}" <<'PY' | run_psql_cmd "${LITELLM_DB}" -v ON_ERROR_STOP=1 >/dev/null
+import hashlib, json, pathlib, re, sys, uuid
 
 cfg_path = pathlib.Path(sys.argv[1]) if sys.argv[1] else None
 admin_pw = sys.argv[2]
 portal_key = sys.argv[3]
 copilot_key = sys.argv[4]
+skills_seed_path = pathlib.Path(sys.argv[5]) if len(sys.argv) > 5 and sys.argv[5] else None
 
 admin_hash = hashlib.sha256(admin_pw.encode("utf-8")).hexdigest()
 
@@ -252,6 +260,107 @@ ON CONFLICT (model_id) DO UPDATE SET
   litellm_params = EXCLUDED.litellm_params,
   model_info = EXCLUDED.model_info,
   updated_at = CURRENT_TIMESTAMP;
+""")
+
+# Seed sovereign platform memories
+memories = [
+    (
+        "wolinet:stack:sovereign_core",
+        "Wolinet Sovereign AI Stack: Lango Rust Gateway (:4000), Mitambo Inference (:9997), Wolinex Web (:8081), 1Panel Orchestrator (:8888), PostgreSQL 16 + pgvector, and Redis 7.",
+        {"tier": "core_infrastructure", "runtime": "podman", "database": "postgresql-16"},
+    ),
+    (
+        "wolinet:models:catalog",
+        "Sovereign models routed via Lango: Wolinet Max, Wolinet Max Pro, Wolinet Coder, Wolinet Pro, Scorpio, Scorpio Pro, and Wolinet Voice.",
+        {"tier": "model_gateway", "router": "lango"},
+    ),
+    (
+        "wolinet:memory:continuity",
+        "Cross-session continuity and semantic retrieval powered by Wolinex Memories (pgvector) and Lango /v1/memory PostgreSQL persistence.",
+        {"tier": "memory", "backend": "postgresql-pgvector"},
+    ),
+    (
+        "wolinet:browser:obscura",
+        "Obscura sovereign web retrieval and headless DOM extractor (WEB_SEARCH_ENGINE=obscura, WEB_LOADER_ENGINE=obscura) with LRU TTL cache and SPA __NEXT_DATA__ distillation.",
+        {"tier": "web_search", "engine": "obscura", "mcp_port": 8080},
+    ),
+    (
+        "wolinet:skills:marketplace",
+        "Wolinet Agentic Skills Marketplace synced into LiteLLM_ClaudeCodePluginTable and surfaced through Lango /claude-code/plugins.",
+        {"tier": "agentic_skills", "standards": ["Agent Skills 1.0", "Claude Code Marketplace"]},
+    ),
+]
+for m_key, m_val, m_meta in memories:
+    mid = f"mem-{hashlib.sha1(m_key.encode('utf-8')).hexdigest()[:12]}"
+    stmts.append(f"""
+INSERT INTO "LiteLLM_MemoryTable" (
+  memory_id, key, value, metadata, user_id, created_by, updated_by, created_at, updated_at
+) VALUES (
+  {sql_str(mid)}, {sql_str(m_key)}, {sql_str(m_val)}, {sql_str(json.dumps(m_meta))}::jsonb,
+  'admin', 'admin', 'admin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+)
+ON CONFLICT (key) DO NOTHING;
+""")
+
+# Seed Agentic Skills into LiteLLM_ClaudeCodePluginTable
+skills_list = []
+if skills_seed_path and skills_seed_path.exists():
+    try:
+        loaded = json.loads(skills_seed_path.read_text(encoding="utf-8"))
+        if isinstance(loaded, list):
+            skills_list = loaded
+    except Exception:
+        skills_list = []
+if not skills_list:
+    skills_list = [
+        {
+            "name": "obscura-web-search",
+            "version": "1.0.0",
+            "description": "Sovereign web search and dynamic SPA Markdown extraction via Obscura.",
+            "source": {"source": "github", "repo": "wolinet-renatus/wolinetAI"},
+            "author": {"name": "Wolinet AI", "email": "support@wolinet.ai"},
+            "category": "Browser & Search",
+            "domain": "Engineering",
+            "keywords": ["obscura", "search", "browser"],
+        },
+        {
+            "name": "unified-memory",
+            "version": "1.0.0",
+            "description": "Cross-session developer & assistant memory retrieval backed by PostgreSQL & pgvector.",
+            "source": {"source": "github", "repo": "wolinet-renatus/wolinetAI"},
+            "author": {"name": "Wolinet AI", "email": "support@wolinet.ai"},
+            "category": "Memory & Recall",
+            "domain": "Memory",
+            "keywords": ["memory", "recall", "pgvector"],
+        },
+        {
+            "name": "coding-standards",
+            "version": "1.0.0",
+            "description": "Universal coding standards and review guardrails for clean production changes.",
+            "source": {"source": "github", "repo": "wolinet-renatus/wolinetAI"},
+            "author": {"name": "Wolinet AI", "email": "support@wolinet.ai"},
+            "category": "Code Review & Quality",
+            "domain": "Engineering",
+            "keywords": ["coding", "standards"],
+        },
+    ]
+
+for sk in skills_list:
+    sname = str(sk.get("name") or "").strip()
+    if not sname:
+        continue
+    sid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"wolinet.skill.{sname}"))
+    sver = str(sk.get("version") or "1.0.0")
+    sdesc = str(sk.get("description") or f"Wolinet skill {sname}")
+    manifest_str = json.dumps(sk)
+    stmts.append(f"""
+INSERT INTO "LiteLLM_ClaudeCodePluginTable" (
+  id, name, version, description, manifest_json, files_json, enabled, created_by, created_at, updated_at
+) VALUES (
+  {sql_str(sid)}, {sql_str(sname)}, {sql_str(sver)}, {sql_str(sdesc)},
+  {sql_str(manifest_str)}, '{{}}', true, 'admin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+)
+ON CONFLICT (name) DO NOTHING;
 """)
 
 print("\n".join(stmts))
@@ -404,6 +513,30 @@ async def ensure_admin():
 asyncio.run(ensure_admin())
 PY
     )
+
+    run_psql_cmd "${WEBUI_DB}" <<'EOSQL' >/dev/null 2>&1 || true
+DO $$
+DECLARE
+  cur_engine text;
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'config' AND column_name = 'key'
+  ) THEN
+    SELECT COALESCE(value#>>'{}', '') INTO cur_engine FROM config WHERE key = 'web.search.engine';
+    IF cur_engine IS NULL OR cur_engine = '' THEN
+      INSERT INTO config (key, value, updated_at) VALUES
+        ('web.search.enable', 'true'::json, EXTRACT(EPOCH FROM NOW())::bigint),
+        ('web.search.engine', '"obscura"'::json, EXTRACT(EPOCH FROM NOW())::bigint),
+        ('web.loader.engine', '"obscura"'::json, EXTRACT(EPOCH FROM NOW())::bigint),
+        ('web.search.bypass_embedding_and_retrieval', 'true'::json, EXTRACT(EPOCH FROM NOW())::bigint),
+        ('memories.enable', 'true'::json, EXTRACT(EPOCH FROM NOW())::bigint),
+        ('memories.system_context.enable', 'true'::json, EXTRACT(EPOCH FROM NOW())::bigint)
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at;
+    END IF;
+  END IF;
+END $$;
+EOSQL
   fi
 }
 
@@ -467,11 +600,21 @@ conn = sqlite3.connect(auth_db)
 conn.executescript("""
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
+  username TEXT NOT NULL,
+  password_hash TEXT,
   source TEXT NOT NULL DEFAULT 'local',
+  oidc_sub TEXT,
   enabled INTEGER NOT NULL DEFAULT 1,
-  must_change_password INTEGER NOT NULL DEFAULT 0
+  must_change_password INTEGER NOT NULL DEFAULT 0,
+  token_version INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_source_username ON users(source, username);
+CREATE TABLE IF NOT EXISTS user_permissions (
+  user_id INTEGER NOT NULL,
+  permission TEXT NOT NULL,
+  PRIMARY KEY (user_id, permission),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS api_keys (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -480,42 +623,113 @@ CREATE TABLE IF NOT EXISTS api_keys (
   key_encrypted TEXT NOT NULL DEFAULT '',
   key_prefix TEXT NOT NULL DEFAULT '',
   name TEXT NOT NULL DEFAULT '',
-  enabled INTEGER NOT NULL DEFAULT 1
+  description TEXT,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  expires_at TIMESTAMP,
+  encryption_version INTEGER DEFAULT 1,
+  rate_limit_max_failures INTEGER,
+  rate_limit_window_seconds INTEGER,
+  rate_limit_ban_seconds INTEGER,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS api_key_model_permissions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   api_key_id INTEGER NOT NULL,
   permission_type TEXT NOT NULL DEFAULT 'all',
-  permission_value TEXT
+  permission_value TEXT,
+  UNIQUE(api_key_id, permission_type, permission_value),
+  FOREIGN KEY (api_key_id) REFERENCES api_keys(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  token_hash TEXT UNIQUE NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS system_config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
 );
 """)
+
+existing_user_cols = {r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()}
+if "oidc_sub" not in existing_user_cols:
+    conn.execute("ALTER TABLE users ADD COLUMN oidc_sub TEXT")
+if "token_version" not in existing_user_cols:
+    conn.execute("ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0")
+existing_key_cols = {r[1] for r in conn.execute("PRAGMA table_info(api_keys)").fetchall()}
+if "description" not in existing_key_cols:
+    conn.execute("ALTER TABLE api_keys ADD COLUMN description TEXT")
+
+INITIAL_ADMIN_PERMISSIONS = [
+    "admin",
+    "models:list",
+    "models:read",
+    "models:write",
+    "models:register",
+    "keys:create",
+    "keys:manage",
+    "users:manage",
+    "cache:list",
+    "cache:delete",
+    "virtualenv:list",
+    "virtualenv:delete",
+    "logs:list",
+    "model_requests:read_body",
+    "monitor:view",
+    "settings:read",
+    "settings:write",
+    "routers:list",
+    "routers:read",
+    "routers:write",
+    "routers:operate",
+]
+
 if admin_pw and not admin_pw.startswith("replace-"):
     try:
         import bcrypt
         pw_hash = bcrypt.hashpw(admin_pw.encode("utf-8")[:72], bcrypt.gensalt()).decode("utf-8")
     except Exception:
         pw_hash = hashlib.sha256(admin_pw.encode("utf-8")).hexdigest()
-    conn.execute(
-        "INSERT INTO users (username, password_hash, source, enabled, must_change_password) "
-        "VALUES (?, ?, 'local', 1, 0) "
-        "ON CONFLICT(username) DO UPDATE SET password_hash=excluded.password_hash, enabled=1",
-        (admin_user, pw_hash),
-    )
+    existing_admin = conn.execute(
+        "SELECT id FROM users WHERE username=? AND source='local'", (admin_user,)
+    ).fetchone()
+    if existing_admin:
+        uid = existing_admin[0]
+        conn.execute(
+            "UPDATE users SET password_hash=?, enabled=1, must_change_password=0 WHERE id=?",
+            (pw_hash, uid),
+        )
+    else:
+        cur = conn.execute(
+            "INSERT INTO users (username, password_hash, source, enabled, must_change_password) "
+            "VALUES (?, ?, 'local', 1, 0)",
+            (admin_user, pw_hash),
+        )
+        uid = cur.lastrowid
+    for perm in INITIAL_ADMIN_PERMISSIONS:
+        conn.execute(
+            "INSERT OR IGNORE INTO user_permissions (user_id, permission) VALUES (?, ?)",
+            (uid, perm),
+        )
     conn.commit()
 
 if api_key and not api_key.startswith("replace-"):
-    row = conn.execute("SELECT id FROM users WHERE username=?", (admin_user,)).fetchone()
+    row = conn.execute("SELECT id FROM users WHERE username=? AND source='local'", (admin_user,)).fetchone()
     if row:
         uid = row[0]
         khash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
         existing = conn.execute("SELECT id FROM api_keys WHERE key_hash=?", (khash,)).fetchone()
         if not existing:
             cur = conn.execute(
-                "INSERT INTO api_keys (user_id, key_hash, key_encrypted, key_prefix, name, enabled) VALUES (?, ?, 'gateway_key_direct', ?, 'lango-gateway', 1)",
+                "INSERT INTO api_keys (user_id, key_hash, key_encrypted, key_prefix, name, enabled) VALUES (?, ?, '', ?, 'lango-gateway', 1)",
                 (uid, khash, api_key[:7]),
             )
             conn.execute(
-                "INSERT INTO api_key_model_permissions (api_key_id, permission_type, permission_value) VALUES (?, 'all', NULL)",
+                "INSERT OR IGNORE INTO api_key_model_permissions (api_key_id, permission_type, permission_value) VALUES (?, 'all', NULL)",
                 (cur.lastrowid,),
             )
             conn.commit()

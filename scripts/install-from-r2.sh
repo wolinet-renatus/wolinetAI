@@ -212,12 +212,27 @@ APTEOF
   fi
 fi
 
-install -d -m 0755 /etc/containers/registries.conf.d
+install -d -m 0755 /etc/containers/registries.conf.d /etc/tmpfiles.d
 cat > /etc/containers/registries.conf.d/99-wolinet-dockerhub.conf <<'EOF'
 unqualified-search-registries = ["docker.io"]
 short-name-mode = "permissive"
 EOF
+touch /etc/containers/nodocker
 systemctl enable --now podman.socket >/dev/null 2>&1 || true
+if ! command -v docker >/dev/null 2>&1 && command -v podman >/dev/null 2>&1; then
+  cat > /usr/local/bin/docker <<'EOF'
+#!/bin/sh
+exec /usr/bin/podman "$@"
+EOF
+  chmod 0755 /usr/local/bin/docker
+fi
+cat > /etc/tmpfiles.d/wolinet-podman-docker.conf <<'EOF'
+L+ /var/run/docker.sock - - - - /run/podman/podman.sock
+EOF
+systemd-tmpfiles --create /etc/tmpfiles.d/wolinet-podman-docker.conf >/dev/null 2>&1 || true
+if [[ -S /run/podman/podman.sock && ! -e /var/run/docker.sock ]]; then
+  ln -sfn /run/podman/podman.sock /var/run/docker.sock
+fi
 
 WORK_DIR="$(mktemp -d /tmp/wolinet-bin-XXXXXX)"
 trap 'rm -rf "${WORK_DIR:-}"' EXIT

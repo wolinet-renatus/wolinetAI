@@ -44,6 +44,59 @@ stage_common_assets() {
   if [[ -d "${ROOT_DIR}/inference/models/registrations" ]]; then
     cp -f "${ROOT_DIR}/inference/models/registrations/"*.json "${pkg_root}/models/registrations/" 2>/dev/null || true
   fi
+  if [[ -d "${ROOT_DIR}/.agents/skills" ]]; then
+    python3 - "${ROOT_DIR}/.agents/skills" "${pkg_root}/etc/skills_seed.json" <<'PY'
+import json, pathlib, re, sys
+
+skills_dir = pathlib.Path(sys.argv[1])
+out_path = pathlib.Path(sys.argv[2])
+entries = []
+for p in sorted(skills_dir.iterdir()):
+    if not p.is_dir() or not re.fullmatch(r"[a-z0-9-]+", p.name):
+        continue
+    sf = p / "SKILL.md"
+    desc = f"Autonomous skill for {p.name}"
+    fm_text = ""
+    if sf.exists():
+        content = sf.read_text(encoding="utf-8", errors="ignore")
+        m = re.search(r"^---\s*\n(.*?)\n---", content, re.DOTALL)
+        if m:
+            fm_text = m.group(1)
+            dm = re.search(r'description:\s*["\']?(.*?)["\']?\s*$', fm_text, re.MULTILINE)
+            if dm and dm.group(1).strip().strip('"\''):
+                desc = dm.group(1).strip().strip('"\'')
+    if len(desc) > 350:
+        desc = desc[:347] + "..."
+    name = p.name
+    domain = "Engineering"
+    author_name = "Wolinet AI"
+    repo = "wolinet-renatus/wolinetAI"
+    category = "Engineering Skills"
+    if "memory" in name:
+        domain, category = "Memory", "Memory & Recall"
+    elif name.startswith(("add-", "update-", "delete-")) or name == "view-usage":
+        domain, category = "DevOps", "Gateway Administration"
+    elif any(k in name for k in ("test", "tdd")):
+        category = "Testing & QA"
+    elif "security" in name or "hipaa" in name:
+        category = "Security & Compliance"
+    elif "review" in name:
+        category = "Code Review & Quality"
+    elif "obscura" in name or "browser" in name:
+        category = "Browser & Search"
+    entries.append({
+        "name": name,
+        "version": "1.0.0",
+        "description": desc,
+        "source": {"source": "github", "repo": repo},
+        "author": {"name": author_name, "email": "support@wolinet.ai"},
+        "category": category,
+        "domain": domain,
+        "keywords": [k for k in name.split("-") if len(k) > 2],
+    })
+out_path.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+PY
+  fi
   if [[ -f "${ROOT_DIR}/gateway/config.yaml" ]]; then
     python3 - "${ROOT_DIR}/gateway/config.yaml" "${pkg_root}/etc/config.yaml.example" <<'PY'
 import pathlib, re, sys

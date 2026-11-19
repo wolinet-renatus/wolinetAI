@@ -148,6 +148,17 @@ install_linux() {
 
   if [[ "${NO_START}" == "0" ]] && has_systemd; then
     run_root systemctl enable --now podman.socket >/dev/null 2>&1 || true
+    run_root install -d -m 0755 /etc/containers /etc/tmpfiles.d
+    run_root touch /etc/containers/nodocker
+    if ! command -v docker >/dev/null 2>&1 && command -v podman >/dev/null 2>&1; then
+      tmp_docker="$(mktemp)"
+      printf '#!/bin/sh\nexec /usr/bin/podman "$@"\n' > "${tmp_docker}"
+      run_root install -m 0755 "${tmp_docker}" /usr/local/bin/docker
+      rm -f "${tmp_docker}"
+    fi
+    if [[ -S /run/podman/podman.sock && ! -e /var/run/docker.sock ]]; then
+      run_root ln -sfn /run/podman/podman.sock /var/run/docker.sock
+    fi
     run_root systemctl daemon-reload
     run_root systemctl enable --now 1panel-agent.service 1apanel.service
     if wait_http_ok "http://127.0.0.1:${PORT}/" 20; then
