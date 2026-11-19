@@ -50,11 +50,38 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+reject_placeholder() {
+  local name="$1" val="$2"
+  if [[ -n "${val}" && ( "${val}" == \<*\> || "${val}" == *"<your-"* ) ]]; then
+    echo "[r2-install:error] ${name} is set to a placeholder (${val}). Pass the real value or unset R2_* to reuse /etc/wolinet/r2.env." >&2
+    exit 1
+  fi
+}
+
+load_saved_r2_var() {
+  local key="$1"
+  [[ -r /etc/wolinet/r2.env ]] || return 0
+  awk -F= -v k="${key}" '$1 == k {sub(/^[^=]*=/, ""); print; exit}' /etc/wolinet/r2.env
+}
+
+reject_placeholder "CLOUDFLARE_API_TOKEN" "${CF_TOKEN}"
+reject_placeholder "R2_ACCOUNT_ID" "${R2_ACCOUNT_ID}"
+reject_placeholder "R2_ACCESS_KEY_ID" "${R2_ACCESS_KEY_ID}"
+reject_placeholder "R2_SECRET_ACCESS_KEY" "${R2_SECRET_ACCESS_KEY}"
+reject_placeholder "R2_ENDPOINT" "${R2_ENDPOINT}"
+
+if [[ -r /etc/wolinet/r2.env ]]; then
+  [[ -n "${R2_ACCOUNT_ID}" ]] || R2_ACCOUNT_ID="$(load_saved_r2_var R2_ACCOUNT_ID)"
+  [[ -n "${R2_ACCESS_KEY_ID}" ]] || R2_ACCESS_KEY_ID="$(load_saved_r2_var R2_ACCESS_KEY_ID)"
+  [[ -n "${R2_SECRET_ACCESS_KEY}" ]] || R2_SECRET_ACCESS_KEY="$(load_saved_r2_var R2_SECRET_ACCESS_KEY)"
+  [[ -n "${R2_ENDPOINT}" ]] || R2_ENDPOINT="$(load_saved_r2_var R2_ENDPOINT)"
+fi
+
 if [[ -z "${R2_ENDPOINT}" && -n "${R2_ACCOUNT_ID}" ]]; then
   R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 fi
 [[ -n "${R2_ACCESS_KEY_ID}" && -n "${R2_SECRET_ACCESS_KEY}" && -n "${R2_ENDPOINT}" ]] || {
-  echo "[r2-install:error] R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_ENDPOINT are required" >&2
+  echo "[r2-install:error] R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_ENDPOINT are required (pass them or ensure /etc/wolinet/r2.env exists)" >&2
   exit 1
 }
 
@@ -268,9 +295,9 @@ verify_svc() {
   return 0
 }
 verify_svc "1apanel :8888" "http://127.0.0.1:8888/" "1apanel" 20
-verify_svc "Lango :4000" "http://127.0.0.1:4000/health/liveliness" "litellm-gateway" 30
-verify_svc "Wolinex Web :8081" "http://127.0.0.1:8081/health" "wolinex-web" 60
-verify_svc "Mitambo :9997" "http://127.0.0.1:9997/status" "mitambo" 60
+verify_svc "Lango :4000" "http://127.0.0.1:4000/health/liveliness" "litellm-gateway" 45
+verify_svc "Wolinex Web :8081" "http://127.0.0.1:8081/health" "wolinex-web" 90
+verify_svc "Mitambo :9997" "http://127.0.0.1:9997/status" "mitambo" 90
 PG_PASS="$(awk -F= '/^POSTGRES_PASSWORD=/{print $2; exit}' /etc/wolinet/1apanel.env 2>/dev/null || echo '')"
 if [[ -n "${PG_PASS}" ]] && command -v psql >/dev/null 2>&1; then
   MC="$(PGPASSWORD="${PG_PASS}" psql -h 127.0.0.1 -p 5433 -U postgres -d litellm -tAc 'SELECT count(*) FROM "LiteLLM_ProxyModelTable";' 2>/dev/null || echo '0')"
