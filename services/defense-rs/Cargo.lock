@@ -788,6 +788,7 @@ dependencies = [
  "async-stream",
  "axum",
  "futures-util",
+ "libc",
  "regex",
  "reqwest",
  "serde",

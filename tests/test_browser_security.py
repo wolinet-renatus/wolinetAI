@@ -93,11 +93,11 @@ def test_output_truncation():
     assert result == exact_text
     assert "truncated" not in result
 
-    # Test overflowing content (> 25,000 chars)
-    overflow_text = "y" * 35000
+    # Test overflowing content (> MAX_OUTPUT_CHARS chars)
+    overflow_text = "y" * (MAX_OUTPUT_CHARS + 10000)
     result = enforce_output_limit(overflow_text)
     assert len(result) > MAX_OUTPUT_CHARS
-    assert "[Content truncated: exceeded 25,000 character limit" in result
+    assert f"[Content truncated: exceeded {MAX_OUTPUT_CHARS} character limit" in result
     assert "10000 additional characters omitted" in result
     assert result.startswith("y" * MAX_OUTPUT_CHARS)
 

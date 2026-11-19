@@ -77,6 +77,13 @@ class DFlashSpeculativeManager:
                     meta["quantization"] = "Q8_0"
                     meta["acceleration_role"] = "Real-Time AI Defense & Guardrail"
                     meta["expected_speedup"] = "Sub-10ms pre-flight filtering"
+                elif "glm" in fname.lower():
+                    meta["target_family"] = "GLM-5.3-Flash Speculative & Cyber Defense"
+                    meta["hidden_dimension"] = 4096
+                    meta["heads"] = 32
+                    meta["quantization"] = "Q8_0"
+                    meta["acceleration_role"] = "Speculative Draft Accelerator (128k context, 50-70 tok/s)"
+                    meta["expected_speedup"] = "2.4x - 3.2x"
                 else:
                     meta["target_family"] = "High-Speed Coding & Chat Drafter (3B/4B)"
                     meta["hidden_dimension"] = 2560

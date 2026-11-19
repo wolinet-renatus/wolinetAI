@@ -139,8 +139,7 @@ def parse_skill(skill_dir: Path):
     domain = "Engineering"
     
     # Check if scientific skill
-    sci_src = WORKSPACE_ROOT / "tools/scientific-agent-skills/skills" / name
-    if sci_src.exists():
+    if fm_match and "k-dense" in fm_match.group(1).lower():
         author_name = "K-Dense-AI"
         repo = "K-Dense-AI/scientific-agent-skills"
         domain = "Science"
