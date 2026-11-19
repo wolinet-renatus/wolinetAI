@@ -336,21 +336,24 @@ EOSQL
       cd /opt/wolinet/wolinex-web/backend/open_webui
       local web_admin_email="${WEBUI_ADMIN_EMAIL:-admin@wolinet.com}"
       local web_admin_pass="${WEBUI_ADMIN_PASSWORD:-${ORIGINAL_PASSWORD:-}}"
+      local web_data_dir="${DATA_DIR:-/var/lib/wolinet/wolinex}"
+      mkdir -p "${web_data_dir}/static"
       PYTHONPATH="/opt/wolinet/wolinex-web/backend" \
       USE_SLIM_DOCKER="true" \
       VECTOR_DB="pgvector" \
       WEBUI_SECRET_KEY="${WEBUI_SECRET_KEY:-wolinet-migrate-seed-key}" \
-      DATA_DIR="${DATA_DIR:-/var/lib/wolinet/wolinex}" \
+      DATA_DIR="${web_data_dir}" \
+      FRONTEND_BUILD_DIR="/opt/wolinet/wolinex-web/frontend" \
+      STATIC_DIR="${web_data_dir}/static" \
       DATABASE_URL="postgresql://${PG_USER}:${PG_PASS}@${PG_HOST}:${PG_PORT}/${WEBUI_DB}" \
       /opt/wolinet/wolinex-web/venv/bin/python3 - "${web_admin_email}" "${web_admin_pass}" <<'PY'
-import asyncio, pathlib, sys, uuid
+import asyncio, bcrypt, pathlib, sys, uuid
 from alembic.config import Config
 from alembic import command
 import open_webui
 from open_webui.internal.db import Base, engine, get_async_db_context
 from open_webui.models.auths import Auth, Auths
 from open_webui.models.users import User, Users
-from open_webui.utils.auth import get_password_hash
 
 cfg = Config()
 cfg.set_main_option("script_location", str(pathlib.Path(open_webui.__file__).parent / "migrations"))
@@ -363,7 +366,7 @@ admin_pass = (sys.argv[2] or "").strip()
 async def ensure_admin():
     if not admin_pass or admin_pass.startswith("replace-"):
         return
-    hashed = await get_password_hash(admin_pass)
+    hashed = bcrypt.hashpw(admin_pass.encode("utf-8")[:72], bcrypt.gensalt()).decode("utf-8")
     existing = await Users.get_user_by_email(admin_email)
     if not existing:
         await Auths.insert_new_auth(
