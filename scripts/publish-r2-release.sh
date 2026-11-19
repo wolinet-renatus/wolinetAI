@@ -95,6 +95,19 @@ cp -f "${ROOT_DIR}/scripts/install-"*.sh "${ROOT_DIR}/scripts/setup-contabo-edge
 cp -R "${ROOT_DIR}/scripts/lib/." "${STAGE_DIR}/bundle/scripts/lib/"
 chmod +x "${STAGE_DIR}/bundle/scripts/"*.sh
 
+for portal in website docs dev-portal; do
+  if [[ -d "${ROOT_DIR}/apps/${portal}" ]]; then
+    mkdir -p "${STAGE_DIR}/bundle/apps/${portal}"
+    cp -R "${ROOT_DIR}/apps/${portal}/." "${STAGE_DIR}/bundle/apps/${portal}/"
+    rm -f "${STAGE_DIR}/bundle/apps/${portal}/Dockerfile" "${STAGE_DIR}/bundle/apps/${portal}/nginx.conf"
+  fi
+done
+if [[ -f "${ROOT_DIR}/apps/wolinex/static/scalar.js" ]]; then
+  cp -f "${ROOT_DIR}/apps/wolinex/static/scalar.js" "${STAGE_DIR}/bundle/apps/docs/scalar.js"
+elif [[ -f "${ROOT_DIR}/gateway/litellm/proxy/swagger/scalar.js" ]]; then
+  cp -f "${ROOT_DIR}/gateway/litellm/proxy/swagger/scalar.js" "${STAGE_DIR}/bundle/apps/docs/scalar.js"
+fi
+
 ASSETS_TGZ="${STAGE_DIR}/wolinet-deploy-assets.tar.gz"
 COPYFILE_DISABLE=1 tar -C "${STAGE_DIR}/bundle" -czf "${ASSETS_TGZ}" .
 if command -v sha256sum >/dev/null 2>&1; then

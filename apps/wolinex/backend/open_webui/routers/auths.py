@@ -214,6 +214,7 @@ async def get_session_user(
 
         # Set the cookie token
         max_age = int(expires_at - time.time()) if expires_at else None
+        cookie_domain = os.getenv('WEBUI_AUTH_COOKIE_DOMAIN') or None
         response.set_cookie(
             key='token',
             value=token,
@@ -221,6 +222,7 @@ async def get_session_user(
             httponly=True,  # Ensures the cookie is not accessible via JavaScript
             samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
             secure=WEBUI_AUTH_COOKIE_SECURE,
+            **({'domain': cookie_domain} if cookie_domain else {}),
             **({'max_age': max_age} if max_age is not None else {}),
         )
 

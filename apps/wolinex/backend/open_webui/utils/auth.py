@@ -736,12 +736,14 @@ async def create_session_response(
         expires_delta=expires_delta,
     )
     if set_cookie and response is not None:
+        cookie_domain = os.getenv('WEBUI_AUTH_COOKIE_DOMAIN') or None
         response.set_cookie(
             'token',
             token,
             httponly=True,
             secure=WEBUI_AUTH_COOKIE_SECURE,
             samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            **({'domain': cookie_domain} if cookie_domain else {}),
             max_age=int(expires_delta.total_seconds()) if expires_delta else None,
         )
     await publish_event(

@@ -751,14 +751,6 @@
 			{/if}
 		</div>
 
-		{#if $config?.features.enable_community_sharing}
-			<CommunityDiscover
-				href="https://openwebui.com/search?type=tool"
-				title={$i18n.t('Discover a tool')}
-				description={$i18n.t('Discover, download, and explore custom tools')}
-			/>
-		{/if}
-
 		<DeleteConfirmDialog
 			bind:show={showDeleteConfirm}
 			title={$i18n.t('Delete tool?')}

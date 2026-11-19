@@ -219,6 +219,10 @@ install_linux() {
       fi
       log_ok "Installed default config at ${cfg_dst}"
     fi
+  elif grep -q 'disable_env_credential_login:[[:space:]]*true' "${cfg_dst}" && \
+       ! grep -qE '^(MICROSOFT|GOOGLE|GENERIC)_CLIENT_ID=' /etc/litellm/env 2>/dev/null; then
+    run_root sed -i 's/disable_env_credential_login:[[:space:]]*true/disable_env_credential_login: false/g' "${cfg_dst}"
+    log_ok "Enabled admin UI credential login in ${cfg_dst} (no SSO configured)"
   fi
 
   configure_lango_env "/etc/litellm/env" "${cfg_dst}" 1
@@ -239,7 +243,8 @@ install_linux() {
 
   if [[ "${NO_START}" == "0" ]] && has_systemd; then
     run_root systemctl daemon-reload
-    run_root systemctl enable --now litellm-gateway
+    run_root systemctl enable litellm-gateway >/dev/null 2>&1 || true
+    run_root systemctl restart litellm-gateway
     if wait_http_ok "http://127.0.0.1:${PORT}/health/liveliness" 20; then
       log_ok "Lango Gateway healthy at http://127.0.0.1:${PORT}/health/liveliness"
     else

@@ -522,7 +522,7 @@
 				{#if $user?.role === 'admin'}
 					<a
 						role="menuitem"
-						href="https://docs.openwebui.com"
+						href="https://wolinet.com"
 						target="_blank"
 						draggable="false"
 						class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
@@ -537,23 +537,6 @@
 						<div class=" self-center truncate">{$i18n.t('Documentation')}</div>
 					</a>
 
-					<!-- Releases -->
-					<a
-						role="menuitem"
-						href="https://github.com/open-webui/open-webui/releases"
-						target="_blank"
-						draggable="false"
-						class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
-						id="chat-share-button"
-						on:click={() => {
-							show = false;
-						}}
-					>
-						<div class="self-center">
-							<MapIcon className="size-3.5" />
-						</div>
-						<div class=" self-center truncate">{$i18n.t('Releases')}</div>
-					</a>
 				{/if}
 
 				<button

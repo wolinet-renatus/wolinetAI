@@ -1,1 +1,23 @@
-{}
+{
+  "name": "Wolinet AI",
+  "short_name": "Wolinet AI",
+  "description": "Wolinet AI Sovereign Enterprise AI Workspace.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070a13",
+  "theme_color": "#070a13",
+  "icons": [
+    {
+      "src": "/static/logo.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/logo.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ]
+}

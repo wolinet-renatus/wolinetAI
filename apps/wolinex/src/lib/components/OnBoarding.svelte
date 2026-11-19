@@ -114,7 +114,7 @@
 
 						<a
 							class="inline-flex items-center text-sm text-white/60 transition hover:text-white"
-							href="https://docs.openwebui.com/"
+							href="https://wolinet.com"
 							target="_blank"
 							rel="noopener noreferrer"
 						>

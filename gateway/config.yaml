@@ -286,7 +286,7 @@ general_settings:
   - path: /defense/inspect
     target: "http://127.0.0.1:9997"
   store_model_in_db: true
-  disable_env_credential_login: true
+  disable_env_credential_login: false
   hide_default_credentials_hint: true
   user_header_mappings:
     - header_name: X-OpenWebUI-User-Id

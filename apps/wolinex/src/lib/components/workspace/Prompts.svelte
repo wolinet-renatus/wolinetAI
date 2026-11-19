@@ -808,14 +808,6 @@
 				</div>
 			{/if}
 		</div>
-
-		{#if $config?.features.enable_community_sharing}
-			<CommunityDiscover
-				href="https://openwebui.com/search?type=prompt"
-				title={$i18n.t('Discover a prompt')}
-				description={$i18n.t('Discover, download, and explore custom prompts')}
-			/>
-		{/if}
 	{:else}
 		<div class="w-full h-full flex justify-center items-center">
 			<Spinner className="size-5" />

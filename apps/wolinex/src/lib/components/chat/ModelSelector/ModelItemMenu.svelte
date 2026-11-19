@@ -191,10 +191,7 @@
 						e.stopPropagation();
 						e.preventDefault();
 
-						window.open(
-							`https://openwebui.com/models?q=${encodeURIComponent(model?.id ?? '')}`,
-							'_blank'
-						);
+				window.open('https://wolinet.com', '_blank');
 						show = false;
 					}}
 				>

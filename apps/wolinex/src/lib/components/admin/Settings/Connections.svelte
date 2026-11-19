@@ -356,13 +356,6 @@
 
 						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 							{$i18n.t('settings.admin.connections.manageOllamaApiConnections.description')}
-							<a
-								class="font-normal underline hover:text-gray-700 dark:hover:text-gray-300"
-								href="https://github.com/open-webui/open-webui#troubleshooting"
-								target="_blank"
-							>
-								{$i18n.t('Click here for help.')}
-							</a>
 						</div>
 					</div>
 				{/if}

@@ -278,3 +278,11 @@ if [[ -n "${PG_PASS}" ]] && command -v psql >/dev/null 2>&1; then
   echo "  [OK] PostgreSQL litellm_models=${MC} webui_alembic=${AV}"
 fi
 df -h / | tail -n 1
+echo "[r2-install] Domain endpoints:"
+echo "  ai.${DOMAIN}      -> Product showcase"
+echo "  wolinex.${DOMAIN} -> Web chat UI (:8081 -> Lango :4000, shared PG :5433)"
+echo "  lango.${DOMAIN}   -> Gateway API & /ui Admin Dashboard (:4000)"
+echo "  mitambo.${DOMAIN} -> Inference engine (:9997)"
+echo "  wcp.${DOMAIN}     -> 1Panel Control Panel (:8888)"
+echo "  docs.${DOMAIN}    -> Developer documentation & Scalar API Ref"
+echo "  dev.${DOMAIN}     -> Developer studio, key gen & AI assistant"

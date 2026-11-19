@@ -180,6 +180,7 @@ async fn build_router_serves_health_and_production_models_in_stateless_mode() {
     assert_eq!(live.status().as_u16(), 200);
 
     let models = app
+        .clone()
         .oneshot(
             Request::get("/v1/models")
                 .header("authorization", "Bearer test-master")
@@ -200,4 +201,34 @@ async fn build_router_serves_health_and_production_models_in_stateless_mode() {
             .iter()
             .any(|m| m["id"] == "Wolinet Max")
     );
+
+    let logo = app
+        .clone()
+        .oneshot(Request::get("/get_image").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(logo.status().as_u16(), 200);
+    assert_eq!(logo.headers().get("content-type").unwrap(), "image/png");
+
+    let ui_cfg = app
+        .clone()
+        .oneshot(
+            Request::get("/litellm/.well-known/litellm-ui-config")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(ui_cfg.status().as_u16(), 200);
+
+    let login = app
+        .oneshot(
+            Request::post("/v2/login")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"username":"admin","password":"test-master"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(login.status().as_u16(), 200);
 }

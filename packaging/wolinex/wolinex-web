@@ -50,7 +50,7 @@ serve_cmd() {
   load_env
   mkdir -p "${DATA_DIR}" "${STATIC_DIR}"
   if [[ -d "${WEB_HOME}/backend/open_webui/static" ]]; then
-    cp -rn "${WEB_HOME}/backend/open_webui/static/." "${STATIC_DIR}/" 2>/dev/null || true
+    cp -Rf "${WEB_HOME}/backend/open_webui/static/." "${STATIC_DIR}/" 2>/dev/null || true
   fi
   cd "${WEB_HOME}/backend"
   exec "${WEB_PYTHON}" -m uvicorn open_webui.main:app \

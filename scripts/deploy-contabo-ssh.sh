@@ -142,6 +142,19 @@ cp -f "${ROOT_DIR}/scripts/install-"*.sh "${ROOT_DIR}/scripts/setup-contabo-edge
 cp -R "${ROOT_DIR}/scripts/lib/." "${STAGE_DIR}/scripts/lib/"
 chmod +x "${STAGE_DIR}/scripts/"*.sh
 
+for portal in website docs dev-portal; do
+  if [[ -d "${ROOT_DIR}/apps/${portal}" ]]; then
+    mkdir -p "${STAGE_DIR}/apps/${portal}"
+    cp -R "${ROOT_DIR}/apps/${portal}/." "${STAGE_DIR}/apps/${portal}/"
+    rm -f "${STAGE_DIR}/apps/${portal}/Dockerfile" "${STAGE_DIR}/apps/${portal}/nginx.conf"
+  fi
+done
+if [[ -f "${ROOT_DIR}/apps/wolinex/static/scalar.js" ]]; then
+  cp -f "${ROOT_DIR}/apps/wolinex/static/scalar.js" "${STAGE_DIR}/apps/docs/scalar.js"
+elif [[ -f "${ROOT_DIR}/gateway/litellm/proxy/swagger/scalar.js" ]]; then
+  cp -f "${ROOT_DIR}/gateway/litellm/proxy/swagger/scalar.js" "${STAGE_DIR}/apps/docs/scalar.js"
+fi
+
 if [[ -n "${ORIGIN_CERT}" || -n "${ORIGIN_KEY}" ]]; then
   [[ -f "${ORIGIN_CERT}" && -f "${ORIGIN_KEY}" ]] || die "Both --origin-cert and --origin-key must exist on disk"
   mkdir -p "${STAGE_DIR}/certs"
@@ -214,10 +227,13 @@ fi
 EOF
 
 log_ok "Contabo deployment complete!"
-log_info "GUI Endpoints:"
-log_info "  1apanel Admin GUI   : https://panel.${DOMAIN}"
-log_info "  Mitambo Admin GUI   : https://mitambo.${DOMAIN}"
-log_info "  Lango Admin UI/API  : https://lango.${DOMAIN}/ui  &  https://lango.${DOMAIN}/v1"
+log_info "GUI & Portal Endpoints:"
+log_info "  Homepage Showcase   : https://ai.${DOMAIN}"
 log_info "  Wolinex Web Portal  : https://wolinex.${DOMAIN}"
+log_info "  Lango Admin UI/API  : https://lango.${DOMAIN}/ui  &  https://lango.${DOMAIN}/v1"
+log_info "  Mitambo Engine      : https://mitambo.${DOMAIN}"
+log_info "  1Panel Control (WCP): https://wcp.${DOMAIN}"
+log_info "  Developer Docs      : https://docs.${DOMAIN}"
+log_info "  Developer Studio    : https://dev.${DOMAIN}"
 log_info "Workstation Desktop/CLI setup:"
 log_info "  ./scripts/install-wolinex-client.sh --component all --gateway-url https://lango.${DOMAIN}"

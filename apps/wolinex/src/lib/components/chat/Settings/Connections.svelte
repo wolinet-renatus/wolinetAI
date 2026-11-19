@@ -142,11 +142,8 @@
 						)}
 					</p>
 					<p>
-						<!-- LICENSE covers this Open WebUI wordmark.
-						Do not alter, remove, obscure, or replace it except as LICENSE permits:
-						https://docs.openwebui.com/license. -->
 						{$i18n.t(
-							'CORS must be properly configured by the provider to allow requests from Open WebUI.'
+							'CORS must be properly configured by the provider to allow requests from Wolinet AI.'
 						)}
 					</p>
 				</div>

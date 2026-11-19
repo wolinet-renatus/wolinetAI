@@ -3,6 +3,7 @@ pub mod management;
 pub mod pricing;
 pub mod spend;
 pub mod store;
+pub mod ui;
 
 use std::{sync::Arc, time::Duration};
 
@@ -25,6 +26,7 @@ pub use error::Error;
 pub use management::management_router;
 pub use spend::{SpendEvent, SpendLogger};
 pub use store::{VirtualKeyRecord, fetch_virtual_key, load_db_models, validate_key_record};
+pub use ui::{UiModelSummary, UiState, ui_router};
 
 #[derive(Clone)]
 pub struct Auth {

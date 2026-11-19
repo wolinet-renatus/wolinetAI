@@ -13,6 +13,9 @@ PANEL_HOST=""
 MITAMBO_HOST_FQDN=""
 LANGO_HOST_FQDN=""
 WOLINEX_HOST_FQDN=""
+AI_HOST_FQDN=""
+DOCS_HOST_FQDN=""
+DEV_HOST_FQDN=""
 ORIGIN_CERT="${CLOUDFLARE_ORIGIN_CERT:-}"
 ORIGIN_KEY="${CLOUDFLARE_ORIGIN_KEY:-}"
 LANGO_UI_DIR="${WOLINET_LANGO_UI_DIR:-}"
@@ -29,18 +32,29 @@ usage() {
   cat <<'EOF'
 Wolinet Contabo Ubuntu 24.04 Edge & Cloudflare Setup
 
-Routes external HTTPS (*.wolinet.com) via Host Nginx -> 127.0.0.1:<port> so all 4
-products have full browser Admin GUI & API access while internal hops stay on loopback.
+Routes external HTTPS (*.wolinet.com) via Host Nginx -> 127.0.0.1:<port> and static portals so
+all 7 Wolinet subdomains have clean, isolated routing while internal hops stay on loopback:
+  ai.<domain>      -> Home & AI product showcase (/opt/wolinet/apps/website)
+  wolinex.<domain> -> Web chat UI (127.0.0.1:8081 -> Lango :4000 ONLY, shared PG :5433)
+  lango.<domain>   -> LiteLLM Gateway & Admin UI (127.0.0.1:4000 -> cloud + Mitambo :9997)
+  mitambo.<domain> -> Mitambo inference engine (127.0.0.1:9997)
+  wcp.<domain>     -> 1Panel control panel (127.0.0.1:8888)
+  docs.<domain>    -> Developer documentation & Scalar API ref (/opt/wolinet/apps/docs)
+  dev.<domain>     -> Developer studio, keys & AI assistant (/opt/wolinet/apps/dev-portal -> Lango)
 
 Usage:
   setup-contabo-edge.sh [options]
 
 Options:
   --domain <domain>            Root Cloudflare domain (default: wolinet.com)
-  --panel-host <fqdn>          1apanel FQDN (default: panel.<domain>)
+  --wcp-host <fqdn>            1apanel Control Panel FQDN (default: wcp.<domain>)
+  --panel-host <fqdn>          Alias for --wcp-host
   --mitambo-host <fqdn>        Mitambo FQDN (default: mitambo.<domain>)
   --lango-host <fqdn>          Lango Gateway + /ui FQDN (default: lango.<domain>)
   --wolinex-host <fqdn>        Wolinex Web FQDN (default: wolinex.<domain>)
+  --ai-host <fqdn>             Homepage & Showcase FQDN (default: ai.<domain>)
+  --docs-host <fqdn>           Developer Docs FQDN (default: docs.<domain>)
+  --dev-host <fqdn>            Developer Studio & Keys FQDN (default: dev.<domain>)
   --origin-cert <path>         Cloudflare Origin CA PEM certificate path
   --origin-key <path>          Cloudflare Origin CA private key path
   --lango-ui-dir <dir>         Static Next.js export dir for Lango /ui
@@ -58,10 +72,13 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --domain)             DOMAIN="${2:-wolinet.com}"; shift 2 ;;
-    --panel-host)         PANEL_HOST="${2:-}"; shift 2 ;;
+    --wcp-host|--panel-host) PANEL_HOST="${2:-}"; shift 2 ;;
     --mitambo-host)       MITAMBO_HOST_FQDN="${2:-}"; shift 2 ;;
     --lango-host)         LANGO_HOST_FQDN="${2:-}"; shift 2 ;;
     --wolinex-host)       WOLINEX_HOST_FQDN="${2:-}"; shift 2 ;;
+    --ai-host)            AI_HOST_FQDN="${2:-}"; shift 2 ;;
+    --docs-host)          DOCS_HOST_FQDN="${2:-}"; shift 2 ;;
+    --dev-host)           DEV_HOST_FQDN="${2:-}"; shift 2 ;;
     --origin-cert)        ORIGIN_CERT="${2:-}"; shift 2 ;;
     --origin-key)         ORIGIN_KEY="${2:-}"; shift 2 ;;
     --lango-ui-dir)       LANGO_UI_DIR="${2:-}"; shift 2 ;;
@@ -80,15 +97,19 @@ done
 detect_platform
 [[ "${HOST_OS}" == "linux" ]] || die "setup-contabo-edge.sh must run on the Linux server host"
 
-PANEL_HOST="${PANEL_HOST:-panel.${DOMAIN}}"
+PANEL_HOST="${PANEL_HOST:-wcp.${DOMAIN}}"
 MITAMBO_HOST_FQDN="${MITAMBO_HOST_FQDN:-mitambo.${DOMAIN}}"
 LANGO_HOST_FQDN="${LANGO_HOST_FQDN:-lango.${DOMAIN}}"
 WOLINEX_HOST_FQDN="${WOLINEX_HOST_FQDN:-wolinex.${DOMAIN}}"
+AI_HOST_FQDN="${AI_HOST_FQDN:-ai.${DOMAIN}}"
+DOCS_HOST_FQDN="${DOCS_HOST_FQDN:-docs.${DOMAIN}}"
+DEV_HOST_FQDN="${DEV_HOST_FQDN:-dev.${DOMAIN}}"
 
 CERT_DIR="/etc/nginx/certs/${DOMAIN}"
 CERT_PEM="${CERT_DIR}/origin.crt"
 KEY_PEM="${CERT_DIR}/origin.key"
 TARGET_UI_DIR="/opt/wolinet/lango/ui"
+TARGET_APPS_DIR="/opt/wolinet/apps"
 
 configure_resolved_dns() {
   log_header "Configuring systemd-resolved reliable upstream DNS"
@@ -142,19 +163,46 @@ ensure_loopback_bindings() {
     "PORT" "8081" \
     "LITELLM_BASE_URL" "http://127.0.0.1:4000" \
     "OPENAI_API_BASE_URL" "http://127.0.0.1:4000/v1" \
-    "OPENAI_API_BASE_URLS" "http://127.0.0.1:4000/v1"
+    "OPENAI_API_BASE_URLS" "http://127.0.0.1:4000/v1" \
+    "ENABLE_OPENAI_API" "True" \
+    "ENABLE_OLLAMA_API" "False" \
+    "OLLAMA_BASE_URL" "" \
+    "OLLAMA_BASE_URLS" "" \
+    "WEBUI_NAME" "Wolinet AI" \
+    "ENABLE_COMMUNITY_SHARING" "false" \
+    "ENABLE_VERSION_UPDATE_CHECK" "false" \
+    "WEBUI_AUTH_COOKIE_DOMAIN" ".${DOMAIN}" \
+    "CORS_ALLOW_ORIGIN" "https://${WOLINEX_HOST_FQDN};https://${DEV_HOST_FQDN};https://${DOCS_HOST_FQDN};https://${AI_HOST_FQDN};https://${LANGO_HOST_FQDN}"
 
   log_ok "Service listeners pinned to loopback (127.0.0.1:8888, 9997, 4000, 8081)"
+}
+
+stage_portal_apps() {
+  for portal in website docs dev-portal; do
+    local src="${ROOT_DIR}/apps/${portal}"
+    local dst="${TARGET_APPS_DIR}/${portal}"
+    if [[ -d "${src}" ]]; then
+      run_root install -d -m 0755 "${dst}"
+      run_root rm -rf "${dst:?}/"*
+      run_root cp -R "${src}/." "${dst}/"
+      run_root rm -f "${dst}/Dockerfile" "${dst}/nginx.conf"
+      log_ok "Staged static portal '${portal}' into ${dst}"
+    fi
+  done
+  if [[ -f "${ROOT_DIR}/apps/wolinex/static/scalar.js" ]]; then
+    run_root install -d -m 0755 "${TARGET_APPS_DIR}/docs"
+    run_root cp -f "${ROOT_DIR}/apps/wolinex/static/scalar.js" "${TARGET_APPS_DIR}/docs/scalar.js"
+  fi
 }
 
 stage_lango_static_ui() {
   local src="${LANGO_UI_DIR}"
   if [[ -z "${src}" ]]; then
     for cand in \
-      "${TARGET_UI_DIR}" \
       "${ROOT_DIR}/dist/installers/server/lango/ui" \
       "${ROOT_DIR}/gateway/ui/litellm-dashboard/out" \
-      "${ROOT_DIR}/gateway/litellm/proxy/_experimental/out"; do
+      "${ROOT_DIR}/gateway/litellm/proxy/_experimental/out" \
+      "${TARGET_UI_DIR}"; do
       if [[ -d "${cand}" && -f "${cand}/index.html" ]]; then
         src="${cand}"
         break
@@ -362,7 +410,7 @@ EOF
 server {
     listen 80;
     listen [::]:80;
-    server_name ${PANEL_HOST} ${MITAMBO_HOST_FQDN} ${LANGO_HOST_FQDN} ${WOLINEX_HOST_FQDN};
+    server_name ${PANEL_HOST} ${MITAMBO_HOST_FQDN} ${LANGO_HOST_FQDN} ${WOLINEX_HOST_FQDN} ${AI_HOST_FQDN} ${DOCS_HOST_FQDN} ${DEV_HOST_FQDN};
     return 301 https://\$host\$request_uri;
 }
 
@@ -438,8 +486,26 @@ server {
     client_max_body_size 100m;
     limit_conn wolinet_conn 128;
 
+    location = / {
+        return 302 /ui/;
+    }
+
     location = /ui {
         return 301 /ui/;
+    }
+
+    location = /favicon.ico {
+        root ${TARGET_UI_DIR};
+        include /etc/nginx/snippets/wolinet-security.conf;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location ^~ /assets/ {
+        root ${TARGET_UI_DIR};
+        include /etc/nginx/snippets/wolinet-security.conf;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
     }
 
     location ^~ /litellm-asset-prefix/ {
@@ -518,6 +584,206 @@ server {
         proxy_connect_timeout 60s;
         proxy_send_timeout 600s;
         proxy_read_timeout 600s;
+    }
+}
+
+# 5. Homepage & AI Product Showcase (ai.<domain>)
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${AI_HOST_FQDN};
+
+    ssl_certificate     ${CERT_PEM};
+    ssl_certificate_key ${KEY_PEM};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:WolinetSSL:10m;
+    ssl_session_timeout 1d;
+
+    root ${TARGET_APPS_DIR}/website;
+    index index.html;
+    limit_conn wolinet_conn 128;
+
+    location ^~ /api/wolinet/ {
+        include /etc/nginx/snippets/wolinet-cloudflare.conf;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        proxy_pass http://wolinet_wolinex_backend;
+        proxy_buffering off;
+        proxy_read_timeout 600s;
+    }
+
+    location ^~ /v1/ {
+        include /etc/nginx/snippets/wolinet-cloudflare.conf;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        limit_req zone=wolinet_api burst=300 nodelay;
+        proxy_pass http://wolinet_lango_backend;
+        proxy_buffering off;
+        proxy_cache off;
+        add_header X-Accel-Buffering no always;
+        proxy_read_timeout 600s;
+    }
+
+    location = /openapi.json {
+        include /etc/nginx/snippets/wolinet-cloudflare.conf;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        proxy_pass http://wolinet_lango_backend/openapi.json;
+    }
+
+    location ^~ /.well-known/ {
+        default_type application/json;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        try_files \$uri =404;
+    }
+
+    location ~* \.(?:css|js)\$ {
+        include /etc/nginx/snippets/wolinet-security.conf;
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+
+    location ~* \.(?:woff2?|png|jpe?g|gif|ico|svg|webp)\$ {
+        include /etc/nginx/snippets/wolinet-security.conf;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location / {
+        include /etc/nginx/snippets/wolinet-security.conf;
+        try_files \$uri \$uri/ /index.html =404;
+    }
+}
+
+# 6. Developer Docs & Knowledge Reference (docs.<domain>)
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${DOCS_HOST_FQDN};
+
+    ssl_certificate     ${CERT_PEM};
+    ssl_certificate_key ${KEY_PEM};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:WolinetSSL:10m;
+    ssl_session_timeout 1d;
+
+    root ${TARGET_APPS_DIR}/docs;
+    index index.html;
+    limit_conn wolinet_conn 128;
+
+    location = /openapi.json {
+        include /etc/nginx/snippets/wolinet-cloudflare.conf;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        proxy_pass http://wolinet_lango_backend/openapi.json;
+    }
+
+    location = /swagger/scalar.js {
+        include /etc/nginx/snippets/wolinet-security.conf;
+        alias ${TARGET_APPS_DIR}/docs/scalar.js;
+        default_type text/javascript;
+        expires 7d;
+    }
+
+    location ^~ /api/wolinet/ {
+        include /etc/nginx/snippets/wolinet-cloudflare.conf;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        proxy_pass http://wolinet_wolinex_backend;
+        proxy_buffering off;
+        proxy_read_timeout 600s;
+    }
+
+    location ^~ /v1/ {
+        include /etc/nginx/snippets/wolinet-cloudflare.conf;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        limit_req zone=wolinet_api burst=300 nodelay;
+        proxy_pass http://wolinet_lango_backend;
+        proxy_buffering off;
+        proxy_cache off;
+        add_header X-Accel-Buffering no always;
+        proxy_read_timeout 600s;
+    }
+
+    location ~* \.(?:css|js)\$ {
+        include /etc/nginx/snippets/wolinet-security.conf;
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+
+    location ~* \.(?:woff2?|png|jpe?g|gif|ico|svg|webp)\$ {
+        include /etc/nginx/snippets/wolinet-security.conf;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location / {
+        include /etc/nginx/snippets/wolinet-security.conf;
+        try_files \$uri \$uri/ /index.html =404;
+    }
+}
+
+# 7. Developer Studio, Key Generation & Integrated Assistant via Lango (dev.<domain>)
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${DEV_HOST_FQDN};
+
+    ssl_certificate     ${CERT_PEM};
+    ssl_certificate_key ${KEY_PEM};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:WolinetSSL:10m;
+    ssl_session_timeout 1d;
+
+    root ${TARGET_APPS_DIR}/dev-portal;
+    index index.html;
+    limit_conn wolinet_conn 128;
+
+    location ^~ /api/wolinet/ {
+        include /etc/nginx/snippets/wolinet-cloudflare.conf;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        proxy_pass http://wolinet_wolinex_backend;
+        proxy_buffering off;
+        proxy_read_timeout 600s;
+    }
+
+    location ^~ /key/ {
+        include /etc/nginx/snippets/wolinet-cloudflare.conf;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        limit_req zone=wolinet_api burst=100 nodelay;
+        proxy_pass http://wolinet_lango_backend;
+    }
+
+    location ^~ /v1/ {
+        include /etc/nginx/snippets/wolinet-cloudflare.conf;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        limit_req zone=wolinet_api burst=300 nodelay;
+        proxy_pass http://wolinet_lango_backend;
+        proxy_buffering off;
+        proxy_cache off;
+        add_header X-Accel-Buffering no always;
+        proxy_read_timeout 600s;
+    }
+
+    location = /openapi.json {
+        include /etc/nginx/snippets/wolinet-cloudflare.conf;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        proxy_pass http://wolinet_lango_backend/openapi.json;
+    }
+
+    location ^~ /.well-known/ {
+        default_type application/json;
+        include /etc/nginx/snippets/wolinet-security.conf;
+        try_files \$uri =404;
+    }
+
+    location ~* \.(?:css|js)\$ {
+        include /etc/nginx/snippets/wolinet-security.conf;
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+
+    location ~* \.(?:woff2?|png|jpe?g|gif|ico|svg|webp)\$ {
+        include /etc/nginx/snippets/wolinet-security.conf;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location / {
+        include /etc/nginx/snippets/wolinet-security.conf;
+        try_files \$uri \$uri/ /index.html =404;
     }
 }
 EOF
@@ -604,7 +870,7 @@ upsert_cloudflare_dns() {
 
   log_header "Upserting Cloudflare A records (${DOMAIN} -> ${PUBLIC_IP}, proxied=${CF_PROXIED}, ssl=${ssl_mode})"
   python3 - "${CF_TOKEN}" "${DOMAIN}" "${CF_ZONE_ID}" "${PUBLIC_IP}" "${CF_PROXIED}" "${ssl_mode}" \
-    "${PANEL_HOST}" "${MITAMBO_HOST_FQDN}" "${LANGO_HOST_FQDN}" "${WOLINEX_HOST_FQDN}" <<'PY'
+    "${PANEL_HOST}" "${MITAMBO_HOST_FQDN}" "${LANGO_HOST_FQDN}" "${WOLINEX_HOST_FQDN}" "${AI_HOST_FQDN}" "${DOCS_HOST_FQDN}" "${DEV_HOST_FQDN}" <<'PY'
 import json
 import sys
 import urllib.error
@@ -672,6 +938,7 @@ PY
 configure_resolved_dns
 ensure_loopback_bindings
 stage_lango_static_ui
+stage_portal_apps
 stage_tls_certificates
 write_nginx_config
 configure_ufw_firewall
@@ -686,7 +953,10 @@ if [[ "${SKIP_RESTART}" == "0" ]] && has_systemd; then
 fi
 
 log_ok "Contabo edge & Cloudflare routing ready:"
-log_info "  1apanel Admin GUI  : https://${PANEL_HOST} (internal http://127.0.0.1:8888)"
-log_info "  Mitambo GUI & API  : https://${MITAMBO_HOST_FQDN} (internal http://127.0.0.1:9997)"
-log_info "  Lango Dashboard/API: https://${LANGO_HOST_FQDN}/ui & /v1 (internal http://127.0.0.1:4000)"
-log_info "  Wolinex Web Portal : https://${WOLINEX_HOST_FQDN} (internal http://127.0.0.1:8081)"
+log_info "  Homepage Showcase   : https://${AI_HOST_FQDN} (static + Lango/Wolinex)"
+log_info "  Wolinex Web Portal  : https://${WOLINEX_HOST_FQDN} (internal http://127.0.0.1:8081 -> Lango :4000 only)"
+log_info "  Lango Dashboard/API : https://${LANGO_HOST_FQDN}/ui & /v1 (internal http://127.0.0.1:4000)"
+log_info "  Mitambo GUI & API   : https://${MITAMBO_HOST_FQDN} (internal http://127.0.0.1:9997)"
+log_info "  1apanel Control WCP : https://${PANEL_HOST} (internal http://127.0.0.1:8888)"
+log_info "  Developer Docs      : https://${DOCS_HOST_FQDN} (static + Lango /openapi.json & /v1)"
+log_info "  Developer Studio    : https://${DEV_HOST_FQDN} (static + Lango keys & Wolinet AI assistant)"

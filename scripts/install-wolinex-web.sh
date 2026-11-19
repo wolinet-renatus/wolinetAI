@@ -115,6 +115,13 @@ configure_wolinex_web_env() {
     web_workers="${WEB_WORKERS_REDIS}"
   fi
   upsert_env_var "${tmp_env}" "UVICORN_WORKERS" "${web_workers}"
+  upsert_env_var "${tmp_env}" "WEBUI_NAME" "Wolinet AI"
+  upsert_env_var "${tmp_env}" "ENABLE_OPENAI_API" "True"
+  upsert_env_var "${tmp_env}" "ENABLE_OLLAMA_API" "False"
+  upsert_env_var "${tmp_env}" "OLLAMA_BASE_URL" ""
+  upsert_env_var "${tmp_env}" "OLLAMA_BASE_URLS" ""
+  upsert_env_var "${tmp_env}" "ENABLE_COMMUNITY_SHARING" "false"
+  upsert_env_var "${tmp_env}" "ENABLE_VERSION_UPDATE_CHECK" "false"
 
   if [[ "${use_root}" == "1" ]]; then
     run_root install -d -m 0750 /etc/wolinet
@@ -152,7 +159,8 @@ install_web_linux() {
   log_ok "Installed CLI command: /usr/bin/wolinex-web (MemoryMax=${WEB_MEM_MAX_MB}M)"
   if [[ "${NO_START}" == "0" ]] && has_systemd; then
     run_root systemctl daemon-reload
-    run_root systemctl enable --now wolinex-web.service
+    run_root systemctl enable wolinex-web.service >/dev/null 2>&1 || true
+    run_root systemctl restart wolinex-web.service
     if wait_http_ok "http://127.0.0.1:${PORT}/health" 30; then
       log_ok "Stage 4 Wolinex Web Portal healthy at http://127.0.0.1:${PORT}/health"
     else

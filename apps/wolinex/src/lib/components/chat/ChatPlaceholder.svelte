@@ -139,17 +139,8 @@
 						{#if models[selectedModelIdx]?.info?.meta?.user && (!models[selectedModelIdx]?.info?.meta?.user.community || $config?.features.enable_community_sharing)}
 							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
 								{$i18n.t('By')}
-								{#if models[selectedModelIdx]?.info?.meta?.user.community}
-									<a
-										href="https://openwebui.com/m/{models[selectedModelIdx]?.info?.meta?.user
-											.username}"
-										>{models[selectedModelIdx]?.info?.meta?.user.name
-											? models[selectedModelIdx]?.info?.meta?.user.name
-											: `@${models[selectedModelIdx]?.info?.meta?.user.username}`}</a
-									>
-								{:else}
-									{models[selectedModelIdx]?.info?.meta?.user.name}
-								{/if}
+								{models[selectedModelIdx]?.info?.meta?.user.name ||
+									`@${models[selectedModelIdx]?.info?.meta?.user.username}`}
 							</div>
 						{/if}
 					{:else}

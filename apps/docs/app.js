@@ -104,16 +104,18 @@ Be accurate, quote exact parameter names, and provide clean JSON and HTTP exampl
     if (submitBtn) submitBtn.disabled = true;
 
     try {
-      const authHeader = session?.api_key ? `Bearer ${session.api_key}` : 'Bearer sk-wolinet-docs-guest';
-      const response = await fetch('/v1/chat/completions', {
+      const endpoint = session?.api_key ? '/v1/chat/completions' : '/api/wolinet/chat';
+      const headers = { 'Content-Type': 'application/json' };
+      if (session?.api_key) {
+        headers['Authorization'] = `Bearer ${session.api_key}`;
+      }
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader
-        },
+        credentials: 'same-origin',
+        headers,
         body: JSON.stringify({
           model: 'Wolinet Coder v2',
-          stream: true,
+          stream: Boolean(session?.api_key),
           messages: [
             { role: 'system', content: DOCS_SYSTEM_PROMPT },
             { role: 'user', content: query }
@@ -125,28 +127,34 @@ Be accurate, quote exact parameter names, and provide clean JSON and HTTP exampl
         throw new Error(`Endpoint returned status ${response.status}`);
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let pending = '';
-      answer.innerHTML = '';
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('text/event-stream')) {
+        const data = await response.json();
+        answer.textContent = data.choices?.[0]?.message?.content || data.error || 'No response';
+      } else {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let pending = '';
+        answer.innerHTML = '';
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        pending += decoder.decode(value, { stream: true });
-        const rows = pending.split('\n');
-        pending = rows.pop() || '';
-        for (const row of rows) {
-          if (!row.startsWith('data: ') || row === 'data: [DONE]') continue;
-          try {
-            const data = JSON.parse(row.slice(6));
-            const delta = data.choices?.[0]?.delta?.content || '';
-            answer.textContent += delta;
-          } catch {
-            continue;
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          pending += decoder.decode(value, { stream: true });
+          const rows = pending.split('\n');
+          pending = rows.pop() || '';
+          for (const row of rows) {
+            if (!row.startsWith('data: ') || row === 'data: [DONE]') continue;
+            try {
+              const data = JSON.parse(row.slice(6));
+              const delta = data.choices?.[0]?.delta?.content || '';
+              answer.textContent += delta;
+            } catch {
+              continue;
+            }
           }
+          chatLog.scrollTop = chatLog.scrollHeight;
         }
-        chatLog.scrollTop = chatLog.scrollHeight;
       }
     } catch (err) {
       answer.innerHTML = `<strong>API Specification Note:</strong><br />Requests to Wolinet endpoints require <code>Authorization: Bearer &lt;key&gt;</code> and <code>Content-Type: application/json</code>. To manage API keys, visit <a href="https://dev.wolinet.com/#keys" target="_blank" rel="noopener noreferrer" style="color: var(--brand-cyan);">Developer Studio</a>. (Status: ${err.message})`;

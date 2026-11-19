@@ -10,13 +10,16 @@
   // =========================================================================
   const isLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
   const host = window.location.hostname || 'localhost';
-  const apiBaseUrl = `${window.location.origin}/v1`;
+  const apiBaseUrl = isLocal ? `${window.location.origin}/v1` : 'https://lango.wolinet.com/v1';
 
   const portalMap = {
     wolinex: isLocal ? `http://${host}:8081` : 'https://wolinex.wolinet.com',
     docs: isLocal ? `http://${host}:8083` : 'https://docs.wolinet.com',
     dev: isLocal ? `http://${host}:8082` : 'https://dev.wolinet.com',
-    api: '/v1',
+    lango: isLocal ? `http://${host}:4000` : 'https://lango.wolinet.com',
+    mitambo: isLocal ? `http://${host}:9997` : 'https://mitambo.wolinet.com',
+    wcp: isLocal ? `http://${host}:8888` : 'https://wcp.wolinet.com',
+    api: apiBaseUrl,
     studio: isLocal ? `http://${host}:8081` : 'https://wolinex.wolinet.com',
     downloads: '#downloads'
   };

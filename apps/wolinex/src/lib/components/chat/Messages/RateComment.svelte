@@ -258,7 +258,7 @@
 		</button>
 	</div>
 
-	{#if $config?.features.enable_community_sharing && message?.model}
+	{#if false && $config?.features.enable_community_sharing && message?.model}
 		<div class="mt-3 pt-3 border-t border-gray-100/30 dark:border-gray-850/30">
 			<a
 				href={`https://openwebui.com/models?q=${encodeURIComponent(message.model)}`}

@@ -18,16 +18,19 @@
   let session = null;
   let keyVisible = false;
   let activeLang = 'python';
+  const gatewayApiBase = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname)
+    ? `${window.location.origin}/v1`
+    : 'https://lango.wolinet.com/v1';
 
   // Multi-Language Code Snippets
   const codeSnippets = {
     python: (key) => `from openai import OpenAI
 
-# Initialize client pointing to Wolinet Developer API
+# Initialize client pointing to Wolinet Lango AI Gateway
 client = OpenAI(
-    base_url="${window.location.origin}/v1",
+    base_url="${gatewayApiBase}",
     api_key="${key}"
-)
+)`,Target:
 
 response = client.chat.completions.create(
     model="Wolinet Pro",
@@ -46,7 +49,7 @@ for chunk in response:
 
 // Initialize client pointing to Wolinet Developer API
 const openai = new OpenAI({
-  baseURL: "${window.location.origin}/v1",
+  baseURL: "${gatewayApiBase}",
   apiKey: "${key}",
 });
 
@@ -64,7 +67,7 @@ async function main() {
 
 main();`,
 
-    curl: (key) => `curl -X POST "${window.location.origin}/v1/chat/completions" \\
+    curl: (key) => `curl -X POST "${gatewayApiBase}/chat/completions" \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer ${key}" \\
   -d '{
@@ -86,7 +89,7 @@ import (
 
 func main() {
 	config := openai.DefaultConfig("${key}")
-	config.BaseURL = "${window.location.origin}/v1"
+	config.BaseURL = "${gatewayApiBase}"
 	client := openai.NewClientWithConfig(config)
 
 	resp, err := client.CreateChatCompletion(
@@ -119,7 +122,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "messages": [{"role": "user", "content": "Verify memory safety in Rust"}]
     });
 
-    let res = client.post("${window.location.origin}/v1/chat/completions")
+    let res = client.post("${gatewayApiBase}/chat/completions")
         .headers(headers)
         .json(&body)
         .send()
@@ -317,16 +320,18 @@ Provide direct, concise, copyable code blocks with minimal filler.`;
     if (chatSubmitBtn) chatSubmitBtn.disabled = true;
 
     try {
-      const authHeader = session?.api_key ? `Bearer ${session.api_key}` : 'Bearer sk-wolinet-guest-session';
-      const response = await fetch('/v1/chat/completions', {
+      const endpoint = session?.api_key ? '/v1/chat/completions' : '/api/wolinet/chat';
+      const headers = { 'Content-Type': 'application/json' };
+      if (session?.api_key) {
+        headers['Authorization'] = `Bearer ${session.api_key}`;
+      }
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader
-        },
+        credentials: 'same-origin',
+        headers,
         body: JSON.stringify({
           model: 'Wolinet Coder v2',
-          stream: true,
+          stream: Boolean(session?.api_key),
           messages: [
             { role: 'system', content: DEVELOPER_SYSTEM_PROMPT },
             { role: 'user', content: content }
@@ -338,28 +343,34 @@ Provide direct, concise, copyable code blocks with minimal filler.`;
         throw new Error(`API returned ${response.status}`);
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let pending = '';
-      answer.innerHTML = '';
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('text/event-stream')) {
+        const data = await response.json();
+        answer.textContent = data.choices?.[0]?.message?.content || data.error || 'No response';
+      } else {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let pending = '';
+        answer.innerHTML = '';
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        pending += decoder.decode(value, { stream: true });
-        const rows = pending.split('\n');
-        pending = rows.pop() || '';
-        for (const row of rows) {
-          if (!row.startsWith('data: ') || row === 'data: [DONE]') continue;
-          try {
-            const data = JSON.parse(row.slice(6));
-            const delta = data.choices?.[0]?.delta?.content || '';
-            answer.textContent += delta;
-          } catch {
-            continue;
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          pending += decoder.decode(value, { stream: true });
+          const rows = pending.split('\n');
+          pending = rows.pop() || '';
+          for (const row of rows) {
+            if (!row.startsWith('data: ') || row === 'data: [DONE]') continue;
+            try {
+              const data = JSON.parse(row.slice(6));
+              const delta = data.choices?.[0]?.delta?.content || '';
+              answer.textContent += delta;
+            } catch {
+              continue;
+            }
           }
+          chatLog.scrollTop = chatLog.scrollHeight;
         }
-        chatLog.scrollTop = chatLog.scrollHeight;
       }
     } catch (error) {
       answer.innerHTML = `<strong>Autonomous Response:</strong> To integrate with Wolinet AI, configure your client using <code>base_url="${window.location.origin}/v1"</code> and your active developer key. Check <a href="https://docs.wolinet.com" target="_blank" rel="noopener noreferrer" style="color: var(--brand-cyan);">Scalar API Docs</a> for exhaustive endpoint specs. (Connection: ${error.message})`;

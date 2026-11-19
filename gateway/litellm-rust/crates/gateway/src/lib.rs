@@ -4,8 +4,9 @@ use axum::{
     Extension, Json, Router,
     body::{Body, Bytes},
     extract::Request,
+    http::{StatusCode, header},
     middleware::{self, Next},
-    response::Response,
+    response::{IntoResponse, Response},
     routing::get,
 };
 use http_body_util::BodyExt;
@@ -14,7 +15,8 @@ use litellm_config::Config;
 use litellm_core::resources::CoreResources;
 pub use litellm_gateway_auth::GatewayAuth;
 use litellm_gateway_auth::{
-    Auth, AuthContext, RequireMasterKey, SpendEvent, authenticate_middleware, management_router,
+    Auth, AuthContext, RequireMasterKey, SpendEvent, UiState, authenticate_middleware,
+    management_router, ui_router,
 };
 use litellm_gateway_inference::{
     AuthMetadata, Gateway, ModelList, PassThroughRoute, UsageRecord, UsageSink,
@@ -140,6 +142,7 @@ pub async fn build_router_with_auth(
     let model_count = inference.models.model_names().len();
     let spend_logger = gateway_auth.spend_logger().clone();
     let mgmt_router = management_router(gateway_auth.clone());
+    let ui_routes = ui_router(UiState::from_config(gateway_auth.clone(), config));
 
     let usage_sink: UsageSink = Arc::new(move |rec: UsageRecord| {
         let auth = rec.auth.unwrap_or_default();
@@ -180,6 +183,7 @@ pub async fn build_router_with_auth(
             ));
 
     Router::new()
+        .route("/get_image", get(serve_wolinet_logo))
         .route("/health/liveliness", get(|| async { Json("I'm alive!") }))
         .route(
             "/health/readiness",
@@ -203,9 +207,21 @@ pub async fn build_router_with_auth(
                 }))
             }),
         )
+        .merge(ui_routes)
         .merge(mgmt_router)
         .merge(inference_router)
         .layer(middleware::from_fn(log_request))
+}
+
+async fn serve_wolinet_logo() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, "image/png"),
+            (header::CACHE_CONTROL, "public, max-age=3600"),
+        ],
+        include_bytes!("../assets/wolinet_64.png").as_slice(),
+    )
 }
 
 async fn bridge_auth_context(mut request: Request, next: Next) -> Response {

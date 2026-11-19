@@ -6,7 +6,11 @@ RUN apk add --no-cache git
 COPY wolinex/package.json wolinex/package-lock.json ./
 RUN ONNXRUNTIME_NODE_INSTALL_CUDA=skip npm ci --force
 COPY wolinex/ ./
-RUN npm run build && find build -type f -name '*.map' -delete
+RUN if [ -f static/pyodide/pyodide-lock.json ]; then \
+      npm run crypto:verify && node --max-old-space-size=12288 node_modules/vite/bin/vite.js build; \
+    else \
+      npm run build; \
+    fi && find build -type f -name '*.map' -delete
 
 FROM ubuntu:24.04 AS builder
 
